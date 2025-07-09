@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil - Appareils soumis à réglementation</title>
+  <style>
+ul.custom-links {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  ul.custom-links li {
+    margin-bottom: 8px;
+    position: relative;
+    padding-left: 1.5em;
+  }
+
+  ul.custom-links li::before {
+    content: "➤";
+    position: absolute;
+    left: 0;
+    color: #2196F3;
+    font-size: 1em;
+    line-height: 1.2;
+  }
+
+  ul.custom-links li a {
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    padding-right: 1.2em;
+    transition: color 0.3s ease;
+  }
+
+  ul.custom-links li a::after {
+    content: '➜';
+    position: absolute;
+    right: 0;
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: all 0.3s ease;
+    color: #2196F3;
+  }
+
+  ul.custom-links li a:hover {
+    color: #2196F3;
+    text-decoration: underline;
+  }
+
+  ul.custom-links li a:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+  }
+footer {
+  margin-top: 3rem;
+  padding: 1rem;
+  background: #eaeaea;
+  font-size: 0.9rem;
+  text-align: center;
+  color: #333;
+}
+footer a {
+  color: #1B396A;
+  text-decoration: none;
+  margin: 0 0.5rem;
+}
+footer a:hover {
+  text-decoration: underline;
+}
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #F5F7FA;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background: linear-gradient(135deg, #1B396A, #3F72AF);
+      color: white;
+      padding: 2rem 1rem;
+    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .header .logo-block {
+      text-align: center;
+      max-width: 250px;
+    }
+    .header .logo-block img {
+      max-height: 100px;
+    }
+    .header .logo-block .caption {
+      font-size: 1.12rem;
+      color: white;
+    }
+    .header .title {
+      flex: 1;
+      text-align: center;
+      padding: 0 1rem;
+    }
+    .header .title h1 {
+      margin: 0;
+      font-size: 2.2rem;
+    }
+    .header .title p {
+      margin: 0.5rem 0 0;
+      font-size: 1.2rem;
+    }
+    .breadcrumb {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      background-color: #e0e0e0;
+    }
+    .breadcrumb a {
+      color: #1B396A;
+      text-decoration: none;
+    }
+    .content {
+      padding: 1rem;
+    }
+    .card {
+      background: white;
+      margin: 1rem 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1rem 2rem;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      color: #1B396A;
+    }
+    .card h3 {
+      font-size: 1.1rem;
+      color: #3F3F3F;
+    }
+    .card ul {
+      margin-top: 0.5rem;
+    }
+    .button {
+      display: inline-block;
+      margin: 1rem 1rem 0 0;
+      padding: 0.6rem 1.4rem;
+      background-color: #1B396A;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 1rem;
+      border: 1px solid #17345A;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+    }
+    .button:hover {
+      background-color: #2C4F88;
+    }
+    footer {
+      margin-top: 3rem;
+      padding: 1rem;
+      background: #eaeaea;
+      font-size: 0.9rem;
+      text-align: center;
+      color: #333;
+    }
+    form .success-message {
+      color: green;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-content">
+      <div class="logo-block">
+        <img src="https://upload.wikimedia.org/wikipedia/fr/2/27/Pr%C3%A9fet_de_la_r%C3%A9gion_Provence-Alpes-C%C3%B4te_d%27Azur.svg" alt="Logo Préfet PACA">
+        <div class="caption">D.R.E.E.T.S<br>D.R.A.A.F</div>
+      </div>
+      <div class="title">
+        <h1>Travaux soumis à réglementation</h1>
+        <p>Jeunes de 15 à 18 ans</p>
+      </div>
+      <div class="logo-block">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/R%C3%A9gion_acad%C3%A9mique_Provence-Alpes-C%C3%B4te_d%27Azur.svg/268px-R%C3%A9gion_acad%C3%A9mique_Provence-Alpes-C%C3%B4te_d%27Azur.svg.png" alt="Logo Région académique PACA">
+        <div class="caption">Académie d'Aix-Marseille<br>Académie de Nice</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="breadcrumb">
+    <a href="#">Accueil</a>
+  </div>
+ <div class="card">
+
+     <a href="guide.html" class="button">Guide</a>
+     <a href="reglementation.html" class="button">Réglementation</a>
+      <a href="base-paca.html" class="button">Base PACA</a>
+      <a href="edition.html" class="button">Édition de documents</a>
+      <a href="contact.html" class="button">Contact</a>
+    </div>
+  <div class="content">
+    <div class="card">
+      <h2>Travaux soumis à réglementation </h2>
+      <h3>La politique de prévention des risques professionnels de l'établissement </h3>
+      <p>
+Les décrets n°2015-443 et 2015-444 du 17 avril 2015 disposent que pour affecter un jeune à des travaux qui sont normalement interdits aux mineurs et pour lesquels il existe une possibilité de dérogation, il convient, d’une part de respecter une procédure de déclaration auprès de l’inspection du travail, et d’autre part, de respecter l’ensemble des mesures de prévention qui s’impose quant aux travaux auxquels va être exposés le jeune. Ainsi, la réglementation prévoit que préalablement à l’affectation d’un jeune mineur à des travaux dangereux susceptibles de dérogation, il conviendra de mener une évaluation des risques puis de prendre des mesures de prévention appropriées conformément aux dispositions du code du travail. 
+
+Les items mentionnés ci-dessous apparaissent alors comme des points de conformité incontournables pour pouvoir déroger à l’interdiction d’affecter un mineur à des travaux dangereux qui lui sont normalement interdits. 
+</p>
+<ul class="custom-links">
+      
+        <li>La démarche d’évaluation du risque</li>
+        <li>La conformité des équipements de travail
+</li>
+        <li>La conformité des installations électriques</li>
+
+<li>La prévention relative au risque chimique</li>
+<li>La conformité des équipements sous pression</li>
+<li>Le contrôle de l’exposition aux vibrations</li>
+
+<h3>Les dispositions spécifiques aux élèves de 15 ans  au moins et de moins de 18 ans : travaux interdits et réglementés</h3>
+<li>Jeunes concernés par les dérogations</li>
+<li>Les travaux interdits</li>
+ <li>Les dérogations permanentes</li>
+ <h3>Travaux soumis à déclaration de dérogation auprès de l’inspection du travail </h3>
+ <h2>La déclaration de dérogation relative aux travaux interdits aux jeunes âgés de 15 ans au moins et de moins de 18 ans </h2>
+      </ul>
+    </div>
+
+   
+
+    <!-- Exemple de formulaire uniquement pour la page contact -->
+    <!--
+    <div class="card">
+      <h2>Formulaire de contact</h2>
+      <form onsubmit="event.preventDefault(); this.querySelector('.success-message').style.display='block';">
+        <label>Nom<br><input type="text" name="nom" style="width:100%;padding:0.5rem;"></label><br><br>
+        <label>Email<br><input type="email" name="email" style="width:100%;padding:0.5rem;"></label><br><br>
+        <label>Message<br><textarea name="message" style="width:100%;padding:0.5rem;" rows="4"></textarea></label><br><br>
+        <button type="submit" class="button">Envoyer</button>
+        <div class="success-message" style="display:none;">Message bien envoyé. Merci pour votre prise de contact.</div>
+      </form>
+    </div>
+    -->
+
+  </div>
+
+ <footer>
+  <a href="index.html">Accueil</a> |
+   <a href="guide.html">Guide</a> |
+  <a href="reglementation.html">Réglementation</a> |
+  <a href="base-paca.html">base-paca</a> |
+  <a href="edition.html">Édition de documents</a> |
+  <a href="contact.html">Contact</a>
+</footer>
+</body>
+</html>
