@@ -1,0 +1,56 @@
+
+<header style="background: linear-gradient(135deg, #1B396A, #3F72AF); color: white; padding: 1rem;">
+  <style>
+    @media (max-width: 768px) {
+      .header-flex {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center;
+      }
+      .header-flex img {
+        margin-bottom: 0.5rem;
+      }
+    }
+  </style>
+  <div class="header-flex" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+    <div style="flex: 1; text-align: center; max-width: 220px;">
+      <img src="https://upload.wikimedia.org/wikipedia/fr/2/27/Pr%C3%A9fet_de_la_r%C3%A9gion_Provence-Alpes-C%C3%B4te_d%27Azur.svg"
+           alt="Logo Préfet PACA" style="max-width: 100%; max-height: 80px; height: auto;">
+      <div style="font-size: 0.95rem;">D.R.E.E.T.S<br>D.R.A.A.F</div>
+    </div>
+    <div style="flex: 2; text-align: center; padding: 0 1rem;">
+      <h1 style="margin: 0; font-size: 1.6rem;">Travaux soumis à réglementation</h1>
+      <p style="margin: 0.5rem 0 0;">Jeunes de 15 à 18 ans</p>
+    </div>
+    <div style="flex: 1; text-align: center; max-width: 220px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/R%C3%A9gion_acad%C3%A9mique_Provence-Alpes-C%C3%B4te_d%27Azur.svg/268px-R%C3%A9gion_acad%C3%A9mique_Provence-Alpes-C%C3%B4te_d%27Azur.svg.png"
+           alt="Logo Région académique PACA" style="max-width: 100%; max-height: 80px; height: auto;">
+      <div style="font-size: 0.95rem;">Académie d'Aix-Marseille<br>Académie de Nice</div>
+    </div>
+  </div>
+  <nav style="text-align: center; margin-top: 1rem;">
+    <button id="menu-toggle" style="background-color: white; color: #1B396A; border: none; padding: 0.5rem 1rem; font-size: 1rem; border-radius: 4px;">
+      ☰ Menu
+    </button>
+    <ul id="menu" style="list-style: none; padding: 0; margin-top: 1rem; display: none;">
+      <li style="margin: 0.5rem 0;"><a href="index.html" style="color: white; text-decoration: none;">Accueil</a></li>
+      <li style="margin: 0.5rem 0;"><a href="guide.html" style="color: white; text-decoration: none;">Guide</a></li>
+      <li style="margin: 0.5rem 0;"><a href="reglementation.html" style="color: white; text-decoration: none;">Réglementation</a></li>
+      <li style="margin: 0.5rem 0;"><a href="base-paca.html" style="color: white; text-decoration: none;">Base PACA</a></li>
+      <li style="margin: 0.5rem 0;"><a href="edition.html" style="color: white; text-decoration: none;">Édition de documents</a></li>
+      <li style="margin: 0.5rem 0;"><a href="contact.html" style="color: white; text-decoration: none;">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+<div id="breadcrumb" class="breadcrumb" style="padding: 0.5rem 1rem; font-size: 0.9rem; background-color: #e0e0e0;"></div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("menu-toggle");
+  const menu = document.getElementById("menu");
+  if (toggle && menu) {
+    toggle.addEventListener("click", () => {
+      menu.style.display = menu.style.display === "none" ? "block" : "none";
+    });
+  }
+});
+</script>
