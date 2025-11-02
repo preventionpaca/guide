@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prévention PACA · Liens techniques</title>
+  <meta name="description" content="Mini‑dashboard de statut pour le site Prévention PACA (audit cloud & intégrations Grist)." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' font-size='48'>✚</text></svg>">
+  <style>
+    :root{
+      --brand-start:#1B396A; /* bleu foncé charte */
+      --brand-end:#3F72AF;   /* bleu clair charte */
+      --bg:#0f172a;          /* toile sombre élégante */
+      --card:#0b1224;        /* cartes sombres */
+      --muted:#8aa3c7;
+      --ok:#16a34a;          /* vert */
+      --warn:#f59e0b;        /* orange */
+      --err:#ef4444;         /* rouge */
+      --chip:#111827;
+      --shadow: 0 10px 25px rgba(0,0,0,.25);
+      --radius: 18px;
+    }
+    html,body{margin:0; padding:0; background:linear-gradient(180deg,#0a1222 0%, #0d152a 60%, #0a1222 100%); color:#e5eefc; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;}
+    a{color:#cde4ff}
+    .container{max-width:1100px; margin:auto; padding:24px}
+    header{
+      position:relative; overflow:hidden; border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(135deg,var(--brand-start),var(--brand-end));
+      color:white;
+    }
+    header .wave{position:absolute; inset:auto -10% -1px -10%; height:80px; background:radial-gradient(100% 80% at 50% 0%, rgba(255,255,255,.25),rgba(255,255,255,0)); filter:blur(24px)}
+    .topbar{display:flex; gap:16px; align-items:center; justify-content:space-between; padding:20px 24px}
+    .brand{display:flex; align-items:center; gap:14px}
+    .brand .logo{width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.2); display:grid; place-items:center; font-weight:700; box-shadow:var(--shadow)}
+    .brand h1{font-size: clamp(18px, 3vw, 24px); margin:0}
+    nav{display:flex; gap:14px; flex-wrap:wrap}
+    nav a{padding:8px 12px; border-radius:999px; text-decoration:none; background:rgba(0,0,0,.18); color:#f0f6ff; border:1px solid rgba(255,255,255,.12)}
+    .hero{padding:8px 24px 28px}
+    .hero p{margin:6px 0 0; color:#ecf3ff; opacity:.9}
+
+    .grid{display:grid; grid-template-columns: repeat(12, 1fr); gap:16px; margin:24px 0}
+    .card{grid-column: span 12; background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:var(--radius); box-shadow:var(--shadow)}
+    .card .hd{display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(255,255,255,.06)}
+    .card .hd h2{margin:0; font-size:18px}
+    .card .bd{padding:16px 18px}
+
+    @media (min-width:740px){
+      .span-4{grid-column: span 4}
+      .span-6{grid-column: span 6}
+      .span-8{grid-column: span 8}
+    }
+
+    .status-row{display:flex; flex-wrap:wrap; gap:12px}
+    .status{flex:1 1 220px; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06)}
+    .dot{width:12px; height:12px; border-radius:999px; background:gray; box-shadow:0 0 0 4px rgba(255,255,255,.04) inset}
+    .status small{color:var(--muted)}
+
+    .kv{display:grid; grid-template-columns: 1fr auto; gap:6px; align-items:center}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08)}
+    .pill code{opacity:.9}
+
+    .list{display:grid; gap:12px}
+    .item{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06)}
+    .item .meta{color:var(--muted); font-size:14px}
+
+    footer{border-top:1px solid rgba(255,255,255,.08); color:#c7d8f8;}
+    footer .inner{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:14px 24px}
+    .badges{display:flex; gap:10px; flex-wrap:wrap}
+
+    .badge{padding:6px 10px; border-radius:10px; font-size:12px; border:1px solid rgba(255,255,255,.14)}
+    .ok{background:rgba(22,163,74,.18); border-color:rgba(34,197,94,.4)}
+    .warn{background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.4)}
+    .err{background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.5)}
+
+    .breadcrumb{display:flex; gap:8px; align-items:center; font-size:14px; color:#d7e7ff; opacity:.9}
+    .breadcrumb a{color:inherit; text-decoration:none}
+    .breadcrumb .sep{opacity:.5}
+    .ghost{opacity:.7}
+    .toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:16px 0}
+    .toolbar input[type="search"], .toolbar select{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#e5eefc; padding:10px 12px; border-radius:10px}
+    .bug{display:grid; grid-template-columns: 1fr auto; gap:10px; padding:14px; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06)}
+    .bug h3{margin:0 0 4px 0; font-size:16px}
+    .bug .meta{font-size:13px; color:var(--muted)}
+    .tags{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+    .tag{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05)}
+    .tag.statut-ok{border-color:rgba(34,197,94,.5); background:rgba(34,197,94,.15)}
+    .tag.statut-open{border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.15)}
+    .tag.statut-block{border-color:rgba(239,68,68,.6); background:rgba(239,68,68,.2)}
+    .tag.prio-low{opacity:.9}
+    .tag.prio-med{box-shadow:0 0 0 1px rgba(245,158,11,.35) inset}
+    .tag.prio-high{box-shadow:0 0 0 1px rgba(239,68,68,.45) inset}
+    .list-bugs{display:grid; gap:12px}
+    .actions{display:flex; align-items:center; gap:10px}
+    .actions a{padding:6px 10px; border-radius:8px; text-decoration:none; background:rgba(0,0,0,.18); color:#f0f6ff; border:1px solid rgba(255,255,255,.12); font-size:13px}
+    .form{display:grid; gap:12px}
+    .form input, .form textarea, .form select{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#e5eefc; padding:10px 12px; border-radius:10px}
+    .form textarea{min-height:90px}
+    .muted{color:var(--muted)}
+    .btn-grid{display:grid; grid-template-columns: 1fr; gap:14px}
+    @media (min-width:720px){.btn-grid{grid-template-columns: repeat(3,1fr)}}
+    .btn{display:flex; align-items:center; justify-content:center; text-align:center; padding:16px 18px; border-radius:14px; text-decoration:none; font-weight:600; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#f0f6ff; box-shadow:var(--shadow)}
+    .btn:hover{transform:translateY(-1px)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar container">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">✚</div>
+        <div>
+          <h1>Prévention PACA · Liens techniques</h1>
+          <div class="breadcrumb"><a href="#">Accueil</a><span class="sep">›</span><span>Statut</span></div>
+        </div>
+      </div>
+      <nav aria-label="Navigation principale"></nav>
+    </div>
+    <div class="hero container">
+      <p class="ghost">Clique sur un bouton ci‑dessous. Trois accès clairs, sans passer par GitHub.</p>
+    </div>
+    <div class="wave" aria-hidden="true"></div>
+  </header>
+
+  <main class="container">
+    <section class="grid">
+      <article class="card span-12" aria-labelledby="titre-liens">
+        <div class="hd"><h2 id="titre-liens">Accès rapides</h2></div>
+        <div class="bd">
+          <div class="btn-grid">
+            <a class="btn" href="https://grist-audit-cloud.onrender.com/status" target="_blank" rel="noopener">Statut de l’API</a>
+            <a class="btn" href="https://grist-audit-cloud.onrender.com/debug/equip" target="_blank" rel="noopener">Debug équipements</a>
+            <a class="btn" href="https://dashboard.render.com/web/srv-d439ifbipnbc73blcrh0/deploys/dep-d43ifmer433s739hvf1g?r=2025-11-02%4009%3A42%3A55%7E2025-11-02%4009%3A46%3A52" target="_blank" rel="noopener">Déploiement Render</a>
+            <a class="btn" href="https://github.com/preventionpaca/grist-audit-cloud" target="_blank" rel="noopener">Code source GitHub</a>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div class="inner container">
+      <div>© <span id="year"></span> Prévention PACA · Tous droits réservés</div>
+      <div class="badges" id="badges">
+        <span class="badge ghost">Charte : dégradé bleu</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
