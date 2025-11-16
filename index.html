@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portail prévention PACA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      /* Thème sombre (par défaut) */
+      --bg: #041221;
+      --card: #1b396a;
+      --card-hover: #24508f;
+      --card-active: #122548;
+      --text: #ffffff;
+      --muted: #cbd5f5;
+      --green: #059669;
+      --green-hover: #16a34a;
+      --green-active: #047857;
+      --shadow-soft: 0 10px 18px rgba(0, 0, 0, 0.35);
+      --shadow-pressed: inset 0 4px 6px rgba(0, 0, 0, 0.45);
+      --radius: 18px;
+    }
+
+    /* Surcharge pour le mode clair */
+    body.light-theme {
+      --bg: #e5ecf5;
+      --card: #ffffff;
+      --card-hover: #f3f4f6;
+      --card-active: #e5e7eb;
+      --text: #111827;
+      --muted: #4b5563;
+      --shadow-soft: 0 8px 16px rgba(15, 23, 42, 0.18);
+      --shadow-pressed: inset 0 3px 5px rgba(148, 163, 184, 0.8);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #0b1f3a 0, var(--bg) 50%, #020814 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 15px;
+      transition: background 200ms ease-out, color 200ms ease-out;
+    }
+
+    body.light-theme {
+      background: radial-gradient(circle at top, #f9fafb 0, var(--bg) 40%, #d1d5db 100%);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .portal-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      animation: fadeInUp 450ms ease-out both;
+    }
+
+    .portal-header {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .logo-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 10px;
+    }
+
+    .logo-block {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.78rem;
+      line-height: 1.3;
+      color: var(--muted);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    body.light-theme .logo-block {
+      background: rgba(15, 23, 42, 0.06);
+    }
+
+    .portal-title {
+      font-size: clamp(1.7rem, 2.2vw, 2.1rem);
+      font-weight: 700;
+      text-align: center;
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .portal-subtitle {
+      text-align: center;
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .header-separator {
+      width: min(260px, 40%);
+      height: 1px;
+      margin: 18px auto 0;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.7),
+        transparent
+      );
+      opacity: 0.8;
+    }
+
+    body.light-theme .header-separator {
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(15, 23, 42, 0.35),
+        transparent
+      );
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: background 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out;
+    }
+
+    body.light-theme .theme-toggle {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(148, 163, 184, 0.9);
+      color: #111827;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .theme-toggle:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 26px;
+    }
+
+    .tile {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 18px 14px;
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, #1b396a, #284a86);
+      box-shadow: var(--shadow-soft);
+      text-decoration: none;
+      color: var(--text);
+      transition:
+        transform 150ms ease-out,
+        box-shadow 150ms ease-out,
+        background 150ms ease-out;
+      cursor: pointer;
+    }
+
+    body.light-theme .tile {
+      background: linear-gradient(145deg, var(--card), #e5ecf7);
+    }
+
+    .tile:hover {
+      transform: translateY(-4px);
+      background: linear-gradient(145deg, var(--card-hover), #2f5ea1);
+      box-shadow: 0 16px 26px rgba(0, 0, 0, 0.5);
+    }
+
+    body.light-theme .tile:hover {
+      background: linear-gradient(145deg, var(--card-hover), #e5ecf7);
+      box-shadow: 0 14px 24px rgba(148, 163, 184, 0.8);
+    }
+
+    .tile:active {
+      transform: translateY(0);
+      box-shadow: var(--shadow-pressed);
+      background: linear-gradient(145deg, var(--card-active), #1d4b84);
+    }
+
+    body.light-theme .tile:active {
+      background: linear-gradient(145deg, var(--card-active), #d1d5db);
+    }
+
+    /* Variante verte pour le bloc "Ajouter des équipements..." */
+    .tile--green {
+      background: linear-gradient(145deg, var(--green), #22c55e);
+    }
+    .tile--green:hover {
+      background: linear-gradient(145deg, var(--green-hover), #22c55e);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 26px rgba(0, 0, 0, 0.5);
+    }
+    .tile--green:active {
+      background: linear-gradient(145deg, var(--green-active), #16a34a);
+      transform: translateY(0);
+      box-shadow: var(--shadow-pressed);
+    }
+
+    body.light-theme .tile--green {
+      /* On garde le vert même en mode clair, ça reste le "bouton action" */
+      background: linear-gradient(145deg, var(--green), #22c55e);
+    }
+
+    .tile-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02));
+      backdrop-filter: blur(4px);
+    }
+
+    body.light-theme .tile-icon {
+      border-color: rgba(148, 163, 184, 0.8);
+      background: linear-gradient(135deg, rgba(148, 163, 184, 0.18), rgba(255, 255, 255, 0.5));
+    }
+
+    .tile-title {
+      font-size: 1.02rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .tile-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-height: 32px;
+    }
+
+    .tile-footer {
+      margin-top: 10px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    body.light-theme .tile-footer {
+      color: rgba(55, 65, 81, 0.9);
+    }
+
+    .tile-footer span {
+      font-size: 0.9em;
+    }
+
+    .tile-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tile-action {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 120ms ease-out, transform 120ms ease-out, box-shadow 120ms ease-out;
+    }
+
+    body.light-theme .tile-action {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(148, 163, 184, 0.9);
+      color: #111827;
+    }
+
+    .tile-action:hover {
+      background: rgba(0, 0, 0, 0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    body.light-theme .tile-action:hover {
+      background: rgba(243, 244, 246, 1);
+      box-shadow: 0 3px 8px rgba(148, 163, 184, 0.8);
+    }
+
+    .tile-action:active {
+      transform: translateY(0);
+      box-shadow: none;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    body.light-theme .tile-action:active {
+      background: rgba(209, 213, 219, 1);
+    }
+
+    .portal-footer {
+      margin-top: 26px;
+      font-size: 0.72rem;
+      text-align: center;
+      color: var(--muted);
+      opacity: 0.9;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 18px 10px;
+      }
+
+      .theme-toggle {
+        position: static;
+        display: block;
+        margin: 0 auto 10px;
+      }
+
+      .portal-header {
+        padding-top: 4px;
+      }
+
+      .tile {
+        padding: 16px 14px 12px;
+      }
+
+      .tile-title {
+        font-size: 0.98rem;
+      }
+
+      .logo-block {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="portal-wrapper">
+    <header class="portal-header">
+      <!-- Bouton mode clair / sombre -->
+      <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
+        Mode clair
+      </button>
+
+      <!-- Ligne institutions : texte uniquement -->
+      <div class="logo-row">
+        <div class="logo-block">D.R.E.E.T.S PACA &nbsp;•&nbsp; D.R.A.A.F PACA</div>
+        <div class="logo-block">RÉGION ACADÉMIQUE PACA &nbsp;•&nbsp; Aix-Marseille • Nice</div>
+        <div class="logo-block">CFA ACADÉMIQUE DE NICE &nbsp;•&nbsp; GIP FIPAN</div>
+      </div>
+
+      <h1 class="portal-title">Portail prévention PACA</h1>
+      <p class="portal-subtitle">
+        Accès centralisé aux outils de prévention, dérogations et évaluations des risques.
+      </p>
+
+      <div class="header-separator"></div>
+    </header>
+
+    <main class="tile-grid">
+      <!-- LIGNE 1 -->
+
+      <!-- 1. Consulter le guide de prévention -->
+      <div id="tile-guide-prevention" class="tile">
+        <div>
+          <div class="tile-icon">GP</div>
+          <div class="tile-title">Consulter le guide de prévention</div>
+          <div class="tile-desc">
+            Guide de prévention PACA&nbsp;: texte de référence, annexes et ressources.
+          </div>
+        </div>
+        <div class="tile-actions">
+          <!-- Remplace les # par tes liens -->
+          <a class="tile-action" href="#">Accès exemple PDF</a>
+          <a class="tile-action" href="#">Accès document de travail</a>
+        </div>
+      </div>
+
+      <!-- 2. Éditer des demandes de dérogation pour l’Inspection du travail -->
+      <a id="tile-demande-derogation" class="tile" href="#">
+        <div>
+          <div class="tile-icon">DD</div>
+          <div class="tile-title">
+            Éditer des demandes de dérogation pour l’Inspection du travail
+          </div>
+          <div class="tile-desc">
+            Assistant pour préparer les formulaires de dérogation à envoyer à l’Inspection du travail.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Préparer le dossier</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 3. Éditer des fiches de poste -->
+      <a id="tile-fiche-poste" class="tile" href="#">
+        <div>
+          <div class="tile-icon">FP</div>
+          <div class="tile-title">Éditer des fiches de poste</div>
+          <div class="tile-desc">
+            Création ou mise à jour des fiches de poste pour les élèves et apprentis.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Créer / modifier</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 4. Éditer des avis médicaux -->
+      <a id="tile-avis-medicaux" class="tile" href="#">
+        <div>
+          <div class="tile-icon">AM</div>
+          <div class="tile-title">Éditer des avis médicaux</div>
+          <div class="tile-desc">
+            Générer les avis médicaux pour les jeunes affectés à des travaux réglementés.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Éditer</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- LIGNE 2 -->
+
+      <!-- 5. Consulter la base des équipements soumis à dérogation -->
+      <a id="tile-base-equipements" class="tile" href="#">
+        <div>
+          <div class="tile-icon">BE</div>
+          <div class="tile-title">Consulter la base des équipements soumis à dérogation</div>
+          <div class="tile-desc">
+            Inventaire des équipements concernés, tous établissements confondus.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Accéder à la base</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 6. Consulter la liste des travaux interdits et réglementés -->
+      <a id="tile-travaux-interdits" class="tile" href="#">
+        <div>
+          <div class="tile-icon">TR</div>
+          <div class="tile-title">
+            Consulter la liste des travaux interdits et réglementés
+          </div>
+          <div class="tile-desc">
+            Liste actualisée des travaux interdits et des travaux réglementés pour les jeunes.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Voir la liste</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 7. Équipements par diplôme -->
+      <a id="tile-equipements-par-diplome" class="tile" href="#">
+        <div>
+          <div class="tile-icon">ED</div>
+          <div class="tile-title">
+            Consulter la liste des équipements soumis à dérogation par diplôme
+          </div>
+          <div class="tile-desc">
+            Filtrage par diplôme pour la préparation des dossiers de dérogation.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Consulter</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 8. Équipements par domaine professionnel -->
+      <a id="tile-equipements-par-domaine" class="tile" href="#">
+        <div>
+          <div class="tile-icon">DP</div>
+          <div class="tile-title">
+            Consulter la liste des équipements soumis à dérogation par domaine professionnel
+          </div>
+          <div class="tile-desc">
+            Vue par domaine : mécanique, électrotechnique, bâtiment, tertiaire, etc.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Explorer</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- LIGNE 3 -->
+
+      <!-- 9. Ajouter des équipements (vert) -->
+      <a id="tile-ajouter-equipement" class="tile tile--green" href="#">
+        <div>
+          <div class="tile-icon">AE</div>
+          <div class="tile-title">
+            Ajouter des équipements soumis à dérogation dans la base
+          </div>
+          <div class="tile-desc">
+            Saisie ou mise à jour des équipements à intégrer dans la base de référence.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Ajouter / modifier</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 10. Évaluation des risques par diplôme -->
+      <a id="tile-eval-risques-diplome" class="tile" href="#">
+        <div>
+          <div class="tile-icon">ER</div>
+          <div class="tile-title">Évaluation des risques par diplôme</div>
+          <div class="tile-desc">
+            Synthèse des dangers, mesures de prévention et travaux associés par diplôme.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Voir les évaluations</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 11. Contacts -->
+      <a id="tile-contacts" class="tile" href="#">
+        <div>
+          <div class="tile-icon">CT</div>
+          <div class="tile-title">Contacts</div>
+          <div class="tile-desc">
+            Coordonnées utiles (DREETS, DRAAF, rectorats, établissements, CFA, etc.).
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Accéder aux contacts</span><span>↗</span>
+        </div>
+      </a>
+
+      <!-- 12. Crédits / remerciements -->
+      <a id="tile-credits" class="tile" href="#">
+        <div>
+          <div class="tile-icon">CR</div>
+          <div class="tile-title">Crédits / remerciements</div>
+          <div class="tile-desc">
+            Partenaires, financeurs, équipes pédagogiques et établissements contributeurs.
+          </div>
+        </div>
+        <div class="tile-footer">
+          <span>Voir les crédits</span><span>↗</span>
+        </div>
+      </a>
+    </main>
+
+    <footer class="portal-footer">
+      Portail prévention PACA — D.R.E.E.T.S / D.R.A.A.F PACA — Région académique Aix-Marseille &amp; Nice —
+      CFA académique de Nice (GIP FIPAN)
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+
+      try {
+        const saved = localStorage.getItem('ppaca-theme');
+        if (saved === 'light') {
+          body.classList.add('light-theme');
+          toggle.textContent = 'Mode sombre';
+          toggle.setAttribute('aria-pressed', 'true');
+        }
+      } catch (e) {
+        // pas grave si localStorage n'est pas dispo
+      }
+
+      toggle.addEventListener('click', function () {
+        const isLight = body.classList.toggle('light-theme');
+        toggle.textContent = isLight ? 'Mode sombre' : 'Mode clair';
+        toggle.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+
+        try {
+          localStorage.setItem('ppaca-theme', isLight ? 'light' : 'dark');
+        } catch (e) {}
+      });
+    });
+  </script>
+</body>
+</html>
