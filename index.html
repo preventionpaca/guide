@@ -1,408 +1,1337 @@
-Aazerty06200*<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Portail prévention PACA – DDFPT</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dérogation travaux réglementés – établissement / diplômes / travaux</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 
-  <style>
-    :root {
-      --bg: #041221;
-      --card: #1b396a;
-      --card-hover: #24508f;
-      --card-active: #122548;
-      --text: #ffffff;
-      --muted: #cbd5f5;
-      --green: #059669;
-      --orange: #ea580c;
-      --shadow-soft: 0 8px 16px rgba(0, 0, 0, 0.35);
-      --shadow-pressed: inset 0 4px 6px rgba(0, 0, 0, 0.45);
-      --border-soft: rgba(255, 255, 255, 0.08);
+<style>
+  :root{
+    --bg:#f3f4f6;
+    --card:#ffffff;
+    --line:#d1d5db;
+    --muted:#6b7280;
+    --accent:#1b396a;
+    --accent-soft:#e0ecff;
+    --danger:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:#f9fafb;
+    color:#111827;
+  }
+  .wrap{
+    max-width:900px;
+    margin:12px auto 40px auto;
+    padding:0 8px 24px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 14px 12px 14px;
+    margin:10px 0;
+  }
+  .card.etab-card{
+    background:#f1f5ff;
+  }
+  .card.wide-card{
+    margin-left:0;
+    margin-right:0;
+  }
+  .card h2{
+    margin:0 0 8px 0;
+    text-align:center;
+    font-size:1rem;
+    color:var(--accent);
+  }
+  .card.small-title h2{font-size:0.95rem}
+  .card-header-main{
+    font-weight:700;
+    text-align:center;
+    margin-bottom:2px;
+  }
+  .hint{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .hint.err{color:var(--danger)}
+  .hint.ok{color:#166534}
+
+  .required-star{
+    color:#dc2626;
+    margin-left:3px;
+  }
+
+  .main-title{
+    text-align:center;
+    padding:10px;
+    font-weight:700;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#f3f4ff;
+    margin-bottom:10px;
+  }
+  .main-title .subtitle{
+    display:block;
+    font-size:11px;
+    color:#6b7280;
+    margin-top:4px;
+  }
+
+  .print-only{display:none;}
+  .screen-only{display:inline;}
+
+  .auto-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .auto-row input[type="text"]{
+    width:100%;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    font-size:0.9rem;
+  }
+
+  .etab-name{
+    font-weight:700;
+    text-decoration:underline;
+    margin-bottom:4px;
+  }
+  .etab-block-line{
+    margin:1px 0;
+  }
+  .etab-block-line span.label{
+    font-weight:600;
+    margin-right:4px;
+  }
+  .etab-flex{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 18px;
+  }
+  .etab-small-input{
+    padding:2px 6px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    font-size:0.85rem;
+    min-width:130px;
+  }
+
+  .full-input{
+    width:100%;
+    padding:6px 8px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    font-size:0.9rem;
+  }
+
+  table{
+    border-collapse:collapse;
+    width:100%;
+  }
+  th,td{
+    border:1px solid var(--line);
+    padding:6px 8px;
+    vertical-align:top;
+  }
+  th{
+    background:#f3f4f6;
+    font-size:0.85rem;
+    text-align:left;
+  }
+  td.small{
+    font-size:0.8rem;
+    color:var(--muted);
+  }
+  .center{text-align:center}
+  .dip-check{transform:scale(1.05);}
+
+  .travaux-title{
+    font-weight:600;
+  }
+  .equip-check{
+    transform:scale(1.05);
+    margin-right:4px;
+  }
+
+  #people-body td[contenteditable="true"]{
+    min-height:22px;
+    outline:none;
+  }
+  #people-body td[contenteditable="true"]:focus{
+    box-shadow:0 0 0 1px #3b82f6 inset;
+  }
+  .people-help{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:3px;
+  }
+
+  .lieu-input-row{
+    display:flex;
+    gap:6px;
+    margin:4px 0;
+  }
+  .lieu-input-row input[type="text"]{
+    flex:1;
+    padding:6px 8px;
+    border-radius:8px;
+    border:1px solid var(--line);
+  }
+  .btn{
+    appearance:none;
+    border-radius:999px;
+    border:1px solid #cbd5e1;
+    padding:6px 12px;
+    font-size:0.85rem;
+    cursor:pointer;
+    background:#e5e7eb;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:#1d4ed8;
+  }
+  .btn-sm{
+    padding:4px 10px;
+    font-size:0.8rem;
+  }
+  .lieu-list{
+    margin:2px 0 4px 0;
+    padding-left:18px;
+    font-size:0.9rem;
+  }
+  .lieu-item{
+    position:relative;
+    margin:1px 0;
+  }
+  .lieu-item button{
+    margin-left:6px;
+    font-size:0.75rem;
+  }
+
+  .ban-card{
+    background:#e0f0ff;
+    border-color:#bfdbfe;
+  }
+  .ban-card ul{
+    margin:4px 0 0 0;
+    padding-left:20px;
+  }
+
+  .blue-card{
+    background:#e6f0ff;
+    border-color:#bfdbfe;
+  }
+  .blue-card label{
+    font-size:0.85rem;
+  }
+  .row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .row > *{flex:1 1 0}
+  .input{
+    width:100%;
+    padding:6px 8px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    font-size:0.9rem;
+  }
+  .date-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .checkbox-line{
+    display:flex;
+    align-items:flex-start;
+    gap:6px;
+    margin:2px 0;
+    font-size:0.8rem;
+    white-space:nowrap;
+  }
+  .sign-row{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+  }
+  .sign-row .left{
+    flex:2;
+  }
+  .sign-row .right{
+    flex:1.4;
+    border:2px dashed #9ca3af;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.9rem;
+    text-align:center;
+    min-height:90px;
+  }
+
+  .export-row{
+    text-align:right;
+    margin-top:8px;
+  }
+
+  #overlay-loading{
+    position:fixed;
+    inset:0;
+    background:rgba(255,255,255,0.75);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    font-size:0.95rem;
+    color:#111827;
+  }
+  #overlay-loading.hidden{display:none;}
+  .spinner{
+    width:24px;
+    height:24px;
+    border-radius:999px;
+    border:3px solid #cbd5e1;
+    border-top-color:var(--accent);
+    animation:spin 0.9s linear infinite;
+    margin-right:10px;
+  }
+  @keyframes spin{
+    to{transform:rotate(360deg);}
+  }
+
+  @media print {
+    .no-print{display:none !important;}
+    .screen-only{display:none !important;}
+    .print-only{display:inline !important;}
+
+    #btnPdf,
+    #btnToday{
+      display:none !important;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    th.sel-col,
+    td.sel-col,
+    .dip-check{
+      display:none !important;
     }
 
-    html, body {
-      height: 100%;
+    tr[data-print="0"]{display:none !important;}
+    li[data-print="0"]{display:none !important;}
+    .dip-row[data-print="0"]{display:none !important;}
+
+    .card{
+      page-break-inside:avoid;
+      break-inside:avoid;
     }
 
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #0b2340, #020617 50%, #000);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
+    body{
+      background:#ffffff;
+    }
+    .card.etab-card{background:#f1f5ff !important;}
+    .ban-card{background:#e0f0ff !important;}
+    .blue-card{background:#e6f0ff !important;}
+
+    #etab-ateliers{
+      display:none !important;
+    }
+    #etab-ateliers-print{
+      display:block !important;
+      margin-top:2px;
+      font-size:0.9rem;
     }
 
-    .app {
-      width: 100%;
-      max-width: 1400px;
-      min-height: 100vh;
-      padding: 24px 32px 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
+    #lieu-list button,
+    #chantier-list button{
+      display:none !important;
     }
-
-    /* En-tête */
-
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .top-bar-left {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .top-title {
-      font-size: clamp(1.5rem, 2.4vw, 2rem);
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .top-subtitle {
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .chips-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-      font-size: 0.75rem;
-    }
-
-    .chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 64, 175, 0.6));
-      backdrop-filter: blur(8px);
-      white-space: nowrap;
-    }
-
-    .mode-pill {
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      font-size: 0.75rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      opacity: 0.8;
-    }
-
-    /* Bloc central */
-
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .buttons-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-    }
-
-    .nav-btn {
-      padding: 8px 16px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: rgba(15, 23, 42, 0.85);
-      color: var(--muted);
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      text-decoration: none;
-    }
-
-    .nav-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 14px rgba(15, 23, 42, 0.7);
-      color: var(--text);
-    }
-
-    /* Cartes principales */
-
-    .tiles-grid {
-      margin-top: 16px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-      align-items: stretch;
-    }
-
-    .tile {
-      position: relative;
-      border-radius: 20px;
-      padding: 20px 22px;
-      display: flex;
-      flex-direction: row;
-      gap: 18px;
-      align-items: center;
-      box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      cursor: pointer;
-      text-decoration: none;
-      color: inherit;
-      overflow: hidden;
-      min-height: 120px;
-      background: var(--card);
-      transition:
-        transform 0.16s ease,
-        box-shadow 0.16s ease,
-        background 0.16s ease,
-        filter 0.16s ease;
-    }
-
-    .tile:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
-      filter: brightness(1.03);
-    }
-
-    .tile:active {
-      transform: translateY(0);
-      box-shadow: var(--shadow-pressed);
-    }
-
-    .tile-badge {
-      flex: 0 0 auto;
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
-      background: rgba(15, 23, 42, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .tile-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .tile-title {
-      font-size: clamp(1rem, 1.4vw, 1.15rem);
-      font-weight: 600;
-    }
-
-    .tile-desc {
-      font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.9);
-      line-height: 1.35;
-    }
-
-    .tile-footer {
-      margin-top: 6px;
-      font-size: 0.75rem;
-      color: var(--muted);
-      opacity: 0.95;
-    }
-
-    .tile-pill {
-      position: absolute;
-      bottom: 12px;
-      right: 16px;
-      font-size: 0.7rem;
-      padding: 4px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      background: rgba(15, 23, 42, 0.3);
-      backdrop-filter: blur(6px);
-    }
-
-    /* Variantes de couleur */
-
-    .tile--orange {
-      background: linear-gradient(135deg, #f97316, #ec4899);
-    }
-
-    .tile--green {
-      background: linear-gradient(135deg, #22c55e, #0ea5e9);
-    }
-
-    .tile--blue {
-      background: linear-gradient(135deg, #1d4ed8, #4f46e5);
-    }
-
-    /* Pied de page */
-
-    .footer {
-      margin-top: 8px;
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-align: center;
-      opacity: 0.8;
-    }
-
-    @media (max-width: 768px) {
-      .app {
-        padding: 16px;
-      }
-      .tile {
-        padding: 16px 14px;
-      }
-      .tile-badge {
-        width: 46px;
-        height: 46px;
-        border-radius: 16px;
-        font-size: 0.95rem;
-      }
-      .top-bar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .top-title {
-        font-size: 1.3rem;
-      }
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <!-- En-tête -->
-    <header class="top-bar">
-      <div class="top-bar-left">
-        <div class="top-title">Accès Directeurs Délégués aux Formations</div>
-        <div class="top-subtitle">Mise à jour de la base des équipements ou produits</div>
-        <div class="chips-row">
-          <span class="chip">DREETS PACA – D.R.A.A.F PACA</span>
-          <span class="chip">Région académique PACA</span>
-          <span class="chip">Académies Aix-Marseille &amp; Nice</span>
-          <span class="chip">CFA académiques &amp; GIP FIPAN</span>
-        </div>
-      </div>
-      <div class="mode-pill">Mode portail</div>
-    </header>
 
-    <!-- Liens de navigation généraux -->
-    <main class="main">
-      <div class="buttons-row">
-        <a class="nav-btn" href="https://docs.getgrist.com" target="_blank" rel="noopener">
-          Portail prévention PACA (Grist)
-        </a>
-        <a class="nav-btn" href="https://github.com/preventionpaca" target="_blank" rel="noopener">
-          GitHub prévention PACA
-        </a>
-        <!-- Tu peux ajouter d'autres boutons ici -->
-      </div>
+<div id="overlay-loading">
+  <div class="spinner"></div>
+  <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
+</div>
 
-      <!-- Cartes principales -->
-      <section id="tiles" class="tiles-grid"></section>
+<div class="wrap">
 
-      <div class="footer">
-        Version portail HTML – Personnalisable (liens &amp; blocs dans la configuration du script).
-      </div>
-    </main>
+  <div class="card small-title">
+    <div class="main-title">
+      Demande d’autorisation de dérogation aux travaux réglementés en vue d’accueillir des jeunes mineurs âgés d’au moins 15 ans et de moins de 18 ans en formation professionnelle ou technologique
+      <span class="subtitle">Articles L4153-9, R4153-15 et suivants du code du travail</span>
+    </div>
   </div>
 
-  <script>
-    // =====================================================
-    // 1. CONFIGURATION DES BLOCS (tu modifies juste ici)
-    // =====================================================
-    const TILES_CONFIG = [
-      {
-        id: "AS",
-        badge: "AS",
-        title: "Associer ÉQUIPEMENT / ÉTABLISSEMENT DIPLÔMES",
-        description: "Lien entre équipements, établissements et diplômes.",
-        footer: "Accès réservé DDFPT / équipe prévention.",
-        colorClass: "tile--orange",
-        url: "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/74" // <-- mets ton lien Grist
-      },
-      {
-        id: "AJ",
-        badge: "AJ",
-        title: "Ajouter des équipements soumis à dérogation dans la base",
-        description: "Saisie guidée des équipements nécessitant une dérogation DREETS.",
-        footer: "Traçabilité des demandes et suivi des validations.",
-        colorClass: "tile--green",
-        url: "https://docs.getgrist.com/..." // <-- mets ici la page d’ajout
+  <div class="card no-print">
+    <h2>Recherche — établissement<span class="required-star">*</span></h2>
+    <div class="auto-row">
+      <input id="q" type="text" placeholder="Tapez 2+ lettres…" list="sugg" autocomplete="off">
+      <datalist id="sugg"></datalist>
+    </div>
+    <div id="hint" class="hint">Chargement…</div>
+  </div>
+
+  <div class="card etab-card" id="card-etab">
+    <h2>Établissement</h2>
+    <div id="etab-display">
+      <div class="etab-name" id="etab-nom"></div>
+      <div class="etab-block-line" id="etab-addr"></div>
+      <div class="etab-block-line" id="etab-cp-ville"></div>
+      <div class="etab-flex">
+        <div class="etab-block-line">
+          <span class="label">Téléphone<span class="required-star">*</span> :</span>
+          <span id="etab-tel-text" class="print-only"></span>
+          <input id="etab-tel-input" class="etab-small-input screen-only" type="text">
+        </div>
+        <div class="etab-block-line">
+          <span class="label">E-mail :</span>
+          <span id="etab-email"></span>
+        </div>
+        <div class="etab-block-line">
+          <span class="label">SIRET<span class="required-star">*</span> :</span>
+          <span id="etab-siret-text" class="print-only"></span>
+          <input id="etab-siret-input" class="etab-small-input screen-only" type="text">
+        </div>
+        <div class="etab-block-line">
+          <span class="label">Secteur d’activité<span class="required-star">*</span> :</span>
+          <span id="etab-secteur-text" class="print-only"></span>
+          <input id="etab-secteur-input" class="etab-small-input screen-only" type="text">
+        </div>
+      </div>
+      <div style="margin-top:6px;">
+        <span class="label">Établissements / ateliers / chantiers concernés<span class="required-star">*</span> :</span>
+        <span id="etab-ateliers-print" class="print-only"></span>
+      </div>
+      <textarea id="etab-ateliers" class="full-input screen-only" rows="2" placeholder="Saisir les ateliers ou chantiers concernés…"></textarea>
+    </div>
+  </div>
+
+  <div class="card" id="card-dip">
+    <h2>Formations professionnelles déclarées</h2>
+    <table aria-label="Formations professionnelles">
+      <thead>
+        <tr>
+          <th style="width:40px" class="center sel-col">Sel.</th>
+          <th>Diplôme / Formation</th>
+        </tr>
+      </thead>
+      <tbody id="dip-body">
+        <tr><td colspan="2" class="small">Sélectionnez d’abord un établissement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="card-travaux">
+    <h2>Travaux réglementés nécessaires aux formations déclarées</h2>
+    <div class="hint no-print">Cochez les équipements/produits à imprimer (les lignes non cochées seront masquées en PDF).</div>
+    <table aria-label="Travaux réglementés">
+      <thead>
+        <tr>
+          <th style="width:32%">Travail réglementé</th>
+          <th style="width:32%">Équipement / produit (sélection)</th>
+          <th>Nature des travaux</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-trvx">
+        <tr><td colspan="3" class="small">Choisissez un établissement puis cochez au moins une formation…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="card-people">
+    <h2>Personnes compétentes pour encadrer les jeunes<span class="required-star">*</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:35%">Nom / prénom</th>
+          <th style="width:30%">Fonction / qualité</th>
+          <th>Travaux encadrés</th>
+        </tr>
+      </thead>
+      <tbody id="people-body">
+        <tr>
+          <td contenteditable="true">&nbsp;</td>
+          <td contenteditable="true">&nbsp;</td>
+          <td contenteditable="true">&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="people-help">
+      Vous pouvez coller un tableau Excel (3 colonnes) directement dans la première cellule : le tableau s’agrandira automatiquement.
+    </div>
+  </div>
+
+  <div class="card" id="card-lieux">
+    <h2>Liste des lieux d’intervention connus au moment de la demande</h2>
+    <div class="hint">
+      Il s’agit ici de préciser les lieux sur lesquels le jeune va évoluer au cours de sa formation. Pour les entreprises dont l’activité est très
+      nomade, il convient de préciser a minima l’adresse du siège / dépôt ou le périmètre géographique concerné.
+    </div>
+
+    <div style="margin-top:6px;font-weight:600;">
+      Adresse ou zone géographique des lieux d’intervention connus<span class="required-star">*</span> :
+    </div>
+    <div class="lieu-input-row">
+      <input id="lieu-input" class="screen-only" type="text" placeholder="Saisir un lieu… ou inscrire « Néant »">
+      <button id="btnAddLieu" type="button" class="btn btn-sm screen-only">Ajouter</button>
+    </div>
+    <ul id="lieu-list" class="lieu-list"></ul>
+
+    <div style="margin-top:6px;font-weight:600;">
+      Si besoin pour les entreprises/établissements de grande taille : préciser les seuls ateliers ou chantiers concernés par la demande de dérogation<span class="required-star">*</span> :
+    </div>
+    <div class="lieu-input-row">
+      <input id="chantier-input" class="screen-only" type="text" placeholder="Saisir un atelier/chantier… ou inscrire « Néant »">
+      <button id="btnAddChantier" type="button" class="btn btn-sm screen-only">Ajouter</button>
+    </div>
+    <ul id="chantier-list" class="lieu-list"></ul>
+  </div>
+
+  <div class="card ban-card" id="card-bans">
+    <h2>Liste des travaux interdits pour lesquels aucune dérogation ne peut être accordée</h2>
+    <ul>
+      <li>Travaux exposant à des actes ou représentations à caractère pornographique ou violent (art. D4153-16 du code du travail)</li>
+      <li>Opérations susceptibles de générer une exposition à un niveau d'empoussièrement de fibres d'amiante de niveau 3 (art. D4153-18 du code du travail)</li>
+      <li>Travaux exposant aux rayonnements ionisants de catégorie A (art. D4153-21 du code du travail)</li>
+      <li>Travaux hyperbares tels que définis à l’article R4461-1 du code du travail</li>
+      <li>Travaux exposant à une température extrême (art. D4153-36 du code du travail)</li>
+      <li>Travaux d'abattage, d'euthanasie et d'équarrissage des animaux, et travaux en contact d'animaux féroces ou venimeux (art. D4153-37 du code du travail)</li>
+      <li>Conduite des quadricycles à moteur (quads agricoles) (D4153-26 du code du travail)</li>
+      <li>Travaux avec tracteurs agricoles ou forestiers non munis de structures de protection en cas de renversement (SPCR) (D4153-26 du code du travail)</li>
+      <li>Travaux avec tracteurs agricoles munis de structures de protection en cas de renversement mais non munis de système de retenue du conducteur au poste de conduite en cas de renversement (D4153-26 du code du travail)</li>
+      <li>Travaux exposant à des agents biologiques du groupe 3 ou 4 (D4153-19 du code du travail) exemples :
+        <ul>
+          <li>Travaux au contact d'animaux (bovins, caprins ou ovins) atteints de fièvre Q,</li>
+          <li>Travaux au contact d’oiseaux atteints d’ornithose.</li>
+        </ul>
+      </li>
+      <li>Travaux exposant aux vibrations mécaniques au-delà des seuils fixés par l'article R4443-2 du code du travail : pour 8 heures par jour (D4153-20 du code du travail) :
+        <ul>
+          <li>2,5 m/s² (bras et mains)</li>
+          <li>0,5 m/s² (ensemble du corps)</li>
+        </ul>
+      </li>
+      <li>Travaux d'élagage et tous travaux portant sur les arbres exposant les jeunes à un risque de hauteur, y compris travaux avec nacelle élévatrice de personnel (D4153-32 du code du travail)</li>
+      <li>Travaux temporaires en hauteur lorsque la protection collective des risques de chute de hauteur n’est pas assurée par des mesures de protection collective (D4153-31 du code du travail)</li>
+      <li>Travaux de terrassement (fouilles en tranchées) et de démolition (de murs et charpentes) exposant à un risque d’effondrement ou d’ensevelissement (D4153-25 du code du travail)</li>
+      <li>Travaux impliquant la manipulation ou l’intervention sur produits amiantés (découpage, sciage, perçage, ponçage) (D4153-18 du code du travail)</li>
+      <li>Travaux au contact d’animaux féroces ou de certains insectes (guêpes, frelons) ou en animalerie les mygales et certains serpents (D4153-37 du code du travail)</li>
+      <li>Travaux sous surveillance dans des locaux ou emplacements présentant des risques électriques de contact avec des pièces nues sous tension, sauf installations à très basse tension de sécurité, opérations sur des installations exécutées sous tension (D4153-24 du code du travail)</li>
+      <li>Port de charge supérieure à 20 % du poids du jeune sans avis médical express d’aptitude.</li>
+    </ul>
+  </div>
+
+  <div class="card blue-card wide-card" id="card-demande">
+    <h2>DEMANDE DE DÉROGATION DU CHEF D’ÉTABLISSEMENT</h2>
+
+    <div class="row" style="align-items:center;margin-bottom:6px;">
+      <label for="dem-nom" style="flex:0 0 auto;">Je soussigné(e)</label>
+      <input id="dem-nom" type="text" class="input" placeholder="Nom et prénom du demandeur">
+    </div>
+
+    <div style="margin-top:4px;font-weight:600;">Atteste :</div>
+    <div id="dem-checks">
+      <label class="checkbox-line"><input type="checkbox"> Avoir procédé à l’évaluation des risques prévue aux articles L4121-1 et suivants du code du travail.<span class="required-star">*</span></label>
+      <label class="checkbox-line"><input type="checkbox"> Avoir consigné le résultat de cette évaluation des risques dans le document unique d’évaluation des risques (DUERP).<span class="required-star">*</span></label>
+      <label class="checkbox-line"><input type="checkbox"> À la suite de cette évaluation, avoir mis en œuvre les actions de prévention prévues à l’article L.4121-3.<span class="required-star">*</span></label>
+      <label class="checkbox-line"><input type="checkbox"> Avoir respecté les obligations des livres I à V de la 4<sup>e</sup> partie du code du travail.<span class="required-star">*</span></label>
+      <label class="checkbox-line"><input type="checkbox"> Assurer l’encadrement du jeune par une personne compétente.<span class="required-star">*</span></label>
+      <label class="checkbox-line"><input type="checkbox"> Avoir vérifié que les travaux sont nécessaires à la formation professionnelle.<span class="required-star">*</span></label>
+    </div>
+
+    <div class="row" style="margin-top:8px;">
+      <div>
+        <label for="dem-lieu">Fait à</label>
+        <input id="dem-lieu" type="text" class="input" placeholder="Ville">
+      </div>
+      <div>
+        <label for="dem-date">Le</label>
+        <div class="date-row">
+          <input id="dem-date" type="date" class="input">
+          <button id="btnToday" type="button" class="btn btn-sm screen-only">Date du jour</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sign-row">
+      <div class="left">
+        <label for="dem-fonction">Qualité du signataire</label>
+        <input id="dem-fonction" type="text" class="input" placeholder="Proviseur, chef d’établissement, etc.">
+      </div>
+      <div class="right">
+        Cachet &amp; signature
+      </div>
+    </div>
+  </div>
+
+  <div class="export-row">
+    <button id="btnPdf" type="button" class="btn btn-primary">Exporter en PDF</button>
+  </div>
+
+</div>
+
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const fix = s => (s ?? '').toString().replace(/\u00A0/g,' ').trim();
+  const baseNorm = s => fix(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const hardNorm = s => baseNorm(s).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const isLinkList = arr => Array.isArray(arr) && arr.length>=1 && arr[0]==='L';
+  const escapeHtml = s => fix(s).replace(/[&<>"']/g, c => (
+    c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;'
+  ));
+  const escapeAttr = s => fix(s).replace(/["']/g, c => c==='"'?'&quot;':'&#39;');
+
+  const T_ETAB='Etablissements_edi', C_ETAB_LABEL='appellation_officielle', C_ETAB_STATUT='Statut';
+  const T_DIP='Diplomes_EN_OK', C_DIP_STATUT='Statut';
+  const T_EQ='Liste_des_equipements';
+  const T_RISK='Risques', C_RISK_LABEL='Travaux2';   // <-- utilisation explicite de Travaux2
+
+  const C_EQ_ETAB='Tampon_Etab';
+  const C_EQ_DIP='Tampon_Diplomes';
+  const C_EQ_TRAV='Tampon_Travaux';
+  const C_EQ_NAT='Nature_des_travaux';
+  const C_EQ_EQUI='Equipements_ou_produits';
+
+  const C_ETAB_TEL='tel_etab';
+  const C_ETAB_EMAIL='email_etab';
+  const C_ETAB_SIRET='siret';
+  const C_ETAB_SECT='secteur_activite';
+
+  const $overlay = $('overlay-loading');
+  const $hint = $('hint');
+  const $q = $('q'), $sugg = $('sugg');
+  const $dipBody = $('dip-body');
+  const $tbodyTrav = $('tbody-trvx');
+
+  const etabName = $('etab-nom');
+  const etabAddr = $('etab-addr');
+  const etabCpVille = $('etab-cp-ville');
+  const etabEmail = $('etab-email');
+
+  const etabTelText = $('etab-tel-text');
+  const etabTelInput = $('etab-tel-input');
+  const etabSiretText = $('etab-siret-text');
+  const etabSiretInput = $('etab-siret-input');
+  const etabSectText = $('etab-secteur-text');
+  const etabSectInput = $('etab-secteur-input');
+
+  const etabAteliers = $('etab-ateliers');
+  const etabAteliersPrint = $('etab-ateliers-print');
+
+  const $lieuInput = $('lieu-input'), $lieuList = $('lieu-list');
+  const $chantierInput = $('chantier-input'), $chantierList = $('chantier-list');
+  const $btnAddLieu = $('btnAddLieu'), $btnAddChantier = $('btnAddChantier');
+  const $btnToday = $('btnToday');
+  const $btnPdf = $('btnPdf');
+  const peopleBody = $('people-body');
+
+  let docApi;
+  async function waitDoc(maxMs=8000){
+    try{ window.grist?.ready?.({requiredAccess:'full document access'}); }catch{}
+    const t0=Date.now();
+    while(!window.grist?.docApi){
+      await new Promise(r=>setTimeout(r,120));
+      if(Date.now()-t0>maxMs) break;
+    }
+    return window.grist?.docApi || null;
+  }
+
+  docApi = await waitDoc();
+  if (!docApi){
+    $hint.textContent='Grist non accessible.';
+    $hint.classList.add('err');
+    $overlay.classList.add('hidden');
+    return;
+  }
+
+  let tE, tD, tR, tQ;
+  try{
+    [tE, tD, tR, tQ] = await Promise.all([
+      docApi.fetchTable(T_ETAB),
+      docApi.fetchTable(T_DIP),
+      docApi.fetchTable(T_RISK),
+      docApi.fetchTable(T_EQ)
+    ]);
+  }catch(e){
+    console.error(e);
+    $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
+    $hint.classList.add('err');
+    $overlay.classList.add('hidden');
+    return;
+  }
+
+  // === ETABLISSEMENTS statut ON ===
+  let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
+  (function(){
+    const keysE = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
+    if(!keysE.length){ $hint.textContent='Aucun établissement trouvé.'; return; }
+    const nE = Math.max(...keysE.map(k=>tE[k].length));
+    for(let i=0;i<nE;i++){
+      const id = Array.isArray(tE.$id) ? tE.$id[i] : (tE.id ? tE.id[i] : i);
+      const lab = fix(tE[C_ETAB_LABEL]?.[i]);
+      if(!lab) continue;
+
+      let statutOK = true;
+      if(tE[C_ETAB_STATUT]){
+        const st = fix(tE[C_ETAB_STATUT][i]).toLowerCase();
+        statutOK = (st === 'on');
       }
-      // Tu peux ajouter d’autres blocs ici
-      // {
-      //   id: "XX",
-      //   badge: "XX",
-      //   title: "Titre du bloc",
-      //   description: "Texte explicatif du bloc.",
-      //   footer: "Texte en bas du bloc.",
-      //   colorClass: "tile--blue",
-      //   url: "https://ton-lien.fr"
-      // }
-    ];
+      if(!statutOK) continue;
 
-    // =====================================================
-    // 2. CONSTRUCTION DES CARTES
-    // =====================================================
-    function buildTiles() {
-      const container = document.getElementById("tiles");
-      container.innerHTML = "";
+      const row={};
+      for(const k of keysE) row[k]=tE[k]?.[i];
+      row.rowId = id;
 
-      TILES_CONFIG.forEach(tile => {
-        const a = document.createElement("a");
-        a.className = `tile ${tile.colorClass || ""}`;
-        a.href = tile.url || "#";
-        a.target = "_blank";
-        a.rel = "noopener";
+      const normLabel = hardNorm(lab);
+      etabs.push({id,label:lab,row,searchNorm:normLabel});
+      etabIdToLabel.set(id,lab);
+      etabNormToId.set(normLabel,id);
+    }
+    $hint.textContent = `${etabs.length} établissement(s) actif(s) chargé(s).`;
+    $hint.classList.add('ok');
+  })();
 
-        const badge = document.createElement("div");
-        badge.className = "tile-badge";
-        badge.textContent = tile.badge || "";
+  function padCP(v){
+    const s=String(v??'').trim();
+    const n=s.replace(/\D/g,'');
+    return n ? n.padStart(5,'0') : '';
+  }
 
-        const content = document.createElement("div");
-        content.className = "tile-content";
+  function fillEtab(row,label){
+    etabName.textContent = label || '';
+    const addr = fix(row.adresse || row.adresse_uai || row.adresse_postale || '');
+    const cp   = padCP(row.code_postal || row.code_postal_uai || row.cp || row.cp_etab || '');
+    const ville= fix(row.ville || row.localite_acheminement_uai || row.commune || '');
+    etabAddr.textContent = addr || '';
+    etabCpVille.textContent = [cp,ville].filter(Boolean).join(' ');
 
-        const title = document.createElement("div");
-        title.className = "tile-title";
-        title.textContent = tile.title || "";
+    const tel = fix(row[C_ETAB_TEL] || row.telephone || row.tel || '');
+    const mail= fix(row[C_ETAB_EMAIL] || row.mail || '');
+    const siret = fix(row[C_ETAB_SIRET] || '');
+    const sect  = fix(row[C_ETAB_SECT] || row.secteur || row.secteur_activite || '');
 
-        const desc = document.createElement("div");
-        desc.className = "tile-desc";
-        desc.textContent = tile.description || "";
+    etabEmail.textContent = mail || '';
+    etabTelInput.value = tel; etabTelText.textContent = tel;
+    etabSiretInput.value = siret; etabSiretText.textContent = siret;
+    etabSectInput.value = sect; etabSectText.textContent = sect;
+  }
 
-        const footer = document.createElement("div");
-        footer.className = "tile-footer";
-        footer.textContent = tile.footer || "";
+  // === DIPLÔMES statut ON ===
+  let dipIdToLabel = new Map();
+  let allowedDipNorms = new Set();
+  (function(){
+    const keysD = Object.keys(tD).filter(k=>Array.isArray(tD[k]));
+    if(!keysD.length) return;
+    const nD = Math.max(...keysD.map(k=>tD[k].length));
+    const DIP_LABEL_COL = (()=>{
+      const norm = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const want=['Concatenation','concatenation','libelle','libellé','intitule','intitulé','diplome','diplôme'];
+      for(const w of want){
+        const k = keysD.find(x=>norm(x).replace(/^\$/,'')===norm(w));
+        if(k) return k;
+      }
+      return keysD[0];
+    })();
+    for(let i=0;i<nD;i++){
+      const id = Array.isArray(tD.$id) ? tD.$id[i] : (tD.id ? tD.id[i] : i);
+      const statut = tD[C_DIP_STATUT] ? fix(tD[C_DIP_STATUT][i]).toLowerCase() : 'on';
+      if(tD[C_DIP_STATUT] && statut!=='on') continue;
+      const label = fix(tD[DIP_LABEL_COL]?.[i]);
+      if(label){
+        dipIdToLabel.set(id,label);
+        const n = hardNorm(label);
+        if(n) allowedDipNorms.add(n);
+      }
+    }
+  })();
 
-        content.appendChild(title);
-        content.appendChild(desc);
-        content.appendChild(footer);
+  // === RISQUES : usage de Travaux2 ===
+  let travIdToLabel = new Map();
+  (function(){
+    const keysR = Object.keys(tR).filter(k=>Array.isArray(tR[k]));
+    if(!keysR.length) return;
+    const nR = Math.max(...keysR.map(k=>tR[k].length));
 
-        const pill = document.createElement("div");
-        pill.className = "tile-pill";
-        pill.textContent = "Ouvrir";
+    const RISK_LABEL_COL =
+      keysR.includes(C_RISK_LABEL)
+        ? C_RISK_LABEL
+        : (keysR.find(k=>/travaux2|travaux|libell/i.test(k)) || keysR[0]);
 
-        a.appendChild(badge);
-        a.appendChild(content);
-        a.appendChild(pill);
+    for(let i=0;i<nR;i++){
+      const id = Array.isArray(tR.$id) ? tR.$id[i] : (tR.id ? tR.id[i] : i);
+      const lab = fix(tR[RISK_LABEL_COL]?.[i]);
+      if(id!=null && lab) travIdToLabel.set(id,lab);
+    }
+  })();
 
-        container.appendChild(a);
-      });
+  // === LISTE DES EQUIPEMENTS ===
+  let equipRows=[], etabIdToEquipRows=new Map(), etabLabelToEquipRows=new Map();
+
+  (function parseEquip(){
+    const keysQ = Object.keys(tQ).filter(k=>Array.isArray(tQ[k]));
+    if(!keysQ.length) return;
+    const nQ = Math.max(...keysQ.map(k=>tQ[k].length));
+
+    // découpage générique (équipements, travaux, etc.)
+    const splitListText = v => {
+      const s=(v==null)?'':String(v);
+      return s.replace(/[\[\]()]/g,' ')
+              .split(/[,;/|]\s*|\n|\r/)
+              .map(x=>x.trim()).filter(Boolean);
+    };
+    // découpage spécifique DIPLÔMES (pas de split sur la virgule)
+    const splitDiplListText = v => {
+      const s=(v==null)?'':String(v);
+      return s.replace(/[\[\]()]/g,' ')
+              .split(/[;\/|]\s*|\n|\r/)
+              .map(x=>x.trim()).filter(Boolean);
+    };
+
+    function pick(want,match){ return keysQ.includes(want)?want:(keysQ.find(k=>match(k))||null); }
+    const cEtab = pick(C_EQ_ETAB, k=>hardNorm(k)===hardNorm(C_EQ_ETAB));
+    const cDip  = pick(C_EQ_DIP , k=>hardNorm(k)===hardNorm(C_EQ_DIP ));
+    const cTrav = pick(C_EQ_TRAV, k=>hardNorm(k)===hardNorm(C_EQ_TRAV));
+    const cNat  = pick(C_EQ_NAT , k=>/nature/i.test(hardNorm(k)));
+    const cEqui = pick(C_EQ_EQUI, k=>/equip/i.test(hardNorm(k)));
+
+    const sanitizeLabels = list=>{
+      const seen=new Set(), out=[];
+      for(const raw of list||[]){
+        const lab=(raw||'').toString().trim();
+        if(!lab) continue;
+        const n=hardNorm(lab);
+        if(!n || seen.has(n)) continue;
+        seen.add(n);
+        out.push({raw:lab,n});
+      }
+      return out;
+    };
+
+    const travCellToLabels = cell=>{
+      if(isLinkList(cell)){
+        const labs = cell.slice(1).map(x=>{
+          if(typeof x==='number') return travIdToLabel.get(x) ?? String(x);
+          if(typeof x==='object' && x && 'id' in x) return travIdToLabel.get(x.id) ?? String(x.label ?? x.id);
+          return String(x);
+        }).filter(Boolean);
+        return sanitizeLabels(labs).map(o=>o.raw);
+      }
+      return sanitizeLabels(splitListText(cell)).map(o=>o.raw);
+    };
+
+    const parseDiplomaLabels = cell=>{
+      const collected=[];
+      const pushIfAllowed = (lab)=>{
+        const n=hardNorm(lab);
+        if(!n || !allowedDipNorms.has(n)) return;
+        collected.push(lab);
+      };
+
+      if(isLinkList(cell)){
+        for(const x of cell.slice(1)){
+          if(typeof x==='number'){
+            const lab = dipIdToLabel.get(x);
+            if(lab) pushIfAllowed(lab);
+          }else if(typeof x==='object'&&x&&'id'in x){
+            const lab = dipIdToLabel.get(x.id);
+            if(lab) pushIfAllowed(lab);
+          }else if(typeof x==='string'&&x!=='L'){
+            pushIfAllowed(x);
+          }
+        }
+      }else{
+        // ICI : on n'utilise PAS la virgule comme séparateur
+        for(const part of splitDiplListText(cell)){
+          pushIfAllowed(part);
+        }
+      }
+      return sanitizeLabels(collected).map(o=>o.raw);
+    };
+
+    const parseMulti = cell=>sanitizeLabels(splitListText(cell)).map(o=>o.raw);
+
+    for(let i=0;i<nQ;i++){
+      const et = (()=>{
+        if(isLinkList(tQ[cEtab]?.[i])){
+          const cell=tQ[cEtab][i];
+          const ids=[], labels=[];
+          for(const x of cell.slice(1)){
+            if(typeof x==='number'){ ids.push(x); labels.push(etabIdToLabel.get(x)??String(x)); }
+            else if(typeof x==='object'&&x&&'id'in x){ ids.push(x.id); labels.push(String(x.label??x.id)); }
+            else if(typeof x==='string'&&x!=='L'){ labels.push(x); }
+          }
+          return {ids:[...new Set(ids)], labels:sanitizeLabels(labels).map(o=>o.raw)};
+        }
+        const parts=sanitizeLabels(splitDiplListText(tQ[cEtab]?.[i])); // pour les noms d'étab, pas critique si virgule
+        const ids=[], labels=[];
+        for(const p of parts){
+          labels.push(p.raw);
+          const id=etabNormToId.get(p.n);
+          if(id!=null){ ids.push(id); }
+        }
+        return {ids:[...new Set(ids)], labels};
+      })();
+
+      const dipLabels = parseDiplomaLabels(tQ[cDip]?.[i]);
+      const travLabs = travCellToLabels(tQ[cTrav]?.[i]);
+      const nats     = parseMulti(tQ[cNat]?.[i]);
+      const equis    = parseMulti(tQ[cEqui]?.[i]);
+      const travList = travLabs.length ? travLabs : ['Travaux'];
+
+      const emit = (travLabel,nat,equi)=>{
+        const row={
+          _rowIndex:i,
+          etabIds:et.ids,
+          etabLabels:et.labels,
+          dipLabels,
+          trav:travLabel||'Travaux',
+          nat:(nat&&nat.trim())?nat.trim():'—',
+          equi:(equi&&equi.trim())?equi.trim():'—',
+          travN:hardNorm(travLabel||'Travaux')
+        };
+        equipRows.push(row);
+        for(const id of et.ids){
+          if(!etabIdToEquipRows.has(id)) etabIdToEquipRows.set(id,[]);
+          etabIdToEquipRows.get(id).push(row);
+        }
+        for(const L of et.labels){
+          const key=hardNorm(L);
+          if(!etabLabelToEquipRows.has(key)) etabLabelToEquipRows.set(key,[]);
+          etabLabelToEquipRows.get(key).push(row);
+        }
+      };
+
+      const expandForTrav = travLabel=>{
+        if(equis.length && nats.length && equis.length===nats.length){
+          for(let k=0;k<equis.length;k++) emit(travLabel,nats[k],equis[k]);
+          return;
+        }
+        const E = equis.length?equis:['—'];
+        const N = nats.length?nats:['—'];
+        for(const e of E) for(const n of N) emit(travLabel,n,e);
+        if(!equis.length && !nats.length) emit(travLabel,'—','—');
+      };
+
+      for(const travLabel of travList) expandForTrav(travLabel);
+    }
+  })();
+
+  function rankEtab(q){
+    const qn=hardNorm(q);
+    if(!qn||qn.length<2) return [];
+    return etabs
+      .map(e=>{
+        const ln=e.searchNorm;
+        let s=0;
+        if(ln.startsWith(qn)) s+=3;
+        if(ln.includes(qn)) s+=2;
+        return {lab:e.label,s};
+      })
+      .filter(x=>x.s>0)
+      .sort((a,b)=>b.s-a.s||a.lab.localeCompare(b.lab,'fr'))
+      .map(x=>x.lab);
+  }
+  function updateSugg(q){
+    $sugg.innerHTML='';
+    for(const lab of rankEtab(q)){
+      const o=document.createElement('option');
+      o.value=lab;
+      $sugg.appendChild(o);
+    }
+  }
+
+  let currentEtabId=null, currentEtabRow=null, currentEtabLabel='';
+
+  function etabMatchesRows(label,id){
+    const rowsById = (id!=null) ? (etabIdToEquipRows.get(id)||[]) : [];
+    if(rowsById.length) return {rows:rowsById, mode:'byId'};
+
+    const ln = hardNorm(label||'');
+    if(!ln) return {rows:[],mode:'none'};
+
+    let rows = (etabLabelToEquipRows.get(ln)||[]);
+    if(!rows.length){
+      for(const [k,v] of etabLabelToEquipRows.entries()){
+        if(ln.includes(k) || k.includes(ln)){
+          rows = rows.concat(v);
+        }
+      }
+      if(rows.length){
+        const seen=new Set();
+        rows = rows.filter(r=>{
+          const key = r._rowIndex;
+          if(seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return {rows,mode:'approx'};
+      }
+    }
+    return {rows,mode:rows.length?'byLabel':'none'};
+  }
+
+  function rebuildDiplomaTable(){
+    $dipBody.innerHTML='';
+    if(!currentEtabId){
+      $dipBody.innerHTML='<tr><td colspan="2" class="small">Sélectionnez d’abord un établissement…</td></tr>';
+      return;
+    }
+    const match = etabMatchesRows(currentEtabLabel,currentEtabId);
+    const preferred=new Map();
+
+    for(const r of match.rows){
+      for(const lab of (r.dipLabels||[])){
+        const n=hardNorm(lab);
+        if(!n || preferred.has(n)) continue;
+        preferred.set(n,lab);
+      }
     }
 
-    buildTiles();
-  </script>
+    if(!preferred.size){
+      $dipBody.innerHTML='<tr><td colspan="2" class="small">— aucun diplôme lié (Statut ON) —</td></tr>';
+      return;
+    }
+    const labels=[...preferred.values()].sort((a,b)=>a.localeCompare(b,'fr'));
+    for(const lab of labels){
+      const n=hardNorm(lab);
+      const tr=document.createElement('tr');
+      tr.className='dip-row';
+      tr.dataset.norm=n;
+      tr.dataset.print='1';
+      tr.innerHTML=`
+        <td class="center sel-col"><input type="checkbox" class="dip-check" data-norm="${n}" checked></td>
+        <td>${escapeHtml(lab)}</td>
+      `;
+      $dipBody.appendChild(tr);
+    }
+    renderTravaux();
+  }
+
+  function getCheckedDiplomaNorms(){
+    const set=new Set();
+    document.querySelectorAll('.dip-check').forEach(cb=>{
+      const n=cb.getAttribute('data-norm');
+      const tr=cb.closest('tr');
+      if(cb.checked){
+        set.add(n);
+        if(tr) tr.dataset.print='1';
+      }else{
+        if(tr) tr.dataset.print='0';
+      }
+    });
+    return set;
+  }
+
+  function renderTravaux(){
+    $tbodyTrav.innerHTML='';
+    if(!currentEtabId){
+      $tbodyTrav.innerHTML='<tr><td colspan="3" class="small">Sélectionnez un établissement…</td></tr>';
+      return;
+    }
+    const selected = getCheckedDiplomaNorms();
+    if(!selected.size){
+      $tbodyTrav.innerHTML='<tr><td colspan="3" class="small">Cochez au moins une formation…</td></tr>';
+      return;
+    }
+    const match = etabMatchesRows(currentEtabLabel,currentEtabId);
+    const rows = match.rows.filter(r=>(r.dipLabels||[]).some(lab=>selected.has(hardNorm(lab))));
+
+    if(!rows.length){
+      $tbodyTrav.innerHTML='<tr><td colspan="3" class="small">Aucun enregistrement correspondant.</td></tr>';
+      return;
+    }
+
+    const byTrav=new Map();
+
+    for(const r of rows){
+      const label=r.trav||'Travaux';
+      const keyTrav=r.travN||hardNorm(label);
+      const equi=(r.equi&&r.equi.trim())?r.equi.trim():'—';
+      const nat=(r.nat&&r.nat.trim())?r.nat.trim():'—';
+
+      if(!byTrav.has(keyTrav)) byTrav.set(keyTrav,{label,pairs:new Map()});
+      const g=byTrav.get(keyTrav);
+      const pk=`${equi}__${nat}`;
+      if(!g.pairs.has(pk)){
+        g.pairs.set(pk,{equi,nat});
+      }
+    }
+
+    const collate=(a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'});
+    const groups=[...byTrav.entries()].sort((A,B)=>collate(A[1].label,B[1].label));
+
+    for(const [travKey,g] of groups){
+      const tr=document.createElement('tr');
+      tr.dataset.print='1';
+
+      const equipParts=[];
+      const natParts=[];
+      for(const {equi,nat} of g.pairs.values()){
+        equipParts.push(
+          `<label><input type="checkbox" class="equip-check" checked data-trav="${escapeAttr(travKey)}" data-equi="${escapeAttr(equi)}" data-nat="${escapeAttr(nat)}"> ${escapeHtml(equi)}</label>`
+        );
+        natParts.push(escapeHtml(nat));
+      }
+
+      tr.innerHTML = `
+        <td><span class="travaux-title">${escapeHtml(g.label)}</span></td>
+        <td>${equipParts.join('<br>')}</td>
+        <td>${natParts.join('<br>')}</td>
+      `;
+      $tbodyTrav.appendChild(tr);
+    }
+
+    $tbodyTrav.querySelectorAll('.equip-check').forEach(cb=>{
+      cb.addEventListener('change',()=>{
+        const tr=cb.closest('tr');
+        if(!tr) return;
+        const anyOn = !!tr.querySelector('.equip-check:checked');
+        tr.dataset.print = anyOn ? '1' : '0';
+      });
+    });
+  }
+
+  function onSelectEtab(val){
+    let rec=etabs.find(e=>e.label===fix(val));
+    if(!rec && val && val.trim()){
+      const candidates = rankEtab(val);
+      if(candidates.length){
+        const bestLabel = candidates[0];
+        rec = etabs.find(e=>e.label===bestLabel);
+        if(rec){
+          $q.value = rec.label;
+        }
+      }
+    }
+    currentEtabId=rec?.id ?? null;
+    currentEtabRow=rec?.row ?? null;
+    currentEtabLabel=rec?.label ?? '';
+    if(!rec){
+      etabName.textContent='';
+      etabAddr.textContent='';
+      etabCpVille.textContent='';
+      etabEmail.textContent='';
+      etabTelInput.value=''; etabTelText.textContent='';
+      etabSiretInput.value=''; etabSiretText.textContent='';
+      etabSectInput.value=''; etabSectText.textContent='';
+      etabAteliers.value=''; etabAteliersPrint.textContent='';
+      $dipBody.innerHTML='<tr><td colspan="2" class="small">Sélectionnez d’abord un établissement…</td></tr>';
+      $tbodyTrav.innerHTML='<tr><td colspan="3" class="small">Choisissez un établissement…</td></tr>';
+      return;
+    }
+    fillEtab(currentEtabRow,currentEtabLabel);
+    rebuildDiplomaTable();
+  }
+
+  $q.addEventListener('input',()=>{
+    updateSugg($q.value);
+  });
+  $q.addEventListener('change',()=>onSelectEtab($q.value));
+  $q.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      onSelectEtab($q.value);
+    }
+  });
+
+  document.addEventListener('change',e=>{
+    if(e.target.classList.contains('dip-check')){
+      renderTravaux();
+    }
+  });
+
+  // MAJ champs Etab en base
+  async function updateEtabField(field, value){
+    if(!currentEtabRow || currentEtabRow.rowId==null) return;
+    const updates={};
+    updates[field] = value || null;
+    try{
+      await docApi.applyUserActions([['UpdateRecord',T_ETAB,currentEtabRow.rowId,updates]]);
+      currentEtabRow[field]=value||null;
+    }catch(e){
+      console.error('Update etab field',field,e);
+    }
+  }
+  etabTelInput.addEventListener('change',()=>{
+    const v=etabTelInput.value.trim();
+    etabTelText.textContent=v;
+    updateEtabField(C_ETAB_TEL,v);
+  });
+  etabSiretInput.addEventListener('change',()=>{
+    const v=etabSiretInput.value.trim();
+    etabSiretText.textContent=v;
+    updateEtabField(C_ETAB_SIRET,v);
+  });
+  etabSectInput.addEventListener('change',()=>{
+    const v=etabSectInput.value.trim();
+    etabSectText.textContent=v;
+    updateEtabField(C_ETAB_SECT,v);
+  });
+
+  // Lieux d’intervention
+  function addLieu(listEl,text){
+    if(!text) return;
+    const li=document.createElement('li');
+    li.className='lieu-item';
+    li.dataset.print='1';
+    li.textContent=text;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn btn-sm screen-only';
+    btn.textContent='Supprimer';
+    btn.addEventListener('click',()=>li.remove());
+    li.appendChild(btn);
+    listEl.appendChild(li);
+  }
+
+  function addLieuFromInput(inputEl,listEl){
+    const v=inputEl.value.trim();
+    if(!v) return;
+    addLieu(listEl,v);
+    inputEl.value='';
+  }
+
+  if($btnAddLieu){
+    $btnAddLieu.addEventListener('click',()=>addLieuFromInput($lieuInput,$lieuList));
+  }
+  if($btnAddChantier){
+    $btnAddChantier.addEventListener('click',()=>addLieuFromInput($chantierInput,$chantierList));
+  }
+
+  $lieuInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      addLieuFromInput($lieuInput,$lieuList);
+    }
+  });
+  $chantierInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      addLieuFromInput($chantierInput,$chantierList);
+    }
+  });
+
+  // Coller tableau Excel personnes compétentes
+  peopleBody.addEventListener('paste',e=>{
+    const td = e.target.closest('td');
+    if(!td) return;
+    e.preventDefault();
+    const data = (e.clipboardData || window.clipboardData).getData('text');
+    if(!data) return;
+    const rows = data.split(/\r?\n/).filter(r=>r.trim());
+    if(!rows.length) return;
+
+    const allRows = Array.from(peopleBody.rows);
+    let startRowIndex = allRows.indexOf(td.parentNode);
+    if(startRowIndex < 0) startRowIndex = 0;
+
+    rows.forEach((line,idx)=>{
+      const cols = line.split(/\t/);
+      let tr;
+      if(idx===0){
+        tr = td.parentNode;
+      }else{
+        tr = document.createElement('tr');
+        for(let c=0;c<3;c++){
+          const cell = document.createElement('td');
+          cell.contentEditable = 'true';
+          cell.innerHTML='&nbsp;';
+          tr.appendChild(cell);
+        }
+        peopleBody.appendChild(tr);
+      }
+      const cells = tr.cells;
+      for(let c=0;c<3 && c<cols.length;c++){
+        cells[c].textContent = cols[c];
+      }
+    });
+  });
+
+  if($btnToday){
+    $btnToday.addEventListener('click',()=>{
+      const d=new Date();
+      const yyyy=d.getFullYear();
+      const mm=String(d.getMonth()+1).padStart(2,'0');
+      const dd=String(d.getDate()).padStart(2,'0');
+      $('dem-date').value=`${yyyy}-${mm}-${dd}`;
+    });
+  }
+
+  function syncAteliersPrint(){
+    etabAteliersPrint.textContent = etabAteliers.value;
+  }
+  etabAteliers.addEventListener('input',syncAteliersPrint);
+  window.addEventListener('beforeprint',syncAteliersPrint);
+
+  function checkRequired(){
+    const missing=[];
+    if(!$q.value.trim()){
+      missing.push("Recherche — établissement");
+    }
+    if(!etabAteliers.value.trim()){
+      missing.push("Établissements / ateliers / chantiers concernés");
+    }
+    if(!etabTelInput.value.trim()){
+      missing.push("Téléphone de l’établissement");
+    }
+    if(!etabSiretInput.value.trim()){
+      missing.push("SIRET de l’établissement");
+    }
+    if(!etabSectInput.value.trim()){
+      missing.push("Secteur d’activité");
+    }
+    if(!peopleBody.textContent.trim()){
+      missing.push("Personnes compétentes pour encadrer les jeunes");
+    }
+    if(!$lieuList.querySelector('li')){
+      missing.push("Adresse ou zone géographique des lieux d’intervention connus");
+    }
+    if(!$chantierList.querySelector('li')){
+      missing.push("Ateliers / chantiers concernés (entreprises de grande taille)");
+    }
+    if(!$('dem-nom').value.trim()){
+      missing.push("Nom et prénom du demandeur");
+    }
+    if(!$('dem-lieu').value.trim()){
+      missing.push("Lieu de signature (Fait à)");
+    }
+    if(!$('dem-date').value.trim()){
+      missing.push("Date de signature (Le)");
+    }
+    if(!$('dem-fonction').value.trim()){
+      missing.push("Qualité du signataire");
+    }
+    const allChecks = Array.from(document.querySelectorAll('#dem-checks input[type="checkbox"]'));
+    if(allChecks.some(cb=>!cb.checked)){
+      missing.push("Toutes les attestations doivent être cochées");
+    }
+
+    if(missing.length){
+      alert("Les champs suivants sont obligatoires :\n- "+missing.join("\n- "));
+      return false;
+    }
+    return true;
+  }
+
+  $btnPdf.addEventListener('click',()=>{
+    if(!checkRequired()) return;
+    syncAteliersPrint();
+    window.print();
+  });
+
+  $overlay.classList.add('hidden');
+})();
+</script>
 </body>
 </html>
