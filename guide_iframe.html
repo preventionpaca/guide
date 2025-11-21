@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Guide prévention PACA – iframe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{
+      margin:0;
+      background:#041221;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      padding:10px;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    .iframe-wrapper{
+      width:100%;
+      max-width:1180px;
+      height:720px;              /* hauteur visible */
+      border-radius:20px;
+      overflow:hidden;
+      background:#000;
+      border:2px solid #111827;
+    }
+    .grist-frame{
+      position:relative;
+      width:100%;
+      height:calc(100% + 42px);  /* on agrandit un peu pour compenser le décalage */
+      border:0;
+      top:-42px;                 /* on remonte pour cacher la barre Grist */
+    }
+    @media(max-width:900px){
+      .iframe-wrapper{height:600px;}
+      .grist-frame{height:calc(600px + 42px);}
+    }
+    @media(max-width:600px){
+      .iframe-wrapper{height:520px;}
+      .grist-frame{height:calc(520px + 42px);}
+    }
+  </style>
+</head>
+<body>
+  <div class="iframe-wrapper">
+    <iframe
+      class="grist-frame"
+      src="https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/78?embed=true"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+    ></iframe>
+  </div>
+</body>
+</html>
