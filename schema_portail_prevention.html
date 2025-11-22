@@ -1,92 +1,193 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <title>Schéma – Portail Prévention PACA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+/* ================= SCHEMA PORTAIL — STYLE GÉNÉRAL ================= */
 
-  <style>
-    :root {
-      --dark-bg: #041221;
-      --dark-card: #0b2238;
-      --dark-border: #f97316;
-      --dark-text: #e5f0ff;
-    }
+.schema-wrapper{
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 20px;
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  color: #e5f0ff;
+}
 
-    * { box-sizing: border-box; }
+.schema-title{
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
 
-    body {
-      margin: 0;
-      padding: 24px;
-      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      background: radial-gradient(circle at top, #07192a 0, #041221 45%, #020617 100%);
-      color: var(--dark-text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
+.schema-sub{
+  text-align: center;
+  font-size: .95rem;
+  color: #9ca3af;
+  margin-bottom: 30px;
+}
 
-    h1 {
-      font-size: 1.4rem;
-      margin: 0 0 4px 0;
-      text-align: center;
-    }
 
-    p.subtitle {
-      margin: 0 0 18px 0;
-      font-size: 0.9rem;
-      opacity: 0.8;
-      text-align: center;
-    }
+/* ================= CARTES ================= */
 
-    .schema-wrapper {
-      width: 100%;
-      max-width: 1200px;
-      background: #020617;
-      border-radius: 18px;
-      border: 2px solid var(--dark-border);
-      padding: 12px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    }
+.schema-card{
+  background:#0b2238;
+  border:2px solid #f97316;
+  border-radius:16px;
+  padding:18px 20px;
+  margin:20px auto;
+  position:relative;
+  box-shadow:0 20px 40px rgba(0,0,0,0.45);
+}
 
-    .schema-wrapper img,
-    .schema-wrapper object,
-    .schema-wrapper iframe {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-radius: 10px;
-      background: #020617;
-    }
+.schema-card h3{
+  margin:0 0 6px 0;
+  font-size:1.25rem;
+}
 
-    .footer-note {
-      margin-top: 10px;
-      font-size: 0.8rem;
-      opacity: 0.75;
-      text-align: center;
-    }
-  </style>
-</head>
+.schema-card p{
+  margin:4px 0;
+  font-size:.92rem;
+  color:#cbd5f5;
+}
 
-<body>
-  <h1>Schéma du portail Prévention PACA</h1>
-  <p class="subtitle">
-    Architecture fonctionnelle&nbsp;: page d’accueil, espace DFPT, espace administrateur, liens principaux.
-  </p>
+.schema-card ul{
+  margin:6px 0 0 20px;
+  padding:0;
+}
 
-  <div class="schema-wrapper">
-    <!--
-      Si le fichier SVG est dans le même dossier que cette page HTML,
-      tu n’as rien à changer.
-      Sinon, adapte simplement le chemin du src (ex. "img/schema_portail_prevention_styled.svg").
-    -->
-    <img src="schema_portail_prevention_styled.svg"
-         alt="Schéma de la structure du portail Prévention PACA" />
+.schema-card li{
+  margin:2px 0;
+  font-size:.90rem;
+}
+
+/* ================= FLÈCHES ================= */
+
+.arrow{
+  width:2px;
+  height:40px;
+  background:#9ca3af;
+  margin:0 auto;
+  position:relative;
+}
+
+.arrow:after{
+  content:"";
+  width:0;
+  height:0;
+  border-left:6px solid transparent;
+  border-right:6px solid transparent;
+  border-top:10px solid #9ca3af;
+  position:absolute;
+  bottom:-10px;
+  left:50%;
+  transform:translateX(-50%);
+}
+
+/* ================= TOKENS ================= */
+
+.token-row{
+  display:flex;
+  justify-content:center;
+  gap:16px;
+  margin-bottom:20px;
+}
+
+.token{
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:.85rem;
+  border:1px solid #f97316;
+  background:#111827;
+}
+
+.token.admin{ border-color:#000; }
+.token.dfpt{ border-color:#22c55e; }
+
+</style>
+
+<div class="schema-wrapper">
+
+  <div class="schema-title">Schéma fonctionnel du portail Prévention PACA</div>
+  <div class="schema-sub">Organisation des pages, liens et espaces clés</div>
+
+  <!-- Tokens -->
+  <div class="token-row">
+    <div class="token">Portail prévention PACA</div>
+    <div class="token admin">Accès administrateur</div>
+    <div class="token dfpt">Accès Directeurs Délégués</div>
   </div>
 
-  <p class="footer-note">
-    Version schématique – à intégrer dans le guide, le portail ou en support de présentation.
-  </p>
-</body>
-</html>
+  <!-- Accueil -->
+  <div class="schema-card">
+    <h3>Page d’accueil – Portail Prévention PACA</h3>
+    <p>En-tête : logos institutionnels, bandeau supérieur, bouton mode clair/sombre.</p>
+    <p>Cartouche d’accueil, menu des trois accès, raccourcis vers :</p>
+    <ul>
+      <li>Guide de prévention</li>
+      <li>Ressources</li>
+      <li>Base équipements & produits</li>
+      <li>Contact</li>
+    </ul>
+  </div>
+
+  <div class="arrow"></div>
+
+  <!-- Portail prévention -->
+  <div class="schema-card">
+    <h3>Portail prévention PACA (accès principal)</h3>
+    <ul>
+      <li><strong>Présentation / mode d’emploi</strong></li>
+      <li><strong>Guide de prévention</strong>
+        <ul>
+          <li>Document de travail (en ligne)</li>
+          <li>Exemple PDF</li>
+        </ul>
+      </li>
+      <li><strong>Ressources : tutoriels, webinaires, supports sécurité</strong></li>
+      <li><strong>Base équipements & produits</strong>
+        <ul>
+          <li>Vue alphabétique</li>
+          <li>Travaux réglementés : interdit / dérogation / autorisé</li>
+          <li>Filtres : diplôme, établissement</li>
+        </ul>
+      </li>
+      <li><strong>Contact</strong> : référents régionaux & académiques</li>
+    </ul>
+  </div>
+
+  <div class="arrow"></div>
+
+  <!-- DFPT -->
+  <div class="schema-card">
+    <h3>Espace Directeurs Délégués (DFPT)</h3>
+    <ul>
+      <li>Tableau de bord DFPT</li>
+      <li>Mise à jour de la base :
+        <ul>
+          <li>Ajout / modification matériels</li>
+          <li>Ajout / modification produits</li>
+        </ul>
+      </li>
+      <li>Association établissement / diplômes / équipements</li>
+      <li>Outils réglementaires :
+        <ul>
+          <li>Formulaire de dérogation (bloc jaune)</li>
+          <li>Exemples de fiches de poste</li>
+          <li>Avis médicaux types</li>
+        </ul>
+      </li>
+      <li>Aide / mode d’emploi DFPT</li>
+    </ul>
+  </div>
+
+  <div class="arrow"></div>
+
+  <!-- Admin -->
+  <div class="schema-card">
+    <h3>Espace administrateur</h3>
+    <ul>
+      <li>Paramétrages généraux du site</li>
+      <li>Gestion des utilisateurs & droits</li>
+      <li>Gestion des tables & référentiels</li>
+      <li>Maintenance fonctionnelle et technique</li>
+    </ul>
+  </div>
+
+</div>
