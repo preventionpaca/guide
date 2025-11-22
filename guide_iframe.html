@@ -229,7 +229,16 @@
       // Récupération de l’URL passée après #
       // ex : guide_iframe.html#https://docs.getgrist.com/...
       let url = window.location.hash ? window.location.hash.slice(1) : '';
-      url = decodeURIComponent(url).trim();
+      url = url.trim();
+
+      // On essaye de décoder, mais sans planter si jamais il y a un % bizarre
+      try {
+        if (url) {
+          url = decodeURIComponent(url);
+        }
+      } catch (e) {
+        console.warn('decodeURIComponent a échoué, on garde l’URL brute :', e);
+      }
 
       if (!url) {
         crumb.textContent = 'Aucune vue sélectionnée';
@@ -244,10 +253,28 @@
         // On affiche le spinner + message
         showMessage('Chargement de la vue…');
 
+        let loaded = false;
+
         frame.addEventListener('load', () => {
-          // Quand la vue a fini de charger, on enlève l’overlay
+          loaded = true;
           hideMessage();
         });
+
+        // Fallback : si au bout de 7 secondes rien n’a chargé,
+        // on arrête le spinner et on explique le problème.
+        setTimeout(() => {
+          if (!loaded) {
+            messageText.innerHTML =
+              'Impossible de charger la vue demandée.<br><br>' +
+              'Il est possible que le site cible bloque l’affichage dans une iframe ' +
+              '(ex. certains services externes), ou que l’URL soit incorrecte.';
+            // On arrête seulement l’animation visuelle en supprimant le spinner
+            const spin = messageBox.querySelector('.spinner');
+            if (spin) {
+              spin.style.display = 'none';
+            }
+          }
+        }, 7000);
 
         frame.src = url;
 
