@@ -92,7 +92,7 @@
     #message {
       position: absolute;
       inset: 0;
-      display: none; /* par défaut caché, on ne l’affiche que s’il manque une URL */
+      display: none; /* par défaut caché */
       align-items: center;
       justify-content: center;
       padding: 20px;
@@ -114,12 +114,6 @@
       background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
       z-index: 10;
       transition: opacity 250ms ease-out;
-    }
-
-    #overlay.is-hidden {
-      opacity: 0;
-      pointer-events: none;
-      display: none;
     }
 
     .spinner {
@@ -159,10 +153,14 @@
 
   <div id="shell" class="frame-shell">
     <iframe id="gristFrame" loading="lazy" referrerpolicy="no-referrer"></iframe>
+
+    <!-- Overlay spinner -->
     <div id="overlay">
       <div class="spinner"></div>
       <p>Chargement de la vue…</p>
     </div>
+
+    <!-- Message d’erreur / aide -->
     <div id="message"></div>
   </div>
 
@@ -174,7 +172,7 @@
       const msg     = document.getElementById('message');
       const backBtn = document.getElementById('backBtn');
 
-      // Bouton retour : historique si possible, sinon retour au portail
+      // Bouton retour : historique si possible, sinon retour portail
       backBtn.addEventListener('click', () => {
         if (window.history.length > 1) {
           window.history.back();
@@ -188,9 +186,11 @@
       url = decodeURIComponent(url.trim());
 
       if (!url) {
-        // Pas d'URL → on cache l’iframe, on affiche le message, on coupe le spinner
+        // Pas d'URL → pas d'iframe, pas de spinner, juste le message
         frame.style.display = 'none';
-        overlay.classList.add('is-hidden');
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
         msg.style.display = 'flex';
         msg.innerHTML =
           'Aucune URL fournie.<br><br>' +
@@ -199,8 +199,8 @@
         return;
       }
 
-      // On a une URL : on prépare le cadre Grist
-      msg.style.display = 'none';     // <<< IMPORTANT : le message ne recouvre plus l’iframe
+      // On a une URL valide → on cache le message, on affiche l’iframe
+      msg.style.display = 'none';
       msg.textContent   = "";
       frame.style.display = 'block';
       frame.src = url;
@@ -209,26 +209,28 @@
         shell.classList.add('is-grist');
       }
 
-      // Gestion du spinner : on le garde quelques secondes APRÈS le load
-      const EXTRA_AFTER_LOAD_MS = 12000;   // durée mini après "load"
-      const MAX_SPINNER_MS      = 25000;   // sécurité anti-spinner infini
+      // Durées de spinner
+      const EXTRA_AFTER_LOAD_MS = 15000;  // 15 s après "load"
+      const MAX_SPINNER_MS      = 25000;  // sécurité max 25 s
       let loadHandled           = false;
 
-      function hideOverlay() {
-        overlay.classList.add('is-hidden');
+      function removeOverlay() {
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay); // supprimé → plus rien ne peut gêner les clics
+        }
       }
 
-      // Quand l’iframe signale "load", on attend encore un peu
+      // Quand l’iframe signale "load", on attend encore un peu pour laisser Grist finir son "Still working"
       frame.addEventListener('load', () => {
         if (loadHandled) return;
         loadHandled = true;
-        setTimeout(hideOverlay, EXTRA_AFTER_LOAD_MS);
+        setTimeout(removeOverlay, EXTRA_AFTER_LOAD_MS);
       });
 
-      // Sécurité : au bout de MAX_SPINNER_MS, on coupe quoi qu’il arrive
+      // Sécurité : si jamais l’event load ne vient pas, on enlève l’overlay au bout de MAX_SPINNER_MS
       setTimeout(() => {
         if (!loadHandled) {
-          hideOverlay();
+          removeOverlay();
         }
       }, MAX_SPINNER_MS);
     })();
