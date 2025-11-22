@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Schéma – Portail Prévention PACA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --dark-bg: #041221;
+      --dark-card: #0b2238;
+      --dark-border: #f97316;
+      --dark-text: #e5f0ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background: radial-gradient(circle at top, #07192a 0, #041221 45%, #020617 100%);
+      color: var(--dark-text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 4px 0;
+      text-align: center;
+    }
+
+    p.subtitle {
+      margin: 0 0 18px 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .schema-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      background: #020617;
+      border-radius: 18px;
+      border: 2px solid var(--dark-border);
+      padding: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .schema-wrapper img,
+    .schema-wrapper object,
+    .schema-wrapper iframe {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      background: #020617;
+    }
+
+    .footer-note {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      opacity: 0.75;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Schéma du portail Prévention PACA</h1>
+  <p class="subtitle">
+    Architecture fonctionnelle&nbsp;: page d’accueil, espace DFPT, espace administrateur, liens principaux.
+  </p>
+
+  <div class="schema-wrapper">
+    <!--
+      Si le fichier SVG est dans le même dossier que cette page HTML,
+      tu n’as rien à changer.
+      Sinon, adapte simplement le chemin du src (ex. "img/schema_portail_prevention_styled.svg").
+    -->
+    <img src="schema_portail_prevention_styled.svg"
+         alt="Schéma de la structure du portail Prévention PACA" />
+  </div>
+
+  <p class="footer-note">
+    Version schématique – à intégrer dans le guide, le portail ou en support de présentation.
+  </p>
+</body>
+</html>
