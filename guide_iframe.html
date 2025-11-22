@@ -92,34 +92,35 @@
     #message {
       position: absolute;
       inset: 0;
-      display: flex;
+      display: none; /* par défaut caché, on ne l’affiche que s’il manque une URL */
       align-items: center;
       justify-content: center;
       padding: 20px;
       text-align: center;
       font-size: 0.95rem;
       color: #e5e7eb;
+      background: #020617;
+      z-index: 5;
     }
 
     /* Overlay spinner */
-   
-#overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
-  z-index: 10;
-  transition: opacity 250ms ease-out;
-}
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
+      z-index: 10;
+      transition: opacity 250ms ease-out;
+    }
 
-#overlay.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-  display: none;   /* ← LA VRAIE SOLUTION */
-}
+    #overlay.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+      display: none;
+    }
 
     .spinner {
       width: 38px;
@@ -187,8 +188,10 @@
       url = decodeURIComponent(url.trim());
 
       if (!url) {
+        // Pas d'URL → on cache l’iframe, on affiche le message, on coupe le spinner
         frame.style.display = 'none';
         overlay.classList.add('is-hidden');
+        msg.style.display = 'flex';
         msg.innerHTML =
           'Aucune URL fournie.<br><br>' +
           'Utilisez cette page en ajoutant l’URL après le <code>#</code>, par exemple :<br>' +
@@ -197,7 +200,8 @@
       }
 
       // On a une URL : on prépare le cadre Grist
-      msg.textContent = "";
+      msg.style.display = 'none';     // <<< IMPORTANT : le message ne recouvre plus l’iframe
+      msg.textContent   = "";
       frame.style.display = 'block';
       frame.src = url;
 
@@ -207,7 +211,7 @@
 
       // Gestion du spinner : on le garde quelques secondes APRÈS le load
       const EXTRA_AFTER_LOAD_MS = 12000;   // durée mini après "load"
-      const MAX_SPINNER_MS      = 25000;  // sécurité anti-spinner infini
+      const MAX_SPINNER_MS      = 25000;   // sécurité anti-spinner infini
       let loadHandled           = false;
 
       function hideOverlay() {
@@ -221,7 +225,7 @@
         setTimeout(hideOverlay, EXTRA_AFTER_LOAD_MS);
       });
 
-      // Sécurité : au bout de 20s, on coupe quoi qu’il arrive
+      // Sécurité : au bout de MAX_SPINNER_MS, on coupe quoi qu’il arrive
       setTimeout(() => {
         if (!loadHandled) {
           hideOverlay();
@@ -231,6 +235,3 @@
   </script>
 </body>
 </html>
-
-
-
