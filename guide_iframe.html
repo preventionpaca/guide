@@ -102,24 +102,24 @@
     }
 
     /* Overlay spinner */
-    #overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
-      z-index: 10;
-      transition: opacity 250ms ease-out, visibility 250ms ease-out;
-      pointer-events: auto;   /* intercepte les clics quand visible */
-    }
+   
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
+  z-index: 10;
+  transition: opacity 250ms ease-out;
+}
 
-    #overlay.is-hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;   /* laisse passer les clics vers l’iframe */
-    }
+#overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none;   /* ← LA VRAIE SOLUTION */
+}
 
     .spinner {
       width: 38px;
@@ -206,8 +206,8 @@
       }
 
       // Gestion du spinner : on le garde quelques secondes APRÈS le load
-      const EXTRA_AFTER_LOAD_MS = 3000;   // durée mini après "load"
-      const MAX_SPINNER_MS      = 20000;  // sécurité anti-spinner infini
+      const EXTRA_AFTER_LOAD_MS = 6000;   // durée mini après "load"
+      const MAX_SPINNER_MS      = 25000;  // sécurité anti-spinner infini
       let loadHandled           = false;
 
       function hideOverlay() {
@@ -231,3 +231,4 @@
   </script>
 </body>
 </html>
+
