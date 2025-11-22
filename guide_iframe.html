@@ -13,35 +13,34 @@
     }
 
     body {
-      background: #020617; /* fond sombre sobre */
+      background: #020617;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #e5e7eb;
     }
 
     .frame-shell {
       position: fixed;
-      inset: 0;             /* top:0; right:0; bottom:0; left:0 */
+      inset: 0;
       overflow: hidden;
       background: #020617;
     }
 
-    .frame-shell iframe {
+    #gristFrame {
       width: 100%;
       height: 100%;
       border: 0;
       position: relative;
       top: 0;
+      display: none; /* caché tant qu’on n’a pas d’URL */
     }
 
     /* Quand c’est une page Grist, on décale l’iframe vers le haut pour masquer le titre + filtres */
-    .frame-shell.is-grist iframe {
-      /* à ajuster finement selon ce que tu vois : 42–60 px en général */
-      top: -48px;
+    .is-grist #gristFrame {
+      top: -48px;               /* ajuste si besoin (42–60 px) */
       height: calc(100% + 48px);
     }
 
-    /* Message si aucune URL n’est fournie */
-    .message {
+    #message {
       position: fixed;
       inset: 0;
       display: flex;
@@ -61,38 +60,36 @@
 <body>
 
   <div id="shell" class="frame-shell">
-    <iframe id="gristFrame" src="" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    <div id="message"></div>
+    <iframe id="gristFrame" loading="lazy" referrerpolicy="no-referrer"></iframe>
   </div>
 
   <script>
     (function() {
       const shell  = document.getElementById('shell');
       const frame  = document.getElementById('gristFrame');
+      const msg    = document.getElementById('message');
 
-      // On récupère l’URL passée après le # dans l’adresse
-      // Ex : guide_iframe.html#https://docs.getgrist.com/....
+      // URL passée après le # : guide_iframe.html#https://docs.getgrist.com/...
       let url = window.location.hash ? window.location.hash.slice(1) : "";
       url = url.trim();
 
       if (!url) {
-        // Pas d’URL => petit message d’aide
-        shell.innerHTML = `
-          <div class="message">
-            Aucune URL Grist fournie.<br><br>
-            Utilisez cette page en ajoutant l’URL après le <code>#</code>, par exemple :<br>
-            <code>https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true</code>
-          </div>
-        `;
+        msg.innerHTML =
+          'Aucune URL Grist fournie.<br><br>' +
+          'Utilisez cette page en ajoutant l’URL après le <code>#</code>, par exemple :<br>' +
+          '<code>https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true</code>';
         return;
       }
 
+      // On a une URL : on cache le message et on affiche l’iframe
+      msg.style.display = 'none';
+      frame.style.display = 'block';
       frame.src = url;
 
-      // Si c’est une vue Grist, on applique le recadrage
-      if (url.indexOf("docs.getgrist.com") !== -1) {
-        shell.classList.add("is-grist");
-      } else {
-        shell.classList.remove("is-grist");
+      // Si c’est une vue Grist, on applique la classe de recadrage
+      if (url.indexOf('docs.getgrist.com') !== -1) {
+        shell.classList.add('is-grist');
       }
     })();
   </script>
