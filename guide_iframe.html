@@ -55,46 +55,6 @@
       color: #e5e7eb;
     }
 
-    /* Overlay spinner */
-    #overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top,
-                                   rgba(15,23,42,0.92),
-                                   rgba(15,23,42,0.98));
-      z-index: 10;
-      transition: opacity 250ms ease-out;
-    }
-
-    #overlay.is-hidden {
-      opacity: 0;
-      pointer-events: none;
-      display: none;
-    }
-
-    .spinner {
-      width: 38px;
-      height: 38px;
-      border-radius: 999px;
-      border: 3px solid rgba(148, 163, 184, 0.3);
-      border-top-color: #38bdf8;
-      animation: spin 750ms linear infinite;
-      margin-bottom: 10px;
-    }
-
-    #overlay p {
-      font-size: 0.9rem;
-      color: #e5e7eb;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
     a {
       color: #38bdf8;
     }
@@ -104,31 +64,21 @@
 
   <div id="shell" class="frame-shell">
     <iframe id="gristFrame" loading="lazy" referrerpolicy="no-referrer"></iframe>
-
-    <div id="overlay">
-      <div class="spinner"></div>
-      <p>Chargement de la vue…</p>
-    </div>
-
     <div id="message"></div>
   </div>
 
   <script>
     (function () {
-      const shell   = document.getElementById('shell');
-      const frame   = document.getElementById('gristFrame');
-      const overlay = document.getElementById('overlay');
-      const msg     = document.getElementById('message');
+      const shell = document.getElementById('shell');
+      const frame = document.getElementById('gristFrame');
+      const msg   = document.getElementById('message');
 
-      // Récupère l’URL passée après le "#"
-      // ex : guide_iframe.html#https://docs.getgrist.com/...
+      // URL passée après le "#"
       let url = window.location.hash ? window.location.hash.slice(1) : "";
       url = decodeURIComponent(url.trim());
 
-      // Si pas d’URL => petit message
       if (!url) {
         frame.style.display = 'none';
-        overlay.classList.add('is-hidden');
         msg.innerHTML =
           'Aucune URL fournie.<br><br>' +
           'Utilisez cette page en ajoutant l’URL après le <code>#</code>, par exemple :<br>' +
@@ -136,9 +86,7 @@
         return;
       }
 
-      // --- DÉBOBINAGE anti-fenêtres imbriquées -------------------------
-      // Si quelqu’un passe déjà une URL du wrapper, on extrait seulement
-      // l’URL interne après le second "#".
+      // --------- Anti-imbriquation du wrapper ----------
       const WRAP_MARK = 'preventionpaca.github.io/guide/guide_iframe.html#';
       const idxWrap   = url.indexOf(WRAP_MARK);
       if (idxWrap !== -1) {
@@ -147,7 +95,7 @@
           url = url.slice(innerHashPos + 1);
         }
       }
-      // ------------------------------------------------------------------
+      // --------------------------------------------------
 
       msg.textContent = "";
       frame.style.display = 'block';
@@ -156,27 +104,6 @@
       if (url.indexOf('docs.getgrist.com') !== -1) {
         shell.classList.add('is-grist');
       }
-
-      // Gestion du spinner : on le garde un peu après le "load"
-      const EXTRA_AFTER_LOAD_MS = 12000;  // temps en plus après "load"
-      const MAX_SPINNER_MS      = 25000;  // sécurité anti-spinner infini
-      let   loadHandled         = false;
-
-      function hideOverlay() {
-        overlay.classList.add('is-hidden');
-      }
-
-      frame.addEventListener('load', () => {
-        if (loadHandled) return;
-        loadHandled = true;
-        setTimeout(hideOverlay, EXTRA_AFTER_LOAD_MS);
-      });
-
-      setTimeout(() => {
-        if (!loadHandled) {
-          hideOverlay();
-        }
-      }, MAX_SPINNER_MS);
     })();
   </script>
 </body>
