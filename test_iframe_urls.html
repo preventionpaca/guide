@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test des URLs Grist en iframe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+    }
+    h1 { font-size: 1.2rem; margin-bottom: 8px; }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      padding: 8px;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+    }
+    button {
+      margin-top: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #38bdf8;
+      background: #0b1120;
+      color: #e5f0ff;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.8rem;
+    }
+    th, td {
+      border: 1px solid #1f2937;
+      padding: 4px 6px;
+      vertical-align: top;
+    }
+    th {
+      background: #111827;
+    }
+    tr.ok td.status {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    tr.blocked td.status {
+      color: #f97316;
+      font-weight: 600;
+    }
+    #hiddenFrames {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Testeur d’URL Grist en iframe</h1>
+  <p style="font-size:0.85rem;">
+    Colle ici tes URLs Grist (une par ligne), puis clique sur <strong>Tester</strong>.
+  </p>
+
+  <textarea id="urlInput" placeholder="https://docs.getgrist.com/...."></textarea>
+  <br>
+  <button id="runBtn">Tester</button>
+
+  <table id="resultTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>URL</th>
+        <th class="status">Résultat</th>
+        <th>Détail</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="hiddenFrames"></div>
+
+  <script>
+    const btn = document.getElementById('runBtn');
+    const input = document.getElementById('urlInput');
+    const tbody = document.querySelector('#resultTable tbody');
+    const pool = document.getElementById('hiddenFrames');
+
+    function normalizeUrl(u) {
+      if (!u) return "";
+      u = String(u).trim();
+      if (!u) return "";
+      if (!/^https?:\/\//i.test(u)) {
+        u = "https://" + u;
+      }
+      return u;
+    }
+
+    btn.addEventListener('click', () => {
+      const lines = input.value.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+      tbody.innerHTML = "";
+      pool.innerHTML = "";
+
+      if (!lines.length) {
+        alert("Aucune URL fournie.");
+        return;
+      }
+
+      btn.disabled = true;
+
+      lines.forEach((raw, index) => {
+        const url = normalizeUrl(raw);
+        const tr = document.createElement('tr');
+        const tdIdx = document.createElement('td');
+        const tdUrl = document.createElement('td');
+        const tdStatus = document.createElement('td');
+        const tdDetail = document.createElement('td');
+
+        tdIdx.textContent = index + 1;
+        tdUrl.textContent = url;
+        tdStatus.textContent = "En test…";
+        tdStatus.className = "status";
+        tdDetail.textContent = "";
+
+        tr.appendChild(tdIdx);
+        tr.appendChild(tdUrl);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdDetail);
+        tbody.appendChild(tr);
+
+        if (!url.includes("docs.getgrist.com")) {
+          tr.classList.add("blocked");
+          tdStatus.textContent = "Pas Grist";
+          tdDetail.textContent = "URL non Grist, test ignoré.";
+          return;
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.width = "1";
+        iframe.height = "1";
+        iframe.style.border = "0";
+
+        let done = false;
+        const start = Date.now();
+
+        const finish = (ok, message) => {
+          if (done) return;
+          done = true;
+          const delay = Date.now() - start;
+
+          if (ok) {
+            tr.classList.add("ok");
+            tdStatus.textContent = "OK";
+            tdDetail.textContent = `Chargé (~${delay} ms)`;
+          } else {
+            tr.classList.add("blocked");
+            tdStatus.textContent = "Bloqué / très lent";
+            tdDetail.textContent = message || `Pas de réponse après ${delay} ms`;
+          }
+        };
+
+        iframe.onload = () => {
+          // On considère que le load signifie que Grist a affiché quelque chose,
+          // même si c’est une page d’erreur. On met OK (à vérifier visuellement après).
+          finish(true);
+          setTimeout(() => {
+            if (iframe.parentNode === pool) pool.removeChild(iframe);
+          }, 1000);
+        };
+
+        iframe.onerror = () => {
+          finish(false, "Erreur de chargement (onerror)");
+          if (iframe.parentNode === pool) pool.removeChild(iframe);
+        };
+
+        // Timeout (8 secondes)
+        const timeout = setTimeout(() => {
+          finish(false, "Timeout 8 s (probable blocage iframe)");
+          if (iframe.parentNode === pool) pool.removeChild(iframe);
+        }, 8000);
+
+        pool.appendChild(iframe);
+        iframe.src = url;
+      });
+
+      // On réactive le bouton au bout de 10 s
+      setTimeout(() => {
+        btn.disabled = false;
+      }, 10000);
+    });
+  </script>
+</body>
+</html>
