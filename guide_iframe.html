@@ -21,7 +21,7 @@
     /* Conteneur plein écran */
     .frame-shell {
       position: fixed;
-      inset: 0;           /* top:0; right:0; bottom:0; left:0 */
+      inset: 0;            /* top:0; right:0; bottom:0; left:0 */
       overflow: hidden;
       background: #020617;
     }
@@ -33,7 +33,7 @@
       border: 0;
       position: relative;
       top: 0;
-      display: none;      /* caché tant qu’on n’a pas une URL valide */
+      display: none;       /* caché tant qu’on n’a pas une URL valide */
     }
 
     /* Décalage pour masquer le bandeau Grist */
@@ -42,17 +42,42 @@
       height: calc(100% + 48px);
     }
 
-    /* Message si aucune URL n’est fournie */
+    /* Message / spinner centré */
     #message {
       position: absolute;
       inset: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 20px;
       text-align: center;
       font-size: 0.95rem;
       color: #e5e7eb;
+      background: radial-gradient(
+        circle at top,
+        rgba(15,23,42,0.95),
+        rgba(15,23,42,0.98)
+      );
+      z-index: 10;
+    }
+
+    #message.hidden {
+      display: none;      /* <-- une fois caché, il ne bloque plus les clics */
+    }
+
+    .spinner {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 3px solid rgba(148, 163, 184, 0.3);
+      border-top-color: #38bdf8;
+      animation: spin 750ms linear infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     a {
@@ -78,7 +103,9 @@
       url = decodeURIComponent(url.trim());
 
       if (!url) {
+        // Pas d’URL : message d’aide (pas de spinner)
         frame.style.display = 'none';
+        msg.classList.remove('hidden');
         msg.innerHTML =
           'Aucune URL fournie.<br><br>' +
           'Utilisez cette page en ajoutant l’URL après le <code>#</code>, par exemple :<br>' +
@@ -97,13 +124,27 @@
       }
       // --------------------------------------------------
 
-      msg.textContent = "";
+      // On affiche un spinner pendant le chargement initial
+      msg.classList.remove('hidden');
+      msg.innerHTML = '<div class="spinner"></div><p>Chargement de la vue…</p>';
+
       frame.style.display = 'block';
       frame.src = url;
 
       if (url.indexOf('docs.getgrist.com') !== -1) {
         shell.classList.add('is-grist');
       }
+
+      // Quand l’iframe a fini de charger, on ENLÈVE complètement le message
+      frame.addEventListener('load', () => {
+        msg.classList.add('hidden');
+      });
+
+      // Sécurité : au cas où l’événement "load" ne viendrait pas,
+      // on cache quand même le message au bout de 25 s.
+      setTimeout(() => {
+        msg.classList.add('hidden');
+      }, 25000);
     })();
   </script>
 </body>
