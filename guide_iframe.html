@@ -1,252 +1,177 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Prévention PACA – Outil</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>Prévention PACA – Vue intégrée</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-
-    body{
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:#020617;
-      color:#e5e7eb;
-      min-height:100vh;
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
     }
 
-    .wrapper{
-      position:fixed;
-      inset:0;
-      display:flex;
-      flex-direction:column;
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    /* Barre haute breadcrumb + bouton retour */
-    .topbar{
-      height:40px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 12px;
-      font-size:0.8rem;
-      background:rgba(15,23,42,0.95);
-      border-bottom:1px solid rgba(148,163,184,0.35);
+    .frame-shell {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #020617;
     }
 
-    .breadcrumb{
-      display:flex;
-      align-items:center;
-      gap:4px;
-      color:#cbd5f5;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+    /* IFRAME GRIST */
+    #innerFrame {
+      position: absolute;
+      left: 0;
+      top: -52px; /* masque la barre Grist (titre + filtres) */
+      width: 100%;
+      height: calc(100% + 52px);
+      border: 0;
     }
 
-    .breadcrumb span:nth-child(1){
-      font-weight:600;
-      color:#ffffff;
+    /* BREADCRUMB + RETOUR */
+
+    .breadcrumb {
+      position: absolute;
+      top: 8px;
+      left: 14px;
+      font-size: 0.78rem;
+      color: #9ca3af;
+      z-index: 20;
     }
 
-    .topbar button{
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.6);
-      padding:3px 9px;
-      background:transparent;
-      color:#e5e7eb;
-      font-size:0.75rem;
-      cursor:pointer;
+    .breadcrumb a {
+      color: #e5e7eb;
+      text-decoration: none;
+      opacity: 0.9;
     }
 
-    .topbar button:hover{
-      background:rgba(15,23,42,0.8);
+    .breadcrumb a:hover {
+      text-decoration: underline;
     }
 
-    .main{
-      flex:1;
-      position:relative;
-      background:#020617;
+    .back-btn {
+      position: absolute;
+      top: 8px;
+      right: 14px;
+      z-index: 20;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #64748b;
+      background: #020617;
+      color: #e5e7eb;
+      cursor: pointer;
     }
 
-    .frame-shell{
-      position:absolute;
-      inset:0;
-      overflow:hidden;
-      background:#020617;
+    .back-btn:hover {
+      background: #111827;
     }
 
-    #gristFrame{
-      width:100%;
-      height:100%;
-      border:0;
-      position:relative;
-      top:0;
-      display:none;
+    /* SPINNER */
+
+    .spinner-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: radial-gradient(circle at top, #020617 0, #020617 55%, #000000 100%);
+      font-size: 0.9rem;
+      z-index: 10;
     }
 
-    /* recadrage pour cacher le titre / filtres Grist */
-    .frame-shell.is-grist #gristFrame{
-      top:-48px;
-      height:calc(100% + 48px);
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 3px solid rgba(148, 163, 184, 0.25);
+      border-top-color: #38bdf8;
+      animation: spin 1s linear infinite;
     }
 
-    /* Overlays spinner + erreur */
-    .overlay{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      text-align:center;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    #loader{
-      flex-direction:column;
-      gap:10px;
-      font-size:0.9rem;
-      color:#e5e7eb;
-      background:radial-gradient(circle at center,rgba(15,23,42,0.9),rgba(15,23,42,0.96));
-      backdrop-filter:blur(4px);
-      z-index:10;
+    .hidden {
+      display: none;
     }
 
-    .spinner{
-      width:32px;
-      height:32px;
-      border-radius:999px;
-      border:3px solid rgba(148,163,184,0.4);
-      border-top-color:#38bdf8;
-      animation:spin 0.8s linear infinite;
-      margin:0 auto;
+    .message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      font-size: 0.9rem;
+      z-index: 15;
     }
 
-    #errorBox{
-      display:none;
-      flex-direction:column;
-      gap:8px;
-      font-size:0.85rem;
-      color:#e5e7eb;
-      background:radial-gradient(circle at center,rgba(15,23,42,0.9),rgba(15,23,42,0.96));
-      backdrop-filter:blur(3px);
-      z-index:9;
-    }
-
-    #errorBox strong{
-      font-weight:600;
-      color:#fee2e2;
-    }
-
-    a.error-link{
-      color:#38bdf8;
-      text-decoration:underline;
-      font-size:0.8rem;
-      word-break:break-all;
-    }
-
-    @keyframes spin{
-      to{transform:rotate(360deg)}
+    .message code {
+      font-size: 0.8rem;
     }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="topbar">
-      <div class="breadcrumb">
-        <span>Prévention PACA</span>
-        <span>&gt;</span>
-        <span>Portail</span>
-        <span>&gt;</span>
-        <span>Outil</span>
-      </div>
-      <button type="button" onclick="history.back()">← Retour</button>
+  <div class="frame-shell">
+    <div class="breadcrumb">
+      <a href="https://preventionpaca.github.io/guide/index.html">Prévention PACA</a> &nbsp;&gt;&nbsp; Outil
     </div>
 
-    <div class="main">
-      <div id="shell" class="frame-shell">
-        <iframe id="gristFrame" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    <button class="back-btn" type="button" onclick="history.back()">← Retour</button>
 
-        <!-- SPINNER -->
-        <div id="loader" class="overlay">
-          <div class="spinner"></div>
-          <div>Chargement de la vue…<br/>Merci de patienter quelques instants.</div>
-        </div>
-
-        <!-- MESSAGE D'ERREUR -->
-        <div id="errorBox" class="overlay">
-          <strong>Impossible de charger la vue demandée.</strong>
-          <div>
-            Il est possible que le site cible bloque l’affichage dans une iframe
-            (par exemple certains services externes), ou que l’URL soit incorrecte.
-          </div>
-          <div id="rawUrl" style="margin-top:6px;font-size:0.8rem;opacity:0.9;"></div>
-        </div>
-      </div>
+    <div id="spinner" class="spinner-overlay">
+      <div class="spinner"></div>
+      <div>Chargement de la vue…</div>
     </div>
+
+    <div id="message" class="message hidden"></div>
+
+    <iframe id="innerFrame" loading="lazy" referrerpolicy="no-referrer"></iframe>
   </div>
 
   <script>
-    (function(){
-      const shell   = document.getElementById('shell');
-      const frame   = document.getElementById('gristFrame');
-      const loader  = document.getElementById('loader');
-      const errorBox= document.getElementById('errorBox');
-      const rawUrlEl= document.getElementById('rawUrl');
+    (function () {
+      const iframe  = document.getElementById('innerFrame');
+      const spinner = document.getElementById('spinner');
+      const message = document.getElementById('message');
 
-      // Récupération de l’URL passée après #
-      let raw = window.location.hash ? window.location.hash.slice(1) : "";
-      raw = raw.trim();
+      // URL passée après le # :
+      // guide_iframe.html#https://docs.getgrist.com/...
+      let url = window.location.hash ? window.location.hash.slice(1) : "";
+      url = decodeURIComponent(url).trim();
 
-      if (!raw) {
-        loader.style.display = 'none';
-        errorBox.style.display = 'flex';
-        rawUrlEl.textContent = "Aucune URL fournie.";
+      if (!url) {
+        spinner.classList.add('hidden');
+        message.classList.remove('hidden');
+        message.innerHTML =
+          'Aucune URL cible fournie.<br><br>' +
+          'Utilisez cette page en ajoutant l’URL après le caractère <code>#</code>, par exemple :<br>' +
+          '<code>https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/…</code>';
         return;
       }
 
-      // 🔧 DÉNESTAGE :
-      // si on reçoit déjà un guide_iframe.html#... dans l’URL,
-      // on récupère la vraie cible derrière.
-      const MARKER = "guide_iframe.html#";
-      const idx = raw.lastIndexOf(MARKER);
-      if (idx !== -1) {
-        raw = raw.slice(idx + MARKER.length);
-      }
+      // Afficher le spinner pendant le chargement
+      spinner.classList.remove('hidden');
+      message.classList.add('hidden');
 
-      const targetUrl = raw;
-      rawUrlEl.innerHTML =
-        'URL cible : <br><a class="error-link" href="'+targetUrl+'" target="_blank" rel="noopener noreferrer">'
-        + targetUrl + '</a>';
-
-      // On considère que c’est une vue Grist → recadrage pour cacher le bandeau
-      if (targetUrl.indexOf("docs.getgrist.com") !== -1) {
-        shell.classList.add("is-grist");
-      }
-
-      frame.src = targetUrl;
-      frame.style.display = 'block';
-
-      let loaded = false;
-
-      frame.addEventListener('load', () => {
-        loaded = true;
-        loader.style.display = 'none';
-        errorBox.style.display = 'none';
+      iframe.addEventListener('load', function () {
+        // On enlève simplement le spinner quand le site a fini de répondre.
+        spinner.classList.add('hidden');
       });
 
-      frame.addEventListener('error', () => {
-        loader.style.display = 'none';
-        errorBox.style.display = 'flex';
-      });
-
-      // Sécurité : si au bout de 12 s rien n’a chargé, on affiche l’erreur
-      setTimeout(() => {
-        if (!loaded) {
-          loader.style.display = 'none';
-          errorBox.style.display = 'flex';
-        }
-      }, 12000);
+      iframe.src = url;
     })();
   </script>
 </body>
