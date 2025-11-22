@@ -112,11 +112,13 @@
       background: radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
       z-index: 10;
       transition: opacity 250ms ease-out, visibility 250ms ease-out;
+      pointer-events: auto;   /* intercepte les clics quand visible */
     }
 
     #overlay.is-hidden {
       opacity: 0;
       visibility: hidden;
+      pointer-events: none;   /* laisse passer les clics vers l’iframe */
     }
 
     .spinner {
