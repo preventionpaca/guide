@@ -1,73 +1,73 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Prévention PACA – Vue intégrée</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prévention PACA – Vue intégrée</title>
 
-<style>
-  html,body {
-    margin:0; padding:0;
-    height:100%;
-    background:#020617;
-  }
+  <!-- Optimisation : handshake plus rapide avec Grist -->
+  <link rel="preconnect" href="https://docs.getgrist.com">
+  <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
-  #wrapper {
-    position:fixed;
-    inset:0;
-    overflow:hidden;
-    background:#020617;
-  }
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #020617;
+    }
 
-  iframe {
-    width:100%;
-    height:100%;
-    border:0;
-    position:absolute;
-    top:0; left:0;
-  }
-</style>
+    #wrapper {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #020617;
+    }
+
+    #gristFrame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
 </head>
 <body>
+  <div id="wrapper">
+    <iframe id="gristFrame" src="" allowfullscreen></iframe>
+  </div>
 
-<div id="wrapper">
-  <iframe id="gristFrame" src="" allowfullscreen></iframe>
-</div>
+  <script>
+    // Nettoyage / normalisation de l'URL qui arrive après le #
+    function cleanUrl(raw) {
+      if (!raw) return "";
+      let u = decodeURIComponent(raw.trim());
 
-<script>
-//
-//  VERSION QUI MASQUE TOUT À 100%
-//  — pas de titre
-//  — pas de menus
-//  — pas de header
-//  — pas de filtre
-//  — pas d’iframe imbriquée
-//  — ultrarapide
-//
+      // On enlève les paramètres parasites éventuels
+      u = u.replace(/[\?&](themeMode|tour|layout|view)=[^&]*/g, "");
 
-function cleanUrl(u) {
-  if (!u) return "";
-  u = decodeURIComponent(u);
+      // On reconstruit proprement
+      const hasQuery = u.includes("?");
+      u += hasQuery ? "" : "?";
 
-  // On vire les paramètres Grist qui foutent la pagaille
-  u = u.replace(/[\?&]themeMode\=[^&]+/, "");
-  u = u.replace(/[\?&]tour\=[^&]+/, "");
-  u = u.replace(/[\?&]layout\=[^&]+/, "");
-  u = u.replace(/[\?&]view\=[^&]+/, "");
+      const params = [];
+      if (!/[\?&]embed=true\b/.test(u)) params.push("embed=true");
+      if (!/[\?&]style=singlePage\b/.test(u)) params.push("style=singlePage");
+      if (!/[\?&]exclude-headers=true\b/.test(u)) params.push("exclude-headers=true");
 
-  // On force l'affichage plein écran
-  if (!u.includes("?")) u += "?";
-  if (!u.includes("embed=true")) u += "&embed=true";
-  if (!u.includes("style=singlePage")) u += "&style=singlePage";
-  if (!u.includes("exclude-headers=true")) u += "&exclude-headers=true";
+      if (params.length) {
+        if (!u.endsWith("?") && !u.endsWith("&")) u += "&";
+        u += params.join("&");
+      }
 
-  return u;
-}
+      return u;
+    }
 
-// Récupère l’URL après #
-const raw = window.location.hash.substring(1);
-document.getElementById("gristFrame").src = cleanUrl(raw);
-</script>
-
+    // URL brute passée dans le hash (#)
+    var raw = window.location.hash ? window.location.hash.substring(1) : "";
+    document.getElementById("gristFrame").src = cleanUrl(raw);
+  </script>
 </body>
 </html>
