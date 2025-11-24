@@ -1,66 +1,73 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Prévention PACA – Vue intégrée</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prévention PACA – Vue intégrée</title>
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
+<style>
+  html,body {
+    margin:0; padding:0;
+    height:100%;
+    background:#020617;
+  }
 
-    body {
-      background: #020617;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #e5e7eb;
-    }
+  #wrapper {
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    background:#020617;
+  }
 
-    /* Conteneur plein écran */
-    .frame-shell {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-      background: #020617;
-    }
-
-    /* Iframe Grist */
-    #gristFrame {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-    }
-  </style>
+  iframe {
+    width:100%;
+    height:100%;
+    border:0;
+    position:absolute;
+    top:0; left:0;
+  }
+</style>
 </head>
 <body>
-  <div class="frame-shell">
-    <iframe id="gristFrame" src="" allowfullscreen></iframe>
-  </div>
 
-  <script>
-    // URL de la vue "Portail" par défaut si aucun hash n'est donné
-    const DEFAULT_GRIST_URL =
-      "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
+<div id="wrapper">
+  <iframe id="gristFrame" src="" allowfullscreen></iframe>
+</div>
 
-    function getTargetUrl() {
-      const hash = window.location.hash ? window.location.hash.substring(1) : "";
-      return hash || DEFAULT_GRIST_URL;
-    }
+<script>
+//
+//  VERSION QUI MASQUE TOUT À 100%
+//  — pas de titre
+//  — pas de menus
+//  — pas de header
+//  — pas de filtre
+//  — pas d’iframe imbriquée
+//  — ultrarapide
+//
 
-    function loadFrame() {
-      const url = getTargetUrl();
-      const frame = document.getElementById("gristFrame");
-      frame.src = url;
-    }
+function cleanUrl(u) {
+  if (!u) return "";
+  u = decodeURIComponent(u);
 
-    // charge au démarrage
-    loadFrame();
+  // On vire les paramètres Grist qui foutent la pagaille
+  u = u.replace(/[\?&]themeMode\=[^&]+/, "");
+  u = u.replace(/[\?&]tour\=[^&]+/, "");
+  u = u.replace(/[\?&]layout\=[^&]+/, "");
+  u = u.replace(/[\?&]view\=[^&]+/, "");
 
-    // si tu changes le hash (#...) dans l'URL, on recharge la bonne vue
-    window.addEventListener("hashchange", loadFrame);
-  </script>
+  // On force l'affichage plein écran
+  if (!u.includes("?")) u += "?";
+  if (!u.includes("embed=true")) u += "&embed=true";
+  if (!u.includes("style=singlePage")) u += "&style=singlePage";
+  if (!u.includes("exclude-headers=true")) u += "&exclude-headers=true";
+
+  return u;
+}
+
+// Récupère l’URL après #
+const raw = window.location.hash.substring(1);
+document.getElementById("gristFrame").src = cleanUrl(raw);
+</script>
+
 </body>
 </html>
