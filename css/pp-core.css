@@ -1,320 +1,213 @@
-/* =========================================================
-   PP-CORE.CSS
-   Découpage EXACT du portail d'origine :
-   - Thème (variables, body, light-theme)
-   - Layout de base (portal-outer / wrapper)
-   - Header (logos, titre, nav, bouton thème)
-   - Footer
-   ========================================================= */
-
-/* ---------- Variables + thème global ---------- */
-
+/* ========== VARIABLES & BASE ========== */
 :root {
   --bg: #041221;
-  --card: #1b396a;
-  --card-hover: #24508f;
-  --card-active: #122548;
+  --bg-soft: #07192a;
+  --card: #0b2238;
+  --card-soft: #10243a;
+  --border: #f97316;
   --text: #ffffff;
   --muted: #cbd5f5;
-  --green: #059669;
-  --orange: #ea580c;
-  --dark: #020617;
-  --shadow-soft: 0 8px 16px rgba(0, 0, 0, 0.35);
-  --shadow-pressed: inset 0 4px 6px rgba(0, 0, 0, 0.45);
-  --radius: 16px;
 
-  --grid-columns: 4;
+  --fs-xs: 0.70rem;
+  --fs-sm: 0.88rem;
+  --fs-md: 1.10rem;
+  --fs-lg: 1.65rem;
 
-  --tile-min-height: 145px;
-  --tile-gap: 16px;
-  --tile-padding: 12px;
-  --title-size: 0.9rem;
-  --desc-size: 0.75rem;
-  --icon-size: 38px;
+  --header-max: 1180px;
+  --pill-bg: rgba(15, 23, 42, 0.80);
+  --pill-border: #1f2937;
+  --nav-pill-bg: #0b2238;
+  --nav-pill-border: #cbd5f5;
+  --nav-pill-active-bg: #059669;
 }
 
+/* Mode clair global */
 body.light-theme {
   --bg: #f3f4f6;
+  --bg-soft: #e5e7eb;
   --card: #ffffff;
-  --card-hover: #e5f0ff;
-  --card-active: #dbeafe;
+  --card-soft: #f9fafb;
+  --border: #f97316;
   --text: #111827;
   --muted: #4b5563;
-  --shadow-soft: 0 8px 14px rgba(15, 23, 42, 0.12);
-  --shadow-pressed: inset 0 3px 5px rgba(148, 163, 184, 0.8);
+  --pill-bg: #e5e7eb;
+  --pill-border: #d1d5db;
+  --nav-pill-bg: #ffffff;
+  --nav-pill-border: #111827;
+  --nav-pill-active-bg: #059669;
 }
 
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+
+body {
   margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page-wrap {
+  padding: 18px 16px 40px;
+}
+
+/* ========== HEADER PORTAIL COMMUN ========== */
+
+.ppp-header {
+  position: relative;
+  max-width: var(--header-max);
+  margin: 0 auto 38px;
+}
+
+.ppp-header-topline {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ppp-chip {
+  padding: 4px 12px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.ppp-header-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.ppp-pill-btn {
+  padding: 4px 12px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--pill-border);
+  background: var(--pill-bg);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ppp-header-main {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.ppp-title {
+  font-size: var(--fs-lg);
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.ppp-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+.ppp-nav-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ppp-nav-pill {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--nav-pill-bg);
+  border: 1px solid var(--nav-pill-border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+}
+
+.ppp-nav-pill--active {
+  background: var(--nav-pill-active-bg);
+  border-color: var(--nav-pill-active-bg);
+  color: #ffffff;
+}
+
+/* ========== PANEL ORANGE & CARTES (réutilisables) ========== */
+
+.panel-orange {
+  max-width: var(--header-max);
+  margin: 0 auto;
+  padding: 26px;
+  border-radius: 24px;
+  border: 2px solid var(--border);
+  background:
+    radial-gradient(circle at top, rgba(249, 115, 22, 0.18), transparent 50%),
+    var(--card);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+}
+
+.panel-orange-title {
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  font-size: var(--fs-md);
+  margin: 0 0 6px;
+}
+
+.panel-orange-sub {
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  margin-bottom: 22px;
+}
+
+.feat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* cartes de sections – texte +15 % */
+.feat-card {
+  background: var(--card-soft);
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.feat-title,
+.feat-text,
+.feat-card ul,
+.feat-card li {
+  font-size: calc(var(--fs-sm) * 1.15);
+}
+
+.feat-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.feat-text {
+  margin: 0 0 6px;
+}
+
+/* listes */
+.feat-card ul {
+  margin: 0 0 0 24px;
   padding: 0;
 }
 
-body {
-  min-height: 100vh;
-  background: radial-gradient(circle at top, #0b1f3a 0, var(--bg) 50%, #020814 100%);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: var(--text);
-  padding: 16px 10px 12px;
-  transition: background 200ms ease-out, color 200ms ease-out;
+.feat-card li {
+  margin-bottom: 4px;
 }
 
-body.light-theme {
-  background: radial-gradient(circle at top, #e5edff 0, #f3f4f6 45%, #e5e7eb 100%);
-}
-
-/* Animation d'entrée du wrapper */
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0);      }
-}
-
-/* ---------- Layout global portail ---------- */
-
-.portal-outer {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.portal-wrapper {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  min-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  animation: fadeInUp 450ms ease-out both;
-}
-
-/* ---------- Header : logos, titre, bouton thème ---------- */
-
-.portal-header {
-  margin-bottom: 10px;
-  position: relative;
-}
-
-.logo-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding-right: 120px;
-}
-
-.logo-block {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 0.72rem;
-  line-height: 1.3;
-  color: var(--muted);
-  text-align: center;
-  white-space: nowrap;
-}
-
-body.light-theme .logo-block {
-  background: #e5edf8;
-  color: #1f2937;
-}
-
-.portal-title {
-  font-size: clamp(1.5rem, 2vw, 1.9rem);
-  font-weight: 700;
-  text-align: center;
-  margin-top: 4px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.portal-subtitle {
-  text-align: center;
-  margin-top: 4px;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.header-separator {
-  width: min(240px, 40%);
-  height: 1px;
-  margin: 8px auto 0;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.7),
-    transparent
-  );
-  opacity: 0.8;
-}
-
-body.light-theme .header-separator {
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(15, 23, 42, 0.35),
-    transparent
-  );
-}
-
-/* Bouton thème (Mode clair / sombre) */
-
-.header-tools {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.theme-toggle {
-  font-size: 0.72rem;
-  padding: 4px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(0, 0, 0, 0.18);
-  color: var(--text);
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  transition:
-    background 150ms ease-out,
-    transform 150ms ease-out,
-    box-shadow 150ms ease-out,
-    border-color 150ms ease-out;
-}
-
-body.light-theme .theme-toggle {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #111827;
-}
-
-.theme-toggle:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
-
-.theme-toggle:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-/* ---------- Navigation pillules ---------- */
-
-.page-nav {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 0.78rem;
-}
-
-.page-nav a {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  text-decoration: none;
-  color: var(--muted);
-  background: rgba(0,0,0,0.16);
-  transition:
-    background 120ms ease-out,
-    color 120ms ease-out,
-    border-color 120ms ease-out;
-}
-
-.page-nav a.active {
-  color: var(--text);
-  border-color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.page-nav a.nav-admin {
-  background: #020617;
-  border-color: #020617;
-  color: #f9fafb;
-}
-.page-nav a.nav-admin:hover,
-.page-nav a.nav-admin.active {
-  background: #0b1120;
-  border-color: #020617;
-  color: #ffffff;
-}
-
-.page-nav a.nav-ddfpt {
-  background: #059669;
-  border-color: #059669;
-  color: #f9fafb;
-}
-.page-nav a.nav-ddfpt:hover,
-.page-nav a.nav-ddfpt.active {
-  background: #047857;
-  border-color: #059669;
-  color: #ffffff;
-}
-
-body.light-theme .page-nav a {
-  border-color: #cbd5e1;
-  background: #ffffff;
-  color: #4b5563;
-}
-body.light-theme .page-nav a.active {
-  background: #1b396a;
-  color: #f9fafb;
-  border-color: #1b396a;
-}
-
-body.light-theme .page-nav a.nav-admin,
-body.light-theme .page-nav a.nav-admin.active {
-  background: #020617;
-  border-color: #020617;
-  color: #f9fafb;
-}
-body.light-theme .page-nav a.nav-ddfpt,
-body.light-theme .page-nav a.nav-ddfpt.active {
-  background: #059669;
-  border-color: #059669;
-  color: #f9fafb;
-}
-
-/* ---------- Footer ---------- */
-
-.portal-footer {
-  margin-top: 4px;
-  padding-top: 4px;
-  font-size: 0.7rem;
-  text-align: center;
-  color: var(--muted);
-  opacity: 0.9;
-}
-
-/* ---------- Responsive header / logos ---------- */
-
-@media (max-width: 900px) {
-  .logo-row {
-    padding-right: 0;
-  }
-}
-
-@media (max-width: 600px) {
-  body {
-    padding: 14px 8px;
-  }
-
-  .header-tools {
-    position: static;
-    margin: 0 auto 6px;
-    justify-content: center;
-  }
-
-  .portal-header {
-    padding-top: 2px;
-  }
-
-  .logo-block {
-    white-space: normal;
-  }
+/* petit ajustement mobile */
+@media (max-width: 640px) {
+  .panel-orange { padding: 18px 14px; }
+  .feat-card { padding: 16px 14px; }
 }
