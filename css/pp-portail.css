@@ -1,22 +1,9 @@
-/* =========================================================
-   PP-PORTAIL.CSS
-   Découpage EXACT du portail d'origine :
-   - Cartouche PPP (ppaca-card…)
-   - Cadre orange + grille (tile-frame, tile-grid…)
-   - Tuiles (tile--*, icônes, descriptions)
-   - Fil info
-   - Responsive tuiles
-   ========================================================= */
-
-/* ---------- Bloc cartouche accueil ---------- */
-
+/* Bloc cartouche accueil */
 .ppaca-section{
   max-width: 1100px;
   margin: 3px auto 8px auto;
   padding: 0 16px;
 }
-
-/* Cadre orange autour de la grille */
 
 .tile-frame {
   margin-top: 6px;
@@ -32,8 +19,6 @@ body.light-theme .tile-frame {
   border-color: #f97316;
 }
 
-/* Grille des tuiles */
-
 .tile-grid {
   flex: 1 0 auto;
   display: grid;
@@ -45,8 +30,6 @@ body.light-theme .tile-frame {
   margin-bottom: 0;
   align-content: flex-start;
 }
-
-/* Tuile générique */
 
 .tile {
   position: relative;
@@ -80,8 +63,6 @@ body.light-theme .tile-frame {
   background: linear-gradient(145deg, var(--card-active), #1d4b84);
 }
 
-/* Comportement des tuiles neutres en mode clair */
-
 body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not(.tile--brown-light):not(.tile--brown-dark):not(.tile--gray-light):not(.tile--white) {
   background: linear-gradient(145deg, #ffffff, #e5edf8);
   box-shadow: 0 8px 18px rgba(148, 163, 184, 0.35);
@@ -92,8 +73,6 @@ body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not
 body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not(.tile--brown-light):not(.tile--brown-dark):not(.tile--gray-light):not(.tile--white):active {
   background: linear-gradient(145deg, #e5e7eb, #d4def5);
 }
-
-/* Variantes de couleur */
 
 .tile--white {
   background: #ffffff;
@@ -186,12 +165,8 @@ body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not
   background: linear-gradient(145deg, #374151, #4b5563);
 }
 
-/* Tuiles fusionnées (double hauteur / largeur) */
-
 .tile--tall { grid-row: span 2; }
 .tile--wide { grid-column: span 2; }
-
-/* Contenu de tuile */
 
 .tile-icon {
   width: var(--icon-size);
@@ -248,12 +223,10 @@ body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Bas de tuile (liens G/D) */
-
 .tile-bottom-links {
   margin-top: 8px;
   display: flex;
-  justify-content: space_between;
+  justify-content: space-between;
   gap: 8px;
   font-size: 0.72rem;
 }
@@ -265,8 +238,6 @@ body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not
 }
 
 .tile-link:hover { text-decoration: underline; }
-
-/* ---------- Fil info ---------- */
 
 .news-viewport {
   margin-top: 8px;
@@ -326,7 +297,14 @@ body.light-theme .news-item:hover {
   100% { transform: translateY(-50%); }
 }
 
-/* ---------- Ajustements de grille par page ---------- */
+.portal-footer {
+  margin-top: 4px;
+  padding-top: 4px;
+  font-size: 0.7rem;
+  text-align: center;
+  color: var(--muted);
+  opacity: 0.9;
+}
 
 body[data-page="Portail"] .tile-grid {
   max-width: 1180px;
@@ -343,8 +321,6 @@ body[data-page="Acces_DDFPT"] .tile {
   max-height: 260px;
 }
 
-/* ---------- Responsive tuiles ---------- */
-
 @media (max-width: 900px) {
   .tile-grid {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
@@ -354,7 +330,7 @@ body[data-page="Acces_DDFPT"] .tile {
   }
 }
 
-/* ---------- BLOC ACCUEIL PPP (carte) ---------- */
+/* ====== BLOC ACCUEIL PPP ====== */
 
 .ppaca-card{
   background: var(--dark-card, #0b2238);
