@@ -1,83 +1,15 @@
 /* =========================
-   CARTOUCHE D’ACCUEIL (page Portail)
+   PORTAIL – CARTOUCHE PPP
    ========================= */
 
 .ppaca-section {
   max-width: 1100px;
-  margin: 3px auto 8px auto;
+  margin: 24px auto 4px auto;
   padding: 0 16px;
 }
 
-.ppaca-card {
-  background: radial-gradient(160% 200% at 0% 0%, #0b2238, #020617 75%);
-  border-radius: 26px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55);
-  color: #e5e7eb;
-  padding: 18px 22px 16px;
-}
-
-.ppaca-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.ppaca-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #0f172a;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-}
-
-.ppaca-card-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.ppaca-card-subtitle {
-  font-size: 0.82rem;
-  color: #cbd5f5;
-  margin-top: 2px;
-}
-
-.ppaca-card-body p {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  margin: 0 0 0.7rem 0;
-}
-
-.ppaca-card-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.ppaca-btn-secondary {
-  font-size: 0.8rem;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.8);
-  color: #e5e7eb;
-  text-decoration: none;
-}
-
-.ppaca-btn-secondary--ghost {
-  background: transparent;
-}
-
 /* =========================
-   CADRE ORANGE AUTOUR DE LA MATRICE
+   CADRE ORANGE AUTOUR DES TUILES
    ========================= */
 
 .tile-frame {
@@ -85,21 +17,42 @@
   margin: 32px auto 40px;
   padding: 22px 22px 26px;
   border-radius: 26px;
-  border: 2px solid #f97316; /* liseré orange */
-  background: radial-gradient(140% 180% at 0% 0%, #111827, #020617 70%);
+  border: 2px solid #f97316;
+  background: radial-gradient(
+    140% 180% at 0% 0%,
+    #111827,
+    #020617 70%
+  );
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* Grille des tuiles */
+/* Version claire (toggle) */
+body.light-theme .tile-frame {
+  background: #f3f4f6;
+  border-color: #f97316;
+}
+
+/* =========================
+   GRILLE DES TUILES
+   ========================= */
+
 .tile-grid {
   display: grid;
   grid-template-columns: repeat(var(--grid-columns, 4), minmax(0, 1fr));
   gap: 16px;
-  align-items: stretch;
+}
+
+/* Tuiles larges / hautes (Fil info, etc.) */
+.tile--wide {
+  grid-column: span 2;
+}
+
+.tile--tall {
+  grid-row: span 2;
 }
 
 /* =========================
-   TUILES – STYLE DE BASE
+   TUILE – STYLE DE BASE
    ========================= */
 
 .tile {
@@ -114,7 +67,7 @@
   overflow: hidden;
 }
 
-/* Pastille PR / GP / RE / … */
+/* pastille PR / GP / AD / … */
 .tile-icon {
   width: 38px;
   height: 38px;
@@ -141,6 +94,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   margin-bottom: 4px;
+  color: #f9fafb;
 }
 
 .tile-desc {
@@ -149,7 +103,7 @@
   opacity: 0.9;
 }
 
-/* Liens en bas de certaines tuiles */
+/* Liens en bas de certaines tuiles (Doc de travail / Ex PDF…) */
 .tile-bottom-links {
   margin-top: 10px;
   display: flex;
@@ -167,17 +121,20 @@
   color: inherit;
 }
 
-/* Tuiles larges / hautes (si besoin) */
-.tile--wide {
-  grid-column: span 2;
+/* Effet survol / clic (foncé) */
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.65);
 }
-.tile--tall {
-  grid-row: span 2;
+
+.tile:active {
+  transform: translateY(0);
+  box-shadow: inset 0 8px 12px rgba(0, 0, 0, 0.55);
 }
 
 /* =========================
-   VARIANTES DE COULEUR – IDENTIQUES
-   À TA CAPTURE « BONNE »
+   VARIANTES DE COULEUR
+   (alignées sur ta capture "modèle")
    ========================= */
 
 /* Tuile blanche – Présentation / mode d'emploi */
@@ -187,17 +144,21 @@
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.55);
 }
 
-/* Tuiles bleues – Guide / Ressources / Contacts / Audit */
+/* Tuiles bleues – Guide / Ressources / Contacts / Audit / etc. */
 .tile--dark {
-  background: radial-gradient(160% 200% at 0% 0%, #1e3a8a, #020617 70%);
+  background: radial-gradient(
+    160% 200% at 0% 0%,
+    #1e3a8a,
+    #020617 70%
+  );
 }
 
-/* Tuile verte – Accès DDFPT, tuiles « validation » */
+/* Tuile verte – Accès DDFPT / Associer Diplômes/domaines */
 .tile--green {
   background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
-/* Tuiles orange – Formulaire / Fiches / Avis médicaux */
+/* Tuiles orange – Formulaire, Fiches de poste, Avis médicaux */
 .tile--orange {
   background: linear-gradient(135deg, #fdba74, #fb923c);
 }
@@ -214,25 +175,29 @@
 }
 
 /* =========================
-   FIL INFO – DANS LA TUILE, PAS DE DÉBORDEMENT
+   FIL INFO – CONTENU INTERNE
    ========================= */
 
-.news-viewport {
+/* Conteneur qui scrolle à l’intérieur de la tuile Fil info */
+.tile .news-viewport {
   margin-top: 10px;
   border-radius: 18px;
   background: linear-gradient(180deg, #111827, #374151);
   padding: 8px 10px;
   flex: 1;
-  overflow: hidden; /* rien ne dépasse */
+  overflow: hidden;   /* rien ne dépasse du cadre */
+  position: relative;
 }
 
-.news-track {
+/* Liste des items */
+.tile .news-track {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.news-item {
+/* Lignes individuelles */
+.tile .news-item {
   font-size: 0.72rem;
   line-height: 1.25;
   color: #e5e7eb;
@@ -243,30 +208,13 @@
 }
 
 /* =========================
-   VARIANTE MODE CLAIR
+   RESPONSIVE
    ========================= */
-
-body.light-theme .tile-frame {
-  background: #f3f4f6;
-  border-color: #f97316;
-}
-
-body.light-theme .tile {
-  background: linear-gradient(145deg, #ffffff, #e5edf8);
-  color: #0f172a;
-  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.35);
-}
-
-body.light-theme .tile--white {
-  background: #ffffff;
-}
-
-/* on laisse vert / orange / marron tels quels pour garder le contraste */
 
 @media (max-width: 1080px) {
   .tile-frame {
     margin: 24px 12px 32px;
-    padding: 16px;
+    padding: 18px;
   }
 }
 
