@@ -1,0 +1,99 @@
+/* ============================================================
+   PP – Page "Présentation du guide"
+   Spécifique à cette page uniquement.
+   Tout le socle (fond, header, boutons, grille, etc.) est dans pp-core.css
+   ============================================================ */
+
+/* Conteneur principal (hérite déjà de .pp-main dans pp-core) */
+.pp-main {
+  max-width: 1100px;
+  margin: 0 auto 32px auto;
+}
+
+/* Bloc orange principal qui encadre la page */
+.panel-orange {
+  border-radius: 18px;
+  border: 2px solid var(--pp-border-accent, #f97316);
+  padding: 18px 22px 22px;
+  background: radial-gradient(circle at top left,
+              rgba(249, 115, 22, 0.08),
+              rgba(15, 23, 42, 1));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Titre principal de la page */
+.panel-orange-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 4px 0;
+}
+
+/* Sous-titre sous le H1 */
+.panel-orange-sub {
+  font-size: 0.95rem;
+  color: var(--pp-muted, #9ca3af);
+  text-align: center;
+  margin: 0 0 16px 0;
+}
+
+/* Cartes de contenu (1, 2, 3, 4) */
+.content-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.9);
+  padding: 14px 16px 16px;
+  margin-top: 14px;
+}
+
+/* Titres des sections 1, 2, 3, 4 – déjà réduits par rapport à "fonctionnalités" */
+.content-heading {
+  font-size: 1.05rem;      /* cohérent avec ce que tu voulais : un peu plus petit */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Corps de texte de chaque carte */
+.content-body p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0.4rem 0;
+}
+
+.content-body ul {
+  margin: 0.35rem 0 0.6rem 1.2rem;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.content-body li {
+  margin-bottom: 0.2rem;
+}
+
+/* Paragraphe de conclusion en bas de page */
+.content-intro {
+  margin-top: 1.2rem;
+  font-size: 0.96rem;
+  font-style: italic;
+  color: var(--pp-muted, #9ca3af);
+}
+
+/* Un peu d'air sous le dernier bloc */
+.pp-main .panel-orange:last-child {
+  margin-bottom: 24px;
+}
+
+/* Version un peu resserrée sur mobile */
+@media (max-width: 768px) {
+  .panel-orange {
+    padding: 14px 14px 18px;
+  }
+
+  .content-card {
+    padding: 12px 12px 14px;
+  }
+}
