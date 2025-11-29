@@ -48,435 +48,167 @@ body.light-theme .tile:not(.tile--green):not(.tile--orange):not(.tile--dark):not
   background: linear-gradient(145deg, #e5e7eb, #d4def5);
 }
 
-
-.tile--white:hover {
-  background: #f3f4f6;
-  box-shadow: 0 14px 22px rgba(15,23,42,0.16);
-}
-.tile--white:active {
-  background: #e5e7eb;
-  box-shadow: var(--shadow-pressed);
-}
-.tile--white .tile-desc {
-  color: #4b5563;
-}
-.tile--white .tile-icon {
-  background: #1f2937;
-  border-color: #0f172a;
-  color: #f9fafb;
+/* =========================
+   BLOC ORANGE AUTOUR DES TUILES
+   ========================= */
+.tile-frame {
+  max-width: 1120px;
+  margin: 32px auto 40px;
+  padding: 22px 22px 26px;
+  border-radius: 26px;
+  border: 2px solid #f97316;                 /* liseré orange bien visible */
+  background: radial-gradient(
+      140% 180% at 0% 0%,
+      #111827,
+      #020617 70%
+  );
 }
 
-.tile--green {
-  background: linear-gradient(145deg, #059669, #22c55e);
-}
-.tile--green:hover {
-  background: linear-gradient(145deg, #16a34a, #22c55e);
-}
-.tile--green:active {
-  background: linear-gradient(145deg, #15803d, #16a34a);
+/* Grille des tuiles : identique à avant */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 4), minmax(0, 1fr));
+  gap: 16px;
 }
 
-.tile--orange {
-  background: linear-gradient(145deg, #f97316, #fdba74);
-  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.45);
-}
-.tile--orange:hover {
-  background: linear-gradient(145deg, #fb923c, #fed7aa);
-  box-shadow: 0 14px 24px rgba(249, 115, 22, 0.55);
-}
-.tile--orange:active {
-  background: linear-gradient(145deg, #ea580c, #f97316);
-  box-shadow: var(--shadow-pressed);
-}
-
-.tile--dark {
-  background: linear-gradient(145deg, #020617, #020617);
-}
-.tile--dark:hover {
-  background: linear-gradient(145deg, #111827, #020617);
-}
-.tile--dark:active {
-  background: linear-gradient(145deg, #020617, #000000);
+/* =========================
+   TUILES – STYLE DE BASE
+   ========================= */
+.tile {
+  position: relative;
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  background: radial-gradient(140% 180% at 0% 0%, #020617, #020617);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.60);
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
 }
 
-.tile--brown-light {
-  background: linear-gradient(145deg, #fbbf24, #fed7aa);
-  box-shadow: 0 10px 20px rgba(217, 119, 6, 0.35);
-  color: #111827;
-}
-.tile--brown-light:hover {
-  background: linear-gradient(145deg, #facc15, #fee2b3);
-  box-shadow: 0 14px 24px rgba(217, 119, 6, 0.45);
-}
-.tile--brown-light:active {
-  background: linear-gradient(145deg, #eab308, #fbbf24);
-  box-shadow: var(--shadow-pressed);
-}
-
-.tile--brown-dark {
-  background: linear-gradient(145deg, #7c2d12, #b45309);
-  box-shadow: 0 10px 20px rgba(124, 45, 18, 0.55);
-}
-.tile--brown-dark:hover {
-  background: linear-gradient(145deg, #9a3412, #ea580c);
-  box-shadow: 0 14px 24px rgba(124, 45, 18, 0.65);
-}
-.tile--brown-dark:active {
-  background: linear-gradient(145deg, #4a1d0b, #c2410c);
-  box-shadow: var(--shadow-pressed);
-}
-
-.tile--gray-light {
-  background: linear-gradient(145deg, #4b5563, #6b7280);
-}
-.tile--gray-light:hover {
-  background: linear-gradient(145deg, #6b7280, #9ca3af);
-}
-.tile--gray-light:active {
-  background: linear-gradient(145deg, #374151, #4b5563);
-}
-
-.tile--tall { grid-row: span 2; }
-.tile--wide { grid-column: span 2; }
-
+/* pastille PR / GP / … */
 .tile-icon {
-  width: var(--icon-size);
-  height: var(--icon-size);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02));
-  backdrop-filter: blur(3px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  margin-bottom: 10px;
 }
 
 .tile-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .tile-title {
-  font-size: var(--title-size);
+  font-size: 0.95rem;
   font-weight: 600;
-  line-height: 1.25;
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
 }
 
 .tile-desc {
-  font-size: var(--desc-size);
-  color: var(--muted);
-  line-height: 1.15;
-  margin-top: 4px;
-}
-
-.tile--green .tile-desc,
-.tile--orange .tile-desc,
-.tile--dark .tile-desc,
-.tile--brown-dark .tile-desc,
-.tile--gray-light .tile-desc {
-  color: rgba(255, 255, 255, 0.94);
-}
-
-.tile--brown-light .tile-title,
-.tile--brown-light .tile-desc {
-  color: #111827;
-}
-.tile--brown-light .tile-icon {
-  border-color: rgba(15, 23, 42, 0.5);
-  color: #111827;
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.tile-bottom-links {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.72rem;
-}
-
-.tile-link {
-  text-decoration: none;
-  color: inherit;
-  opacity: 0.95;
-}
-
-.tile-link:hover { text-decoration: underline; }
-
-.news-viewport {
-  margin-top: 8px;
-  border-radius: 10px;
-  background: rgba(15,23,42,0.55);
-  padding: 8px 10px;
-  overflow: hidden;
-  position: relative;
-  max-height: 200px;
-  min-height: 160px;
-}
-
-body.light-theme .news-viewport {
-  background: #e5edf8;
-}
-
-.tile--tall .news-viewport {
-  max-height: 230px;
-  min-height: 180px;
-}
-
-.news-track {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  animation: newsScroll 18s linear infinite;
-}
-
-.news-viewport:hover .news-track {
-  animation-play-state: paused;
-}
-
-.news-item {
-  font-size: 0.75rem;
-  color: #e5e7eb;
-  text-decoration: none;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-body.light-theme .news-item {
-  color: #1f2937;
-}
-
-.news-item:hover {
-  text-decoration: underline;
-  color: #ffffff;
-}
-
-body.light-theme .news-item:hover {
-  color: #111827;
-}
-
-@keyframes newsScroll {
-  0%   { transform: translateY(0); }
-  100% { transform: translateY(-50%); }
-}
-
-.portal-footer {
-  margin-top: 4px;
-  padding-top: 4px;
-  font-size: 0.7rem;
-  text-align: center;
-  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
   opacity: 0.9;
 }
 
-body[data-page="Portail"] .tile-grid {
-  max-width: 1180px;
-}
-
-body[data-page="Acces_Admin"] .tile-grid,
-body[data-page="Acces_DDFPT"] .tile-grid {
-  max-width: 1100px;
-}
-
-body[data-page="Acces_Admin"] .tile,
-body[data-page="Acces_DDFPT"] .tile {
-  min-height: 180px;
-  max-height: 260px;
-}
-
-@media (max-width: 900px) {
-  .tile-grid {
-    grid-template-columns: repeat(2, minmax(160px, 1fr));
-  }
-  .tile--wide {
-    grid-column: span 2;
-  }
-}
-
-/* ====== BLOC ACCUEIL PPP ====== */
-
-.ppaca-card{
-  background: var(--dark-card, #0b2238);
-  border: 2px solid #f97316;
-  border-radius: 18px;
-  padding: 24px 24px 20px 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.45);
-  color: var(--dark-text, #e5f0ff);
-}
-
-.ppaca-card-header{
+/* Liens en bas de certaines tuiles */
+.tile-bottom-links {
+  margin-top: 10px;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.ppaca-avatar{
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  background: linear-gradient(135deg,#1b396a,#2563eb);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #e5f0ff;
-}
-
-.ppaca-card-title{
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.ppaca-card-subtitle{
-  margin: 2px 0 0 0;
-  font-size: 0.9rem;
-  color: var(--dark-muted, #9ca3af);
-}
-
-.ppaca-card-body{
-  margin-top: 12px;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.ppaca-card-body p{
-  margin: 0 0 10px 0;
-}
-
-.ppaca-card-footer{
-  margin-top: 18px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 6px;
 }
 
-.ppaca-btn-secondary{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 12px;
+.tile-link {
+  font-size: 0.75rem;
+  padding: 4px 8px;
   border-radius: 999px;
-  border: 1px solid #f97316;
-  background: transparent;
-  font-size: 0.8rem;
-  color: var(--dark-text, #e5f0ff);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.7);
   text-decoration: none;
-  white-space: nowrap;
+  color: inherit;
 }
 
-.ppaca-btn-secondary:hover{
-  background: rgba(249,115,22,0.12);
-}
+/* =========================
+   VARIANTES DE COULEUR (comme avant)
+   ========================= */
 
-.ppaca-btn-secondary--ghost{
-  background: rgba(15,23,42,0.25);
-}
-.ppaca-btn-secondary--ghost:hover{
-  background: rgba(249,115,22,0.18);
-}
-
-body.light-theme .ppaca-card{
-  background: var(--light-card, #ffffff);
-  color: #111827;
-  border-color: #f97316;
-}
-
-body.light-theme .ppaca-card-subtitle{
-  color: #6b7280;
-}
-
-body.light-theme .ppaca-btn-secondary{
-  color: #111827;
-  border-color: #f97316;
-  background: #ffffff;
-}
-
-body.light-theme .ppaca-btn-secondary:hover{
-  background: #fef3c7;
-}
-
-body.light-theme .ppaca-btn-secondary--ghost{
-  background: #f9fafb;
-}
-body.light-theme .ppaca-btn-secondary--ghost:hover{
-  background: #fee2b3;
-}
-/* ===== Tuile "Fil info" – éviter le débordement ===== */
-
-.news-viewport {
-  margin-top: 12px;
-  padding-right: 6px;
-  max-height: 210px;      /* ajuste à 190 / 220 si besoin */
-  overflow-y: auto;       /* on scrolle dans la tuile */
-}
-
-.news-track {
-  display: flex;
-  flex-direction: column;
-}
-
-.news-item {
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-/* ===== Correctifs portail – bloc de tuiles ===== */
-
-/* Cadre orange autour des tuiles (aspect "ancienne version") */
-.tile-frame {
-  max-width: 1180px;
-  margin: 32px auto 40px;
-  padding: 24px;
-  border-radius: 26px;
-  border: 2px solid #f97316;
-  background: radial-gradient(circle at 0 0, #0b2238 0, #020617 55%);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
-}
-
-/* Base commune des tuiles : fond un peu plus lumineux */
-.tile {
-  background: rgba(15, 23, 42, 0.95);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
-}
-
-/* Couleurs spécifiques forcées (comme la maquette d'origine) */
+/* Tuile blanche – Présentation / mode d'emploi */
 .tile--white {
   background: #f9fafb;
   color: #111827;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.55);
 }
 
-.tile--green {
-  background: #10b981;
-}
-
-.tile--orange {
-  background: #f97316;
-}
-
+/* Tuiles bleues – Guide / Ressources / Contacts */
 .tile--dark {
-  background: #020617;
+  background: radial-gradient(
+      160% 200% at 0% 0%,
+      #1e3a8a,
+      #020617 70%
+  );
 }
 
-.tile--brown-light {
-  background: #ea580c;
+/* Tuile verte – Accès DDFPT */
+.tile--green {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
+/* Tuiles orange – Formulaire / Fiches / Avis médicaux */
+.tile--orange {
+  background: linear-gradient(135deg, #fdba74, #fb923c);
+}
+
+/* Tuile marron – Travaux, équipements, produits */
 .tile--brown-dark {
-  background: #7c2d12;
+  background: linear-gradient(135deg, #9a3412, #7c2d12);
 }
 
+/* Tuile grise – Fil info */
 .tile--gray-light {
-  background: #4b5563;
+  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+  color: #111827;
 }
+
+/* =========================
+   FIL INFO – PAS DE DÉBORDEMENT
+   ========================= */
+
+/* Conteneur qui scrolle à l’intérieur de la tuile */
+.tile .news-viewport {
+  margin-top: 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #111827, #374151);
+  padding: 8px 10px;
+  flex: 1;                    /* prend la hauteur dispo dans la tuile */
+  overflow: hidden;           /* rien ne dépasse en bas */
+  position: relative;
+}
+
+/* Liste des items de fil info */
+.tile .news-track {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Une ligne de fil info */
+.tile .news-item {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.95;
+}
+
+
