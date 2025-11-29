@@ -9,7 +9,7 @@ const PPP_LINKS = {
   home:   "https://ton-url-accueil",           // page portail d'accueil Grist ou GitHub
   portal: "https://ton-url-portail-general",   // bouton « Portail prévention PACA »
   admin:  "https://ton-url-admin",             // bouton « Accès administrateur »
-  ddfpt:  "https://ton-url-ddfpt"              // bouton « Accès Directeurs Délégués aux Formations »
+  ddfpt:  "https://ton-url-ddfpt2"              // bouton « Accès Directeurs Délégués aux Formations »
 };
 
 // ========================
