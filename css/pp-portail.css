@@ -431,6 +431,7 @@ body.light-theme .ppaca-btn-secondary--ghost:hover{
   line-height: 1.35;
   white-space: nowrap;
 }
+
 /* ===== Correctifs portail – bloc de tuiles ===== */
 
 /* Cadre orange autour des tuiles (aspect "ancienne version") */
@@ -479,4 +480,3 @@ body.light-theme .ppaca-btn-secondary--ghost:hover{
 .tile--gray-light {
   background: #4b5563;
 }
-
