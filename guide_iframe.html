@@ -36,26 +36,32 @@
 </head>
 <body>
   <div id="wrapper">
-    <iframe id="gristFrame" src="" allowfullscreen></iframe>
+    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
 
   <script>
     // Nettoyage / normalisation de l'URL qui arrive après le #
     function cleanUrl(raw) {
       if (!raw) return "";
+
       let u = decodeURIComponent(raw.trim());
 
-      // On enlève les paramètres parasites éventuels
+      // On enlève éventuellement des paramètres parasites
       u = u.replace(/[\?&](themeMode|tour|layout|view)=[^&]*/g, "");
+
+      // On enlève d'éventuels anciens embed/style/exclude-headers pour éviter les doublons
+      u = u.replace(/[\?&](embed|style|exclude-headers)=[^&]*/g, "");
 
       // On reconstruit proprement
       const hasQuery = u.includes("?");
       u += hasQuery ? "" : "?";
 
       const params = [];
-      if (!/[\?&]embed=true\b/.test(u)) params.push("embed=true");
-      if (!/[\?&]style=singlePage\b/.test(u)) params.push("style=singlePage");
-      if (!/[\?&]exclude-headers=true\b/.test(u)) params.push("exclude-headers=true");
+
+      // Ici on force un style "page unique" éditable, + suppression des en-têtes Grist
+      params.push("style=singlePage");
+      params.push("embed=true");            // en pratique Grist gère les deux
+      params.push("exclude-headers=true");
 
       if (params.length) {
         if (!u.endsWith("?") && !u.endsWith("&")) u += "&";
@@ -65,9 +71,22 @@
       return u;
     }
 
-    // URL brute passée dans le hash (#)
-    var raw = window.location.hash ? window.location.hash.substring(1) : "";
-    document.getElementById("gristFrame").src = cleanUrl(raw);
+    function updateFrameFromHash() {
+      const raw = window.location.hash ? window.location.hash.substring(1) : "";
+      const url = cleanUrl(raw);
+      if (!url) return;
+
+      const frame = document.getElementById("gristFrame");
+      if (frame.src !== url) {
+        frame.src = url;
+      }
+    }
+
+    // Chargement initial
+    updateFrameFromHash();
+
+    // Mise à jour quand le hash change (clic sur un lien, retour navigateur, etc.)
+    window.addEventListener("hashchange", updateFrameFromHash);
   </script>
 </body>
 </html>
