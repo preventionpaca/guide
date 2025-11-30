@@ -6,10 +6,10 @@
 // (Les pages utilisent data-nav="home" | "portal" | "admin" | "ddfpt")
 
 const PPP_LINKS = {
-  home:   "https://ton-url-accueil",           // page portail d'accueil Grist ou GitHub
-  portal: "https://ton-url-portail-general",   // bouton « Portail prévention PACA »
-  admin:  "https://ton-url-admin",             // bouton « Accès administrateur »
-  ddfpt:  "https://ton-url-ddfpt2"              // bouton « Accès Directeurs Délégués aux Formations »
+  home:   "https://preventionpaca.github.io/guide/",           // page portail d'accueil Grist ou GitHub
+  portal: "https://preventionpaca.github.io/guide/",   // bouton « Portail prévention PACA »
+  admin:  "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/69?embed=true&style=singlePage&exclude-headers=true",             // bouton « Accès administrateur »
+  ddfpt:  "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/70?embed=true&style=singlePage&exclude-headers=true"              // bouton « Accès Directeurs Délégués aux Formations »
 };
 
 // ========================
