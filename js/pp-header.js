@@ -8,8 +8,8 @@
 const PPP_LINKS = {
   home:   "https://preventionpaca.github.io/guide/",           // page portail d'accueil Grist ou GitHub
   portal: "https://preventionpaca.github.io/guide/",   // bouton « Portail prévention PACA »
-  admin:  "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/75?embed=true&style=singlePage&exclude-headers=true",             // bouton « Accès administrateur »
-  ddfpt:  "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/74?embed=true&style=singlePage&exclude-headers=true"              // bouton « Accès Directeurs Délégués aux Formations »
+  admin:  "https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/75?embed=true&style=singlePage&exclude-headers=true",             // bouton « Accès administrateur »
+  ddfpt:  "https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/74?embed=true&style=singlePage&exclude-headers=true"              // bouton « Accès Directeurs Délégués aux Formations »
 };
 
 // ========================
