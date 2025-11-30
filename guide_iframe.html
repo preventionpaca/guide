@@ -10,26 +10,37 @@
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
   <style>
+    :root {
+      --bg: #020617;
+      /* Hauteur approximative de la barre Grist à masquer */
+      --grist-offset: 56px; /* ajuste à 48 / 60 si besoin */
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #020617;
+      background: var(--bg);
     }
 
+    /* Conteneur plein écran, coupe ce qui dépasse */
     #wrapper {
       position: fixed;
       inset: 0;
       overflow: hidden;
-      background: #020617;
+      background: var(--bg);
     }
 
+    /* Iframe Grist :
+       - décalée vers le haut de --grist-offset
+       - un peu plus haute pour ne pas perdre le bas de la page
+    */
     #gristFrame {
       position: absolute;
-      top: 0;
+      top: calc(-1 * var(--grist-offset));
       left: 0;
       width: 100%;
-      height: 100%;
+      height: calc(100% + var(--grist-offset));
       border: 0;
     }
   </style>
@@ -58,9 +69,9 @@
 
       const params = [];
 
-      // Ici on force un style "page unique" éditable, + suppression des en-têtes Grist
+      // Style page unique + suppression des en-têtes Grist
       params.push("style=singlePage");
-      params.push("embed=true");            // en pratique Grist gère les deux
+      params.push("embed=true");
       params.push("exclude-headers=true");
 
       if (params.length) {
