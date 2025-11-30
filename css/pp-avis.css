@@ -1,0 +1,672 @@
+/* ================== EN-TÊTE + THÈME ================== */
+:root {
+  /* Fond sombre aligné sur le portail */
+  --bg: #020617;
+  --text: #ffffff;
+  --muted: #cbd5f5;
+
+  --pill-bg: rgba(255, 255, 255, 0.06);
+  --pill-text: #cbd5f5;
+
+  --header-max: 1180px;
+}
+
+/* Mode clair : on écrase les variables */
+body.light-theme {
+  --bg: #f3f4f6;
+  --text: #111827;
+  --muted: #4b5563;
+
+  --pill-bg: #e5edf8;
+  --pill-text: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Fond sombre = couleur portail ; léger halo en haut, mais base = #020617 */
+  background: radial-gradient(circle at top, #0b1f3a 0, var(--bg) 55%, #020617 100%);
+  color: var(--text);
+  padding: 16px 10px 12px;
+  transition: background 200ms ease-out, color 200ms ease-out;
+}
+
+body.light-theme {
+  /* Fond clair légèrement contrasté par rapport au bloc blanc */
+  background: radial-gradient(circle at top, #e0ebff 0, #f3f4f6 45%, #e5e7eb 100%);
+}
+
+/* Wrapper formulaire (carte centrale) */
+.wrapper {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  color: #000000;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.3);
+}
+
+body.light-theme .wrapper {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+  box-shadow: 0 12px 24px rgba(148, 163, 184, 0.4);
+}
+
+/* Alignement propre des champs du tableau identité */
+table td {
+  padding: 0;
+}
+
+/* ----------------------- HEADER PORTAIL ---------------------- */
+
+.portal-header-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.portal-header {
+  width: 100%;
+  max-width: var(--header-max);
+  margin: 0 auto 10px auto;
+  position: relative;
+}
+
+/* ===== Bouton retour (gros bouton à gauche) ===== */
+
+.back-button {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.28);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms ease-out, transform 150ms ease-out,
+              box-shadow 150ms ease-out, border-color 150ms ease-out;
+}
+
+.back-button:hover {
+  transform: translate(-1px, -51%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.back-button:active {
+  transform: translateY(-50%);
+  box-shadow: none;
+}
+
+.back-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.back-label {
+  white-space: nowrap;
+}
+
+body.light-theme .back-button {
+  background: #ffffff;
+  color: #111827;
+  border-color: #cbd5e1;
+}
+
+/* ===== Bouton mode clair/sombre ===== */
+
+.header-tools {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  font-size: 0.72rem;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: background 150ms ease-out, transform 150ms ease-out,
+              box-shadow 150ms ease-out, border-color 150ms ease-out;
+}
+
+body.light-theme .theme-toggle {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #111827;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.theme-toggle:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ===== Lignes de logos ===== */
+
+.logo-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-right: 120px; /* pour laisser la place au bouton mode clair */
+}
+
+.logo-block {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--pill-text);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ===== Titre + sous-titre ===== */
+
+.portal-title {
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+  font-weight: 700;
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.portal-subtitle {
+  text-align: center;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.header-separator {
+  width: min(240px, 40%);
+  height: 1px;
+  margin: 8px auto 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.7),
+    transparent
+  );
+  opacity: 0.8;
+}
+
+body.light-theme .header-separator {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(15, 23, 42, 0.35),
+    transparent
+  );
+}
+
+/* ===== Boutons de navigation (Portail / Admin / DDFPT) ===== */
+
+.page-nav {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.page-nav a {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  text-decoration: none;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.16);
+  transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.page-nav a.active {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.page-nav a.nav-admin {
+  background: #020617;
+  border-color: #020617;
+  color: #f9fafb;
+}
+.page-nav a.nav-admin:hover,
+.page-nav a.nav-admin.active {
+  background: #0b1120;
+  border-color: #020617;
+  color: #ffffff;
+}
+
+.page-nav a.nav-ddfpt {
+  background: #059669;
+  border-color: #059669;
+  color: #f9fafb;
+}
+.page-nav a.nav-ddfpt:hover,
+.page-nav a.nav-ddfpt.active {
+  background: #047857;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+body.light-theme .page-nav a {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #4b5563;
+}
+body.light-theme .page-nav a.active {
+  background: #1b396a;
+  color: #f9fafb;
+  border-color: #1b396a;
+}
+body.light-theme .page-nav a.nav-admin,
+body.light-theme .page-nav a.nav-admin.active {
+  background: #020617;
+  border-color: #020617;
+  color: #f9fafb;
+}
+body.light-theme .page-nav a.nav-ddfpt,
+body.light-theme .page-nav a.nav-ddfpt.active {
+  background: #059669;
+  border-color: #059669;
+  color: #f9fafb;
+}
+
+/* ================== PRINT ================== */
+
+/* Ce qui ne doit pas apparaître lors de l’export PDF */
+@media print {
+  .non-printable {
+    display: none !important;
+  }
+  .avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  body {
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+  .wrapper {
+    max-width: 100%;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+/* =============== FORMULAIRE AVIS MÉDICAL =============== */
+
+.search-card {
+  border: 1px solid #dde2f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  background: #f8fafc;
+}
+
+.search-card h3 {
+  margin: 0 0 6px 0;
+  font-size: 1rem;
+  color: #1b396a;
+}
+
+.search-card p {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.field-block {
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
+
+.field-block label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #1b396a;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 2px rgba(27, 57, 106, 0.12);
+}
+
+.dropdown {
+  position: relative;
+  margin-top: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 6px;
+  border: 1px solid #c5cce0;
+  background: #fff;
+  display: none;
+  z-index: 10;
+}
+
+.dropdown-item {
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:nth-child(2n) {
+  background: #f7f8fd;
+}
+
+.dropdown-item:hover {
+  background: #e0e7ff;
+}
+
+/* En-tête titre principal */
+
+.header-table h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1b396a;
+  text-transform: uppercase;
+}
+
+.header-subtitle {
+  margin: 4px 0 0 0;
+  color: #444;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+/* Ligne établissement + bloc bleu */
+.header-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.etab-text {
+  font-size: 0.85rem;
+  color: #000;
+  line-height: 1.3;
+  max-width: 35%;
+  min-width: 30%;
+  white-space: normal;
+}
+
+.etab-text strong {
+  font-weight: bold;
+}
+
+.legal-box {
+  border: 1px solid #1c87c9;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #f0f7ff;
+  font-size: 12px;
+  color: #1c87c9;
+  flex: 1;
+}
+
+.legal-box ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+
+.legal-box li {
+  margin-bottom: 2px;
+}
+
+/* Champs identité / formation */
+.field {
+  width: 100%;
+  height: 25px;
+  border: 1px solid #000;
+  padding: 2px 4px;
+  box-sizing: border-box;
+}
+
+/* Liste des travaux en 13px + retrait de 2 cm */
+#travaux-list,
+#travaux-list li {
+  font-size: 13px;
+}
+
+#travaux-list {
+  margin-top: 6px;
+  margin-left: 2cm;
+  padding-left: 0;
+}
+
+/* Avis médical */
+
+.avis-title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* Ligne d'en-tête : Avis médical à gauche, Date à droite */
+.avis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.avis-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.avis-medical-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 26px;
+}
+
+.avis-choix {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.avis-choix label {
+  cursor: pointer;
+  font-weight: bold;
+  color: black;
+  text-decoration: none;
+}
+
+input[type="radio"] {
+  display: none;
+}
+
+#avis1:checked ~ .avis1 label {
+  color: orange;
+  text-decoration: underline;
+}
+
+#avis2:checked ~ .avis2 label {
+  color: red;
+  text-decoration: underline;
+}
+
+#avis3:checked ~ .avis3 label {
+  color: green;
+  text-decoration: underline;
+}
+
+.avis-bloc {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+#avis1:checked ~ .avis1 .avis-bloc,
+#avis2:checked ~ .avis2 .avis-bloc,
+#avis3:checked ~ .avis3 .avis-bloc {
+  display: flex;
+}
+
+/* Masquer la ligne de 3 choix une fois le choix fait */
+#avis1:checked ~ .avis-choix,
+#avis2:checked ~ .avis-choix,
+#avis3:checked ~ .avis-choix {
+  display: none;
+}
+
+.avis-bloc input {
+  height: 50px;
+  flex: 1;
+}
+
+/* Date + bouton calendrier */
+
+.tat-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tat-input {
+  width: 140px;
+  height: 25px;
+  box-sizing: border-box;
+  padding: 2px 6px;
+}
+
+.tat-btn {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tat-btn:hover {
+  background: #e5e5e5;
+}
+
+.cachets-table {
+  margin-top: 12px;
+}
+
+.export-btn {
+  margin-top: 20px;
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #1b396a;
+  background: #1b396a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.export-btn:hover {
+  background: #23477f;
+}
+
+/* Affichage écran / impression */
+
+.screen-only {
+  display: inline-block;
+}
+
+.print-only {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .logo-row {
+    padding-right: 0;
+  }
+  .back-button {
+    left: 8px;
+    top: 12px;
+    transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 14px 8px;
+  }
+
+  .header-tools {
+    position: static;
+    margin: 0 auto 6px;
+    justify-content: center;
+  }
+
+  .portal-header {
+    padding-top: 28px;
+  }
+
+  .logo-block {
+    white-space: normal;
+  }
+
+  .wrapper {
+    padding: 16px;
+  }
+
+  .header-info-row {
+    flex-direction: column;
+  }
+}
