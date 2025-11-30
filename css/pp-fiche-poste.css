@@ -1,0 +1,318 @@
+:root{
+  /* Palette fiche de poste : identique à ta version */
+  --blue-dark:#0b1f3b;
+  --blue:#1b396a;
+  --blue-soft:#dbeafe;
+  --blue-grad-start:#1b396a;
+  --blue-grad-end:#3b82f6;
+
+  --green-bg:#16a34a;
+  --green-soft:#22c55e;
+
+  --orange-bg:#fb923c;
+  --orange-soft:#fed7aa;
+
+  --env-azure-start:#38bdf8;
+  --env-azure-end:#bfdbfe;
+
+  --red-bg:#b91c1c;
+  --red-soft:#fecaca;
+
+  --card-bg:#ffffff;
+  --page-bg:#f3f4f6;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#d1d5db;
+
+  --pill-bg:#111827;
+  --pill-border:#374151;
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+/* Conteneur général sous le header commun */
+.page-wrap{
+  padding:16px 10px 32px;
+}
+
+/* =================== FICHE DE POSTE =================== */
+
+.wrapper{
+  max-width:1100px;
+  margin:20px auto 16px auto;
+  background:var(--card-bg);
+  border-radius:8px;
+  border:1px solid var(--border);
+  box-shadow:0 10px 30px rgba(15,23,42,0.35);
+  padding:18px 20px 16px;
+  color:var(--text);
+}
+body.light-theme .wrapper{
+  background:#ffffff;
+  border-color:#d1d5db;
+  box-shadow:0 10px 24px rgba(15,23,42,0.1);
+  color:#111827;
+}
+
+/* ===== HEADER FICHE ===== */
+.fp-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  border-radius:6px;
+  padding:10px 14px;
+  margin-bottom:14px;
+  background:linear-gradient(90deg,var(--blue-grad-start),var(--blue-grad-end));
+  color:#f9fafb;
+}
+
+.fp-header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.fp-header-title{
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:0.08em;
+}
+
+.fp-header-sub{
+  font-size:13px;
+  text-transform:uppercase;
+}
+
+.estab-pill{
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(15,23,42,0.5);
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:12px;
+}
+
+.estab-pill-label{
+  font-size:11px;
+  opacity:0.9;
+}
+
+.estab-search-wrapper{
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+#etab-search{
+  width:100%;
+  border:none;
+  background:transparent;
+  color:#e5e7eb;
+  font:inherit;
+  padding:2px 2px;
+  outline:none;
+}
+#etab-search::placeholder{
+  color:rgba(226,232,240,0.7);
+}
+
+.estab-hint{
+  margin-top:2px;
+  font-size:11px;
+  color:#e5e7eb;
+  opacity:0.9;
+}
+
+.fp-header-right{
+  display:flex;
+  align-items:stretch;
+  gap:10px;
+  min-width:260px;
+}
+
+.estab-contact{
+  font-size:11px;
+  color:#e5e7eb;
+  max-width:220px;
+}
+
+.estab-contact-name{
+  font-weight:700;
+  text-transform:uppercase;
+  margin-bottom:2px;
+}
+
+.estab-contact-line{
+  line-height:1.2;
+}
+
+.logo-frame{
+  width:130px;
+  height:78px;
+  border-radius:8px;
+  background:#e0f2fe;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  border:1px solid rgba(15,23,42,0.35);
+}
+
+.logo-frame img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+
+.logo-upload{
+  font-size:10px;
+  color:#e5e7eb;
+  text-align:right;
+  margin-top:2px;
+}
+
+.logo-upload input[type="file"]{
+  font-size:10px;
+  max-width:160px;
+}
+
+/* ===== IDENTIFICATION ZONE ===== */
+.meta-row{
+  display:grid;
+  grid-template-columns:2fr 1.5fr 1.5fr;
+  gap:10px;
+  margin-bottom:10px;
+  font-size:13px;
+}
+
+.meta-field{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  border-bottom:1px solid var(--border);
+  padding:4px 2px;
+}
+
+.meta-label{
+  font-weight:600;
+  min-width:110px;
+}
+
+.meta-input-wrapper{
+  flex:1;
+  position:relative;
+}
+
+.meta-input{
+  width:100%;
+  border:none;
+  border-bottom:1px dashed #9ca3af;
+  padding:2px 0;
+  font:inherit;
+  background:transparent;
+  outline:none;
+}
+
+.meta-input::placeholder{
+  color:#9ca3af;
+}
+
+/* ===== NATURE + DIPLÔMES (version pleine largeur) ===== */
+.nature-row{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom:12px;
+  font-size:13px;
+}
+
+.box{
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 8px;
+  background:#f9fafb;
+}
+
+.box-title{
+  font-weight:600;
+  margin-bottom:4px;
+  font-size:13px;
+}
+
+.textarea-like{
+  width:100%;
+  min-height:40px;
+  border:none;
+  resize:vertical;
+  font:inherit;
+  padding:3px 0;
+  background:transparent;
+  outline:none;
+}
+
+/* DIPLÔMES EN COLONNES */
+.dipl-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:8px;
+  margin-top:4px;
+}
+
+.dipl-col{
+  background:#e5e7ff;
+  border-radius:4px;
+  padding:4px 6px;
+  border:1px solid #c7d2fe;
+}
+
+.dipl-col-title{
+  font-weight:600;
+  font-size:12px;
+  margin-bottom:2px;
+  color:#1e293b;
+}
+
+.dipl-item{
+  font-size:12px;
+  margin-left:4px;
+  color:#111827;
+}
+
+.choose-machine-row{
+  margin-top:6px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+.btn{
+  appearance:none;
+  border-radius:999px;
+  border:1px solid #1f2937;
+  padding:4px 10px;
+  font-size:11px;
+  background:#111827;
+  color:#f9fafb;
+  cursor:pointer;
+}
+.btn:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+body.light-theme .btn{
+  background:#1b396a;
+  border-color:#1b396a;
+  color:#f9fafb;
+}
+
+/* ===== 3 COLONNES PRINCIPALES ===== */
+.main-grid{
+  display:grid;
+  grid-template-columns:1.3fr 1.4fr 1.4fr;
+  gap:10p
