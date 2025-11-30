@@ -17,6 +17,43 @@
 
   --red-bg:#b91c1c;
   --red-soft:#fecaca;
+/* ================== CORRECTIF CONTRASTE HEADER (fiche de poste) ================== */
+
+/* Mode sombre : texte bien lisible sur le fond bleu nuit */
+.ppp-header {
+  color: #e5e7eb;
+}
+
+.ppp-title {
+  color: #e5e7eb;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+}
+
+.ppp-subtitle {
+  color: #cbd5f5;
+  opacity: 0.95;
+}
+
+/* Mode clair : couleurs adaptées sur fond clair */
+body.light-theme .ppp-header {
+  color: #111827;
+}
+
+body.light-theme .ppp-title {
+  color: #111827;
+  text-shadow: none;
+}
+
+body.light-theme .ppp-subtitle {
+  color: #4b5563;
+}
+
+/* On s'assure aussi que les pills de navigation restent bien contrastées en sombre */
+body:not(.light-theme) .ppp-nav-pill {
+  color: #e5e7eb;
+  border-color: rgba(248, 250, 252, 0.7);
+}
 
   --card-bg:#ffffff;
   --page-bg:#f3f4f6;
@@ -681,3 +718,41 @@ body.light-theme .btn{
   font-size:11px;
   color:#6b7280;
 }
+/* ================== CORRECTIF CONTRASTE HEADER (fiche de poste) ================== */
+
+/* Mode sombre : texte bien lisible sur le fond bleu nuit */
+.ppp-header {
+  color: #e5e7eb;
+}
+
+.ppp-title {
+  color: #e5e7eb;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+}
+
+.ppp-subtitle {
+  color: #cbd5f5;
+  opacity: 0.95;
+}
+
+/* Mode clair : couleurs adaptées sur fond clair */
+body.light-theme .ppp-header {
+  color: #111827;
+}
+
+body.light-theme .ppp-title {
+  color: #111827;
+  text-shadow: none;
+}
+
+body.light-theme .ppp-subtitle {
+  color: #4b5563;
+}
+
+/* On s'assure aussi que les pills de navigation restent bien contrastées en sombre */
+body:not(.light-theme) .ppp-nav-pill {
+  color: #e5e7eb;
+  border-color: rgba(248, 250, 252, 0.7);
+}
+
