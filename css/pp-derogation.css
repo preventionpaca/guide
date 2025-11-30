@@ -1,335 +1,473 @@
-/* ========= FORMULAIRE DÉROGATION ========= */
+/* pp-derogation.css
+   Styles spécifiques au formulaire "Dérogation travaux réglementés"
+   Le header, le fond général et le mode clair/sombre
+   sont gérés par pp-core.css + pp-header.js
+*/
 
-.wrap{
-  max-width:900px;
-  margin:56px auto 40px auto;
-  padding:0 8px 24px;
-}
-
-.card{
-  border-radius:12px;
-  padding:10px 14px 12px 14px;
-  margin:10px 0;
-  border:1px solid;
-  background:#ffffff;          /* cartes blanches dans les deux modes */
-  color:#0f172a;
-}
-body.theme-light .card{
-  border-color:var(--light-border);
-  box-shadow:0 10px 20px rgba(15,23,42,0.05);
-}
-body.theme-dark .card{
-  border-color:#1f2937;
-  box-shadow:0 18px 30px rgba(0,0,0,0.55);
+:root {
+  --derog-border: #d1d5db;
+  --derog-muted: #6b7280;
+  --derog-accent: #1b396a;
+  --derog-danger: #dc2626;
 }
 
-.small-title{
-  border-left:4px solid #1b396a;
+/* Réglages généraux de la page de contenu
+   (le fond global reste celui du portail) */
+body {
+  margin: 0;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-.main-title{
-  font-size:0.95rem;
-  font-weight:600;
-  line-height:1.4;
-}
-.main-title .subtitle{
-  display:block;
-  font-size:0.82rem;
-  font-weight:400;
-  margin-top:4px;
-  color:#4b5563;
+/* Contenu principal sous le header commun */
+.page-wrap {
+  padding: 16px 10px 32px;
 }
 
-/* Textes d’aide / hints */
-.hint{
-  font-size:0.8rem;
-  color:#6b7280;
-  margin-top:4px;
+/* Conteneur du formulaire */
+.wrap {
+  max-width: 900px;
+  margin: 32px auto 40px;
+  padding: 0 8px 24px;
 }
 
-/* Champs génériques */
-.input,
-.full-input,
-.etab-small-input{
-  border-radius:6px;
-  border:1px solid #cbd5e1;
-  padding:4px 6px;
-  font-size:0.86rem;
-  width:100%;
-}
-.input:focus,
-.full-input:focus,
-.etab-small-input:focus{
-  outline:none;
-  border-color:#2563eb;
-  box-shadow:0 0 0 1px rgba(37,99,235,0.3);
+/* Cartes blanches */
+.card {
+  border-radius: 12px;
+  padding: 10px 14px 12px;
+  margin: 10px 0;
+  border: 1px solid var(--derog-border);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
-/* AUTOCOMPLÉTION ETABLISSEMENT */
-.auto-row{
-  display:flex;
-  gap:6px;
+.card.etab-card {
+  background: #f9fafb;
 }
-.auto-row input[list]{
-  flex:1;
+
+.card.wide-card {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Titres de section */
+.card h2 {
+  margin: 0 0 8px 0;
+  text-align: center;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--derog-accent);
+}
+
+.card.small-title h2 {
+  font-size: 0.95rem;
+}
+
+.card-header-main {
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+/* Bandeau principal du formulaire (titre long + articles) */
+.main-title {
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #bfdbfe;
+  background: #e6f0ff;
+  color: var(--derog-accent);
+}
+
+.main-title .subtitle {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+  color: #4b5563;
+}
+
+/* Petits textes / aides */
+.hint {
+  font-size: 12px;
+  color: var(--derog-muted);
+}
+
+.hint.err {
+  color: #b91c1c;
+}
+.hint.ok {
+  color: #166534;
+}
+
+.required-star {
+  color: var(--derog-danger);
+  margin-left: 3px;
+}
+
+/* Éléments visibles uniquement à l’écran / à l’impression */
+.print-only {
+  display: none;
+}
+.screen-only {
+  display: inline;
+}
+
+/* Ligne de recherche établissement */
+.auto-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.auto-row input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--derog-border);
+  font-size: 0.9rem;
+  background: #ffffff;
+  color: #111827;
 }
 
 /* Bloc établissement */
-.etab-card{
-  background:linear-gradient(135deg,#e0ecff,#ffffff);
-  border-color:#bfdbfe;
+.etab-name {
+  font-weight: 700;
+  text-decoration: underline;
+  margin-bottom: 4px;
 }
 
-.etab-name{
-  font-size:1rem;
-  font-weight:600;
-  margin-bottom:4px;
-}
-.etab-block-line{
-  font-size:0.86rem;
-  margin-top:2px;
-}
-.etab-flex{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px 18px;
-  margin-top:6px;
-}
-.etab-small-input{
-  max-width:180px;
-}
-.label{
-  font-weight:600;
-}
-.required-star{
-  color:#b91c1c;
-  margin-left:2px;
+.etab-block-line {
+  margin: 1px 0;
 }
 
-/* Table formations */
-#card-dip table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:0.85rem;
-}
-#card-dip th,
-#card-dip td{
-  border-bottom:1px solid #e5e7eb;
-  padding:4px 6px;
-}
-#card-dip thead th{
-  background:#f3f4f6;
-  font-weight:600;
-}
-.center{
-  text-align:center;
-}
-.sel-col{
-  width:40px;
-}
-.small{
-  font-size:0.8rem;
-  color:#6b7280;
+.etab-block-line span.label {
+  font-weight: 600;
+  margin-right: 4px;
 }
 
-/* Table travaux */
-#card-travaux table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:0.85rem;
-}
-#card-travaux th,
-#card-travaux td{
-  border-bottom:1px solid #e5e7eb;
-  padding:4px 6px;
-  vertical-align:top;
-}
-#card-travaux thead th{
-  background:#f3f4f6;
-  font-weight:600;
+.etab-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
 }
 
-/* Lieux d’intervention */
-.lieu-input-row{
-  display:flex;
-  gap:6px;
-  margin-top:4px;
-}
-.lieu-input-row input{
-  flex:1;
-}
-.lieu-list{
-  margin:6px 0 0 0;
-  padding-left:18px;
-  font-size:0.86rem;
-}
-.lieu-item{
-  margin-bottom:2px;
+.etab-small-input {
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--derog-border);
+  font-size: 0.85rem;
+  min-width: 130px;
+  background: #ffffff;
+  color: #111827;
 }
 
-/* Carte travaux interdits */
-.ban-card{
-  border-color:#fca5a5;
-  background:#fef2f2;
-  color:#7f1d1d;
-}
-.ban-card h2{
-  font-size:0.95rem;
-  margin-bottom:6px;
-}
-.ban-card ul{
-  margin:0;
-  padding-left:18px;
-  font-size:0.86rem;
-}
-.ban-card li{
-  margin-bottom:3px;
+/* Autres champs texte */
+.full-input,
+.input,
+.lieu-input-row input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--derog-border);
+  font-size: 0.9rem;
+  background: #ffffff;
+  color: #111827;
 }
 
-/* Engagement employeur */
-.engagement-text{
-  font-size:0.9rem;
-  line-height:1.5;
-}
-.engagement-text .input{
-  display:inline-block;
-  width:auto;
-  min-width:160px;
-  margin:2px 4px;
+/* Tableaux */
+table {
+  border-collapse: collapse;
+  width: 100%;
 }
 
-.engagement-list{
-  margin-top:8px;
-  font-size:0.88rem;
-}
-.checkbox-line{
-  display:block;
-  margin-bottom:4px;
+th,
+td {
+  border: 1px solid var(--derog-border);
+  padding: 6px 8px;
+  vertical-align: top;
 }
 
-/* Lieu / date / signature */
-.row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:14px;
-}
-.row > div{
-  flex:1 1 180px;
-}
-.date-row{
-  display:flex;
-  gap:6px;
-  align-items:center;
+th {
+  font-size: 0.85rem;
+  text-align: left;
+  background: #f3f4f6;
 }
 
-.sign-row{
-  display:flex;
-  justify-content:space-between;
-  gap:16px;
-  margin-top:10px;
-  align-items:flex-end;
+td.small {
+  font-size: 0.8rem;
+  color: var(--derog-muted);
 }
-.sign-row .left{
-  flex:1;
+
+.center {
+  text-align: center;
 }
-.sign-row .right{
-  min-width:160px;
-  text-align:center;
-  font-weight:600;
+
+.dip-check,
+.equip-check {
+  transform: scale(1.05);
+}
+
+.travaux-title {
+  font-weight: 600;
+}
+
+/* Tableau "Personnes compétentes" */
+#people-body td[contenteditable="true"] {
+  min-height: 22px;
+  outline: none;
+}
+#people-body td[contenteditable="true"]:focus {
+  box-shadow: 0 0 0 1px #3b82f6 inset;
+}
+
+.people-help {
+  font-size: 11px;
+  color: var(--derog-muted);
+}
+
+/* Listes de lieux */
+.lieu-input-row {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.lieu-list {
+  margin: 2px 0 4px 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+}
+
+.lieu-item {
+  position: relative;
+  margin: 1px 0;
+}
+
+.lieu-item button {
+  margin-left: 6px;
+  font-size: 0.75rem;
 }
 
 /* Boutons */
-.btn{
-  border-radius:999px;
-  border:1px solid #1d4ed8;
-  background:#1d4ed8;
-  color:#ffffff;
-  padding:4px 10px;
-  font-size:0.8rem;
-  cursor:pointer;
-}
-.btn:hover{
-  background:#1e40af;
-  border-color:#1e40af;
-}
-.btn-sm{
-  padding:3px 8px;
-  font-size:0.78rem;
-}
-.btn-primary{
-  background:#1b396a;
-  border-color:#1b396a;
-}
-.btn-primary:hover{
-  background:#102649;
-  border-color:#102649;
+.btn {
+  appearance: none;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #111827;
 }
 
-/* Ligne export PDF */
-.export-row{
-  margin-top:14px;
-  text-align:right;
+.btn-primary {
+  font-weight: 500;
+  background: var(--derog-accent);
+  border-color: #1d4ed8;
+  color: #ffffff;
 }
 
-/* Affichage écran / impression */
-.screen-only{
-  display:inline-block;
-}
-.print-only{
-  display:none;
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
 }
 
-@media print{
-  body{
-    background:#ffffff !important;
-    color:#000000 !important;
-    padding:0 !important;
+/* Bloc "travaux interdits" */
+.ban-card {
+  font-size: 13px;
+  line-height: 1.45;
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.09);
+}
+
+.ban-card h2 {
+  color: #b91c1c;
+}
+
+.ban-card ul {
+  margin: 4px 0 0 0;
+  padding-left: 22px;
+}
+
+.ban-card li {
+  margin-bottom: 3px;
+}
+
+/* Bloc bleu "DEMANDE DE DÉROGATION" */
+.blue-card {
+  border-width: 2px;
+  background: #e6f0ff;
+  border-color: #bfdbfe;
+}
+
+.blue-card label {
+  font-size: 0.85rem;
+}
+
+/* Lignes flexibles */
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.row > * {
+  flex: 1 1 0;
+}
+
+/* Date + bouton "Date du jour" */
+.date-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Cases à cocher "Atteste" */
+.checkbox-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Bloc signature */
+.sign-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sign-row .left {
+  flex: 2;
+}
+
+.sign-row .right {
+  flex: 1.4;
+  border: 2px dashed #9ca3af;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  text-align: center;
+  min-height: 90px;
+}
+
+/* Ligne d’export */
+.export-row {
+  text-align: right;
+  margin-top: 8px;
+}
+
+/* Overlay de chargement */
+#overlay-loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+}
+
+#overlay-loading.hidden {
+  display: none;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #3b82f6;
+  animation: spin 0.9s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Impression */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .screen-only {
+    display: none !important;
+  }
+  .print-only {
+    display: inline !important;
   }
 
-  .no-print,
-  .header-tools,
-  #overlay-loading{
-    display:none !important;
+  #btnPdf,
+  #btnToday {
+    display: none !important;
   }
 
-  .screen-only{
-    display:none !important;
-  }
-  .print-only{
-    display:inline !important;
-  }
-
-  .wrap{
-    margin:0;
-    padding:0;
-    max-width:none;
+  th.sel-col,
+  td.sel-col,
+  .dip-check {
+    display: none !important;
   }
 
-  .card{
-    page-break-inside:avoid;
-    break-inside:avoid;
-    box-shadow:none !important;
+  tr[data-print="0"] {
+    display: none !important;
+  }
+  li[data-print="0"] {
+    display: none !important;
+  }
+  .dip-row[data-print="0"] {
+    display: none !important;
   }
 
-  .card.etab-card{background:#f1f5ff !important;}
-  .blue-card{background:#e6f0ff !important;}
-  .ban-card{
-    background:#fde2e2 !important;
-    border-color:#fca5a5 !important;
-    color:#7f1d1d !important;
+  .card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
   }
 
-  #etab-ateliers{
-    display:none !important;
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  #etab-ateliers-print{
-    display:block !important;
-    margin-top:2px;
-    font-size:0.9rem;
+
+  .card.etab-card {
+    background: #f1f5ff !important;
+  }
+
+  .blue-card {
+    background: #e6f0ff !important;
+  }
+
+  .ban-card {
+    background: #fde2e2 !important;
+    border-color: #fca5a5 !important;
+    color: #7f1d1d !important;
+  }
+
+  #etab-ateliers {
+    display: none !important;
+  }
+
+  #etab-ateliers-print {
+    display: block !important;
+    margin-top: 2px;
+    font-size: 0.9rem;
   }
 
   #lieu-list button,
-  #chantier-list button{
-    display:none !important;
+  #chantier-list button {
+    display: none !important;
   }
 }
