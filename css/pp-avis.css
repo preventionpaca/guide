@@ -1,35 +1,52 @@
-/* ================== AVIS MÉDICAL – CONTENEURS ================== */
+/* ========== STYLES SPÉCIFIQUES AVIS MÉDICAL ========== */
 
+/* Fond général : on laisse pp-core gérer les couleurs,
+   ici on met juste le padding interne du widget */
 body {
   margin: 0;
+  padding: 16px 10px 12px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.avis-wrapper {
-  max-width: 1000px;
-  margin: 24px auto;
-  padding: 0 10px 30px;
-}
-
-/* Carte blanche principale */
-.avis-card {
+/* Carte blanche du formulaire */
+.wrapper {
   max-width: 900px;
-  margin: 0 auto;
+  margin: 24px auto;
   padding: 20px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #ccc;
   border-radius: 8px;
   color: #000000;
 }
 
-/* ================== RECHERCHE DIPLÔME / ETAB ================== */
+/* Bloc à éviter de casser en plein milieu à l’impression */
+.avoid-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Ce qui ne doit PAS apparaître dans le PDF
+   (header portail + recherche + éléments marqués non-printable) */
+@media print {
+  .portal-header-wrapper,
+  .pp-header-wrapper,
+  .search-card,
+  .non-printable {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    padding: 0;
+  }
+}
+
+/* ===== Carte de recherche (diplôme + établissement) ===== */
 
 .search-card {
   border: 1px solid #dde2f0;
   border-radius: 8px;
   padding: 12px 14px;
-  margin: 0 auto 20px auto;
-  max-width: 900px;
+  margin-bottom: 20px;
   background: #f8fafc;
 }
 
@@ -97,21 +114,7 @@ body {
   background: #e0e7ff;
 }
 
-/* ================== EN-TÊTE AVIS ================== */
-
-.header-table {
-  width: 100%;
-  margin-bottom: 4px;
-}
-
-.header-logo-cell {
-  width: 30%;
-}
-
-.header-logo {
-  width: 160px;
-  height: auto;
-}
+/* ===== En-tête du formulaire avis médical ===== */
 
 .header-table h2 {
   margin: 0;
@@ -167,20 +170,7 @@ body {
   margin-bottom: 2px;
 }
 
-.section-separator {
-  margin-top: 15px;
-}
-
-/* ================== IDENTITÉ / FORMATION ================== */
-
-.identite-table {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.identite-table td {
-  padding: 0;
-}
+/* ===== Champs identité / formation ===== */
 
 .field {
   width: 100%;
@@ -190,35 +180,27 @@ body {
   box-sizing: border-box;
 }
 
-.field-formation {
-  display: flex;
-  align-items: center;
-}
+/* Liste des travaux en 13px + retrait de 2 cm */
 
-/* ================== TRAVAUX RÉGLEMENTÉS ================== */
-
-.travaux-title {
-  margin-top: 20px;
-}
-
-.travaux-list,
-.travaux-list li {
+#travaux-list,
+#travaux-list li {
   font-size: 13px;
 }
 
-.travaux-list {
+#travaux-list {
   margin-top: 6px;
-  margin-left: 2cm;  /* retrait demandé */
+  margin-left: 2cm;   /* retrait demandé */
   padding-left: 0;
 }
 
-/* ================== AVIS MÉDICAL ================== */
+/* ===== Avis médical ===== */
 
 .avis-title {
   margin: 0;
   font-size: 1.2rem;
 }
 
+/* Ligne d'en-tête : Avis médical à gauche, Date à droite */
 .avis-header {
   display: flex;
   justify-content: space-between;
@@ -254,15 +236,25 @@ body {
   text-decoration: none;
 }
 
-/* radios cachés */
-.avis-medical-container input[type="radio"] {
+input[type="radio"] {
   display: none;
 }
 
 /* couleur + souligné du choix sélectionné */
-#avis1:checked ~ .avis1 label { color: orange; text-decoration: underline; }
-#avis2:checked ~ .avis2 label { color: red;    text-decoration: underline; }
-#avis3:checked ~ .avis3 label { color: green;  text-decoration: underline; }
+#avis1:checked ~ .avis1 label {
+  color: orange;
+  text-decoration: underline;
+}
+
+#avis2:checked ~ .avis2 label {
+  color: red;
+  text-decoration: underline;
+}
+
+#avis3:checked ~ .avis3 label {
+  color: green;
+  text-decoration: underline;
+}
 
 .avis-bloc {
   display: none;
@@ -288,7 +280,7 @@ body {
   flex: 1;
 }
 
-/* Date + bouton calendrier */
+/* ===== Date + bouton calendrier ===== */
 
 .tat-wrapper {
   display: inline-flex;
@@ -317,36 +309,14 @@ body {
   background: #e5e5e5;
 }
 
-/* ================== CACHETS ================== */
+/* ===== Cachets & bouton PDF ===== */
 
 .cachets-table {
-  width: 100%;
-  font-size: 12px;
   margin-top: 12px;
 }
 
-.cachet-cell {
-  width: 48%;
-}
-
-.cachet-spacer {
-  width: 4%;
-}
-
-.cachet-box {
-  border: 2px dashed #999;
-  height: 110px;
-  margin-top: 5px;
-}
-
-/* ================== BOUTON EXPORT ================== */
-
-.export-row {
-  text-align: right;
-  margin-top: 20px;
-}
-
 .export-btn {
+  margin-top: 20px;
   padding: 8px 14px;
   font-size: 14px;
   border-radius: 6px;
@@ -358,64 +328,4 @@ body {
 
 .export-btn:hover {
   background: #23477f;
-}
-
-.avis-reset-row {
-  margin-top: 10px;
-}
-
-.btn-reset {
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* ================== IMPRESSION ================== */
-
-@media print {
-  /* On masque le header commun et les éléments marqués comme non imprimables */
-  .portal-header-wrapper,
-  .pp-header-wrapper,
-  .non-printable {
-    display: none !important;
-  }
-
-  body {
-    background: #ffffff !important;
-    padding: 0 !important;
-  }
-
-  .avis-wrapper {
-    margin: 0;
-    padding: 0;
-  }
-
-  .avis-card {
-    border: none;
-    box-shadow: none;
-    margin: 0;
-    page-break-inside: avoid;
-  }
-
-  .avoid-break {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-}
-
-/* ================== RESPONSIVE ================== */
-
-@media (max-width: 640px) {
-  .avis-card {
-    padding: 14px;
-  }
-
-  .header-info-row {
-    flex-direction: column;
-  }
-
-  .etab-text {
-    max-width: 100%;
-    min-width: 100%;
-  }
 }
