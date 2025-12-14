@@ -827,4 +827,8 @@
 .ppp-header-right #themeToggle:hover{
   transform: translateY(-1px);
 }
+/* 1) Accueil + bouton thème (classe .ppp-pill-btn) => ORANGE */
+.ppp-header .ppp-pill-btn{
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
 
