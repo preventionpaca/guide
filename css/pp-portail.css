@@ -715,33 +715,48 @@
     body.light-theme .ppaca-btn-secondary--ghost:hover{
       background: #fee2b3;
     }
-/* ===============================
-   HEADER — couleurs figées par axe
-   =============================== */
+/* ==========================================================
+   HEADER — AXES DE NAVIGATION (COULEURS FIGÉES)
+   Portail prévention PACA
+   ========================================================== */
 
-/* Base : on neutralise les hover dynamiques existants */
+/* Neutralisation des effets hover génériques éventuels */
 .ppp-nav-pill:hover{
   filter: none;
   transform: none;
+  box-shadow: none;
 }
 
-/* PORTAIL — bleu institutionnel */
+/* ==========================================================
+   AXE 1 — Portail prévention PACA (BLEU institutionnel)
+   ========================================================== */
 .ppp-nav-pill[data-nav="portal"]:hover{
-  background: #1b396a;
+  background: #1b396a;          /* bleu portail */
   border-color: #1b396a;
   color: #ffffff;
 }
 
-/* ADMIN — sobre / noir bleuté */
+/* ==========================================================
+   AXE 2 — Accès administrateur (SOMBRE / SOBRE)
+   ========================================================== */
 .ppp-nav-pill[data-nav="admin"]:hover{
-  background: #020617;
+  background: #020617;          /* noir bleuté */
   border-color: #020617;
   color: #ffffff;
 }
 
-/* DDFPT — vert (celui de ta capture) */
+/* ==========================================================
+   AXE 3 — Directeurs Délégués aux Formations (VERT DDFPT)
+   ========================================================== */
 .ppp-nav-pill[data-nav="ddfpt"]:hover{
-  background: #059669;          /* vert validé */
+  background: #059669;          /* vert DDFPT validé */
   border-color: #059669;
   color: #ffffff;
+}
+
+/* ==========================================================
+   OPTIONNEL — état actif (si tu veux le figer aussi)
+   ========================================================== */
+.ppp-nav-pill--active{
+  font-weight: 600;
 }
