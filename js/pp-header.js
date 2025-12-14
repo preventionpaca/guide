@@ -1,30 +1,69 @@
-/* ==========================================================
-   PP HEADER — loader centralisé (iframe-safe, anti-404)
-   Dépendances : pp-config.js (chargé AVANT)
-   ========================================================== */
+// ==========================================================
+// PP HEADER — loader centralisé (iframe-safe)
+// ==========================================================
 (function () {
-  const DEFAULT_HEADER_URL =
-    "https://preventionpaca.github.io/guide/partials/pp-header.html";
 
-  function setHref(el, href) {
-    if (!href) return;
-    el.setAttribute("href", href);
-    // Sortir de l’iframe Grist
-    el.setAttribute("target", "_top");
-    el.setAttribute("rel", "noopener noreferrer");
-    el.style.cursor = "pointer";
+  async function loadHeader() {
+    const host = document.getElementById("header-container");
+    if (!host) return;
+
+    const url = window.PP_HEADER_URL;
+    if (!url) {
+      console.error("[pp-header] PP_HEADER_URL manquant (pp-config.js non chargé ?)");
+      return;
+    }
+
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} – ${res.statusText}`);
+
+      const html = await res.text();
+
+      // Anti-404 "silencieux"
+      if (/404\s*:\s*Not\s*Found/i.test(html)) {
+        throw new Error("Le contenu chargé ressemble à une page 404");
+      }
+
+      host.innerHTML = html;
+
+      bindNavLinks();
+      markActiveNav();
+      bindThemeToggle();
+
+    } catch (err) {
+      console.error("[pp-header] échec chargement header :", err);
+      host.innerHTML = "";
+      host.style.display = "none";
+    }
   }
 
-  function bindNavLinks(scope) {
+  function bindNavLinks() {
     const links = window.PP_LINKS || {};
-    (scope || document).querySelectorAll("[data-nav]").forEach((el) => {
+    document.querySelectorAll("[data-nav]").forEach(el => {
       const key = el.dataset.nav;
-      setHref(el, links[key]);
+      const href = links[key];
+      if (!href) return;
+
+      // Important : on met HREF pour que le hover/curseur + clic fonctionnent partout
+      el.setAttribute("href", href);
+
+      // Iframe-safe : on sort du cadre Grist
+      el.setAttribute("target", "_top");
+      el.setAttribute("rel", "noopener noreferrer");
     });
   }
 
-  function bindThemeToggle(scope) {
-    const btn = (scope || document).getElementById("themeToggle");
+  function markActiveNav() {
+    const current = (window.PP_PAGE || "").trim();
+    if (!current) return;
+
+    document.querySelectorAll(".ppp-nav-pill[data-nav]").forEach(a => {
+      a.classList.toggle("ppp-nav-pill--active", a.dataset.nav === current);
+    });
+  }
+
+  function bindThemeToggle() {
+    const btn = document.getElementById("themeToggle");
     if (!btn) return;
 
     const STORAGE_KEY = window.PP_THEME_KEY || "ppp-theme";
@@ -42,42 +81,8 @@
     apply(current);
 
     btn.addEventListener("click", () => {
-      const next = document.body.classList.contains("light-theme") ? "dark" : "light";
-      apply(next);
+      apply(document.body.classList.contains("light-theme") ? "dark" : "light");
     });
-  }
-
-  async function loadHeader() {
-    const host = document.getElementById("header-container");
-    if (!host) return;
-
-    const url = window.PP_HEADER_URL || DEFAULT_HEADER_URL;
-
-    try {
-      const res = await fetch(url, { cache: "no-store" });
-
-      // ✅ si 404/500 : on STOP, on n’injecte RIEN
-      if (!res.ok) throw new Error(`Header HTTP ${res.status} ${res.statusText}`);
-
-      const html = await res.text();
-
-      // Garde-fou : GitHub Pages 404 peut renvoyer une page HTML
-      if (/404\s*:\s*Not\s*Found/i.test(html)) {
-        throw new Error("Header content looks like a 404 page");
-      }
-
-      host.innerHTML = html;
-
-      // On “scoppe” les binds dans le header injecté
-      bindNavLinks(host);
-      bindThemeToggle(document);
-
-    } catch (e) {
-      console.error("[pp-header] impossible de charger le header :", e);
-      // On n’affiche pas de 404 dans la page, on masque juste le host
-      host.innerHTML = "";
-      host.style.display = "none";
-    }
   }
 
   document.addEventListener("DOMContentLoaded", loadHeader);
