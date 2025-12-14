@@ -51,3 +51,30 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .catch(error => console.error("Erreur de chargement du header depuis GitHub : ", error));
 });
+
+async function loadHeaderInto(containerId, url) {
+  const host = document.getElementById(containerId);
+  if (!host) return;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+
+    // ✅ NE PAS injecter si 404 / 500 / etc.
+    if (!res.ok) throw new Error(`Header fetch failed: ${res.status} ${res.statusText}`);
+
+    const html = await res.text();
+
+    // Petit garde-fou supplémentaire (optionnel)
+    if (/404\s*:\s*Not\s*Found/i.test(html)) {
+      throw new Error("Header content looks like a 404 page");
+    }
+
+    host.innerHTML = html;
+  } catch (e) {
+    console.error("[pp-header] impossible de charger le header :", e);
+    // On évite d’afficher un truc moche dans la page
+    host.innerHTML = "";
+    host.style.display = "none";
+  }
+}
+
