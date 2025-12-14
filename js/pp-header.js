@@ -1,57 +1,53 @@
 // ========================
-//  Configuration des URLs
+// Chargement du header depuis GitHub
 // ========================
-//
-// À modifier UNE SEULE FOIS ici pour tout le portail.
-// (Les pages utilisent data-nav="home" | "portal" | "admin" | "ddfpt")
-
-const PPP_LINKS = {
-  home:   "https://preventionpaca.github.io/guide/",           // page portail d'accueil Grist ou GitHub
-  portal: "https://preventionpaca.github.io/guide/",   // bouton « Portail prévention PACA »
-  admin:  "https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/75?embed=true&style=singlePage&exclude-headers=true",             // bouton « Accès administrateur »
-  ddfpt:  "https://preventionpaca.github.io/guide/guide_iframe.html#https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/74?embed=true&style=singlePage&exclude-headers=true"              // bouton « Accès Directeurs Délégués aux Formations »
-};
-
-// ========================
-// Affectation des liens
-// ========================
-
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll("[data-nav]").forEach(el => {
-    const key = el.dataset.nav;
-    if (!key || !PPP_LINKS[key]) return;
-    el.setAttribute("href", PPP_LINKS[key]);
-    el.setAttribute("target", "_top"); // sort de l'iframe Grist
-  });
+  const headerContainer = document.getElementById("header-container");
+  
+  // URL du fichier header à charger depuis GitHub
+  const headerUrl = "https://raw.githubusercontent.com/preventionpaca/guide/main/header.html";  // Adaptez cette URL si nécessaire
 
-  // ========================
-  // Gestion du thème
-  // ========================
-  const btn = document.getElementById("themeToggle");
-  if (!btn) return;
+  fetch(headerUrl)
+    .then(response => response.text())
+    .then(html => {
+      // Injecter le HTML du header dans l'élément #header-container
+      headerContainer.innerHTML = html;
 
-  const STORAGE_KEY = "ppp-theme";
+      // Liaison des liens de navigation avec les URLs depuis la config
+      document.querySelectorAll("[data-nav]").forEach(el => {
+        const key = el.dataset.nav;
+        if (PPP_LINKS[key]) {
+          el.setAttribute("href", PPP_LINKS[key]);
+          el.setAttribute("target", "_top"); // Sortir de l'iframe Grist
+        }
+      });
+      
+      // Activer le bascule du thème
+      const btn = document.getElementById("themeToggle");
+      if (btn) {
+        const STORAGE_KEY = "ppp-theme";
 
-  function applyTheme(theme) {
-    const isLight = theme === "light";
-    document.body.classList.toggle("light-theme", isLight);
-    btn.textContent = isLight ? "Mode sombre" : "Mode clair";
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch (e) {
-      // si localStorage est bloqué, on ignore
-    }
-  }
+        function applyTheme(theme) {
+          const isLight = theme === "light";
+          document.body.classList.toggle("light-theme", isLight);
+          btn.textContent = isLight ? "Mode sombre" : "Mode clair";
+          try {
+            localStorage.setItem(STORAGE_KEY, theme);
+          } catch (e) {}
+        }
 
-  let current = "dark";
-  try {
-    current = localStorage.getItem(STORAGE_KEY) || "dark";
-  } catch (e) {}
+        let current = "dark";
+        try {
+          current = localStorage.getItem(STORAGE_KEY) || "dark";
+        } catch (e) {}
 
-  applyTheme(current);
+        applyTheme(current);
 
-  btn.addEventListener("click", () => {
-    current = document.body.classList.contains("light-theme") ? "dark" : "light";
-    applyTheme(current);
-  });
+        btn.addEventListener("click", () => {
+          current = document.body.classList.contains("light-theme") ? "dark" : "light";
+          applyTheme(current);
+        });
+      }
+    })
+    .catch(error => console.error("Erreur de chargement du header depuis GitHub : ", error));
 });
