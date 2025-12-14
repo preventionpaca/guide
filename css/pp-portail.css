@@ -760,3 +760,38 @@
 .ppp-nav-pill--active{
   font-weight: 600;
 }
+/* ==========================================================
+   Header — hover figé par bouton (portal/admin/ddfpt)
+   ========================================================== */
+
+/* Base : on s’assure que le hover s’applique même si href n’est pas encore là */
+.ppp-nav-pill{
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+/* PORTAL = bleu */
+.ppp-nav-pill[data-nav="portal"]:hover{
+  background: var(--accent-blue, #1b396a);
+  border-color: var(--accent-blue, #1b396a);
+  color: #fff;
+}
+
+/* ADMIN = noir */
+.ppp-nav-pill[data-nav="admin"]:hover{
+  background: #0b1220;
+  border-color: #0b1220;
+  color: #fff;
+}
+
+/* DDFPT = vert */
+.ppp-nav-pill[data-nav="ddfpt"]:hover{
+  background: var(--accent-green, #059669);
+  border-color: var(--accent-green, #059669);
+  color: #fff;
+}
+
+/* Petit “lift” discret (optionnel, mais sympa) */
+.ppp-nav-pill:hover{
+  transform: translateY(-1px);
+}
+
