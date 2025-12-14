@@ -794,4 +794,37 @@
 .ppp-nav-pill:hover{
   transform: translateY(-1px);
 }
+/* ==========================================================
+   Header — hover orange (Accueil + Mode clair/sombre)
+   ========================================================== */
+
+/* Bouton Accueil */
+.ppp-header-right .ppp-pill-btn[data-nav="home"]:hover{
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  color: #fff;
+}
+
+/* Bouton Mode clair / sombre */
+.ppp-header-right #themeToggle:hover{
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  color: #fff;
+}
+
+/* Transition douce (au cas où elle ne serait pas déjà posée) */
+.ppp-header-right .ppp-pill-btn,
+.ppp-header-right #themeToggle{
+  transition:
+    background-color .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    transform .15s ease;
+}
+
+/* Petit lift discret, cohérent avec les autres boutons */
+.ppp-header-right .ppp-pill-btn:hover,
+.ppp-header-right #themeToggle:hover{
+  transform: translateY(-1px);
+}
 
