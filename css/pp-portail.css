@@ -715,3 +715,33 @@
     body.light-theme .ppaca-btn-secondary--ghost:hover{
       background: #fee2b3;
     }
+/* ===============================
+   HEADER — couleurs figées par axe
+   =============================== */
+
+/* Base : on neutralise les hover dynamiques existants */
+.ppp-nav-pill:hover{
+  filter: none;
+  transform: none;
+}
+
+/* PORTAIL — bleu institutionnel */
+.ppp-nav-pill[data-nav="portal"]:hover{
+  background: #1b396a;
+  border-color: #1b396a;
+  color: #ffffff;
+}
+
+/* ADMIN — sobre / noir bleuté */
+.ppp-nav-pill[data-nav="admin"]:hover{
+  background: #020617;
+  border-color: #020617;
+  color: #ffffff;
+}
+
+/* DDFPT — vert (celui de ta capture) */
+.ppp-nav-pill[data-nav="ddfpt"]:hover{
+  background: #059669;          /* vert validé */
+  border-color: #059669;
+  color: #ffffff;
+}
