@@ -87,3 +87,25 @@
 
   document.addEventListener("DOMContentLoaded", loadHeader);
 })();
+function buildBreadcrumb() {
+  const nav = document.querySelector(".ppp-breadcrumb");
+  if (!nav) return;
+
+  const page = window.PP_PAGE;
+  const map  = window.PP_BREADCRUMB || {};
+  const items = map[page];
+
+  if (!items || !items.length) {
+    nav.style.display = "none";
+    return;
+  }
+
+  nav.innerHTML = items
+    .map((label, i) =>
+      i === 0
+        ? `<span class="ppp-bc-root">${label}</span>`
+        : `<span class="ppp-bc-sep">›</span><span>${label}</span>`
+    )
+    .join("");
+}
+
