@@ -28,6 +28,7 @@
 
       bindNavLinks();
       markActiveNav();
+      buildBreadcrumb();
       bindThemeToggle();
 
     } catch (err) {
