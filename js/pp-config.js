@@ -21,4 +21,16 @@
   // Clé de stockage du thème (commune)
   window.PP_THEME_KEY = "ppp-theme";
 })();
+// ==========================================================
+// Fil d'Ariane — structure des pages
+// ==========================================================
+window.PP_BREADCRUMB = {
+  home:   ["Accueil"],
+  portal: ["Accueil", "Portail prévention PACA"],
+  admin:  ["Accueil", "Accès administrateur"],
+  ddfpt:  ["Accueil", "Accès Directeurs Délégués aux Formations"],
+  derog:  ["Accueil", "Accès DDFPT", "Dérogations"],
+  avis:   ["Accueil", "Accès DDFPT", "Avis médicaux"]
+};
+
 
