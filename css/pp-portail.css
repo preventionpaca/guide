@@ -798,28 +798,29 @@
    Header — hover orange (Accueil + Mode clair/sombre)
    ========================================================== */
 /* ==========================================================
-   Fil d'Ariane — discret et institutionnel
+   Fil d’Ariane — centré, discret, aligné header
    ========================================================== */
 
 .ppp-breadcrumb{
-  margin: 6px auto 0;
-  max-width: 1100px;
+  max-width: 1100px;     /* même largeur que le contenu */
+  margin: 6px auto 0;   /* CENTRAGE */
   padding: 0 12px;
+  text-align: center;   /* centre le texte */
   font-size: 0.72rem;
   color: rgba(226,232,240,.65);
   letter-spacing: .02em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
+}
+
+.ppp-breadcrumb span{
+  white-space: nowrap;
 }
 
 .ppp-bc-sep{
+  margin: 0 6px;
   opacity: .45;
 }
 
-.ppp-bc-root{
-  opacity: .85;
-}
 
 /* Bouton Accueil */
 .ppp-header-right .ppp-pill-btn[data-nav="home"]:hover{
