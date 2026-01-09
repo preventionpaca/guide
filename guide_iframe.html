@@ -50,54 +50,56 @@
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
 
-  <script>
-    // Nettoyage / normalisation de l'URL qui arrive après le #
-    function cleanUrl(raw) {
-      if (!raw) return "";
+ <script>
+  // Nettoyage / normalisation de l'URL qui arrive après le #
+  function cleanUrl(raw) {
+    if (!raw) return "";
 
-      let u = decodeURIComponent(raw.trim());
+    // 1) on décode une seule fois
+    const decoded = decodeURIComponent(raw.trim());
 
-      // On enlève éventuellement des paramètres parasites
-      u = u.replace(/[\?&](themeMode|tour|layout|view)=[^&]*/g, "");
+    // 2) on sépare l'URL Grist et le fragment Grist (deep-link)
+    //    ex: https://docs.../p/119?...    +   ?table=Liste...&rowId=81
+    const parts = decoded.split("#");
+    const beforeHash = parts[0];               // URL principale
+    const deepLink = parts.slice(1).join("#"); // tout ce qui suit le premier #
 
-      // On enlève d'éventuels anciens embed/style/exclude-headers pour éviter les doublons
-      u = u.replace(/[\?&](embed|style|exclude-headers)=[^&]*/g, "");
-
-      // On reconstruit proprement
-      const hasQuery = u.includes("?");
-      u += hasQuery ? "" : "?";
-
-      const params = [];
-
-      // Style page unique + suppression des en-têtes Grist
-      params.push("style=singlePage");
-      params.push("embed=true");
-      params.push("exclude-headers=true");
-
-      if (params.length) {
-        if (!u.endsWith("?") && !u.endsWith("&")) u += "&";
-        u += params.join("&");
-      }
-
-      return u;
+    let url;
+    try {
+      url = new URL(beforeHash);
+    } catch (e) {
+      // au cas où on reçoit un truc bizarre
+      return decoded;
     }
 
-    function updateFrameFromHash() {
-      const raw = window.location.hash ? window.location.hash.substring(1) : "";
-      const url = cleanUrl(raw);
-      if (!url) return;
+    // 3) on retire uniquement des params de la query principale (pas du deep-link)
+    ["themeMode", "tour", "layout", "view", "embed", "style", "exclude-headers"].forEach(k => {
+      url.searchParams.delete(k);
+    });
 
-      const frame = document.getElementById("gristFrame");
-      if (frame.src !== url) {
-        frame.src = url;
-      }
-    }
+    // 4) on impose nos params d’embed dans la query principale
+    url.searchParams.set("style", "singlePage");
+    url.searchParams.set("embed", "true");
+    url.searchParams.set("exclude-headers", "true");
 
-    // Chargement initial
-    updateFrameFromHash();
+    // 5) on reconcatène le deep-link (s'il existe) *après* l'URL, en hash normal
+    //    IMPORTANT : deepLink arrive souvent sous la forme "?table=..."
+    return deepLink ? `${url.toString()}#${deepLink}` : url.toString();
+  }
 
-    // Mise à jour quand le hash change (clic sur un lien, retour navigateur, etc.)
-    window.addEventListener("hashchange", updateFrameFromHash);
-  </script>
+  function updateFrameFromHash() {
+    const raw = window.location.hash ? window.location.hash.substring(1) : "";
+    const url = cleanUrl(raw);
+    if (!url) return;
+
+    const frame = document.getElementById("gristFrame");
+    if (frame.src !== url) frame.src = url;
+  }
+
+  updateFrameFromHash();
+  window.addEventListener("hashchange", updateFrameFromHash);
+</script>
+
 </body>
 </html>
+
