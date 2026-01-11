@@ -5,44 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Prévention PACA – Vue intégrée</title>
 
-  <!-- Optimisation : handshake plus rapide avec Grist -->
   <link rel="preconnect" href="https://docs.getgrist.com">
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
   <style>
     :root {
       --bg: #020617;
-      /* Hauteur approximative de la barre Grist à masquer */
-      --grist-offset: 56px; /* ajuste à 48 / 60 si besoin */
+      --grist-offset: 56px;
     }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: var(--bg);
-    }
-
-    /* Conteneur plein écran, coupe ce qui dépasse */
-    #wrapper {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-      background: var(--bg);
-    }
-
-    /* Iframe Grist :
-       - décalée vers le haut de --grist-offset
-       - un peu plus haute pour ne pas perdre le bas de la page
-    */
-    #gristFrame {
-      position: absolute;
-      top: calc(-1 * var(--grist-offset));
-      left: 0;
-      width: 100%;
-      height: calc(100% + var(--grist-offset));
-      border: 0;
-    }
+    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
+    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    #gristFrame { position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%; height:calc(100% + var(--grist-offset)); border:0; }
   </style>
 </head>
 <body>
@@ -50,56 +23,64 @@
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
 
- <script>
-  // Nettoyage / normalisation de l'URL qui arrive après le #
-  function cleanUrl(raw) {
-    if (!raw) return "";
+  <script>
+    // Nettoyage / normalisation de l'URL qui arrive après le #
+    // IMPORTANT : on ne touche PAS au fragment Grist "#?table=...&rowId=..."
+    function cleanUrl(raw) {
+      if (!raw) return "";
 
-    // 1) on décode une seule fois
-    const decoded = decodeURIComponent(raw.trim());
+      let u = decodeURIComponent(raw.trim());
 
-    // 2) on sépare l'URL Grist et le fragment Grist (deep-link)
-    //    ex: https://docs.../p/119?...    +   ?table=Liste...&rowId=81
-    const parts = decoded.split("#");
-    const beforeHash = parts[0];               // URL principale
-    const deepLink = parts.slice(1).join("#"); // tout ce qui suit le premier #
+      // On sépare la partie "avant hash" et le fragment (ex: "#?table=...&rowId=...")
+      const hashIndex = u.indexOf('#');
+      const basePart  = (hashIndex >= 0) ? u.slice(0, hashIndex) : u;
+      const hashPart  = (hashIndex >= 0) ? u.slice(hashIndex) : "";
 
-    let url;
-    try {
-      url = new URL(beforeHash);
-    } catch (e) {
-      // au cas où on reçoit un truc bizarre
-      return decoded;
+      // 1) On nettoie seulement la partie base (query string), pas le hash Grist
+      let base = basePart;
+
+      // On enlève éventuellement des paramètres parasites
+      base = base.replace(/([?&])(themeMode|tour|layout|view)=[^&]*/g, '$1');
+      // On enlève d'éventuels anciens embed/style/exclude-headers pour éviter les doublons
+      base = base.replace(/([?&])(embed|style|exclude-headers)=[^&]*/g, '$1');
+
+      // Nettoyage des séparateurs ?/& résiduels
+      base = base.replace(/[?&]$/,'');
+      base = base.replace(/\?&/g,'?');
+
+      // 2) On (re)pose les paramètres requis sur la query string
+      const params = new URLSearchParams();
+      // On repart de la query existante si elle existe
+      const qIndex = base.indexOf('?');
+      let origin = base;
+      if (qIndex >= 0) {
+        origin = base.slice(0, qIndex);
+        const existingQs = base.slice(qIndex + 1);
+        try { new URLSearchParams(existingQs).forEach((v,k)=>params.set(k,v)); } catch(e) {}
+      }
+
+      // Paramètres obligatoires
+      params.set('style', 'singlePage');
+      params.set('embed', 'true');
+      params.set('exclude-headers', 'true');
+
+      const rebuilt = origin + '?' + params.toString();
+
+      // 3) On recolle le hash Grist intact (si présent)
+      return rebuilt + hashPart;
     }
 
-    // 3) on retire uniquement des params de la query principale (pas du deep-link)
-    ["themeMode", "tour", "layout", "view", "embed", "style", "exclude-headers"].forEach(k => {
-      url.searchParams.delete(k);
-    });
+    function updateFrameFromHash() {
+      const raw = window.location.hash ? window.location.hash.substring(1) : "";
+      const url = cleanUrl(raw);
+      if (!url) return;
 
-    // 4) on impose nos params d’embed dans la query principale
-    url.searchParams.set("style", "singlePage");
-    url.searchParams.set("embed", "true");
-    url.searchParams.set("exclude-headers", "true");
+      const frame = document.getElementById("gristFrame");
+      if (frame.src !== url) frame.src = url;
+    }
 
-    // 5) on reconcatène le deep-link (s'il existe) *après* l'URL, en hash normal
-    //    IMPORTANT : deepLink arrive souvent sous la forme "?table=..."
-    return deepLink ? `${url.toString()}#${deepLink}` : url.toString();
-  }
-
-  function updateFrameFromHash() {
-    const raw = window.location.hash ? window.location.hash.substring(1) : "";
-    const url = cleanUrl(raw);
-    if (!url) return;
-
-    const frame = document.getElementById("gristFrame");
-    if (frame.src !== url) frame.src = url;
-  }
-
-  updateFrameFromHash();
-  window.addEventListener("hashchange", updateFrameFromHash);
-</script>
-
+    updateFrameFromHash();
+    window.addEventListener("hashchange", updateFrameFromHash);
+  </script>
 </body>
 </html>
-
