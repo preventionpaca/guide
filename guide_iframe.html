@@ -69,11 +69,14 @@
     }
 
     function buildDeepLink(baseUrl, table, rowId){
-      if(!table || !rowId) return baseUrl;
-      const t = String(table).trim();
-      const r = String(rowId).trim();
-      if(!t || !r) return baseUrl;
-      return baseUrl + "#?table=" + encodeURIComponent(t) + "&rowId=" + encodeURIComponent(r);
+      const r = String(rowId || '').trim();
+      const t = String(table || '').trim();
+      if(!r) return baseUrl;
+      if(t){
+        return baseUrl + "#?table=" + encodeURIComponent(t) + "&rowId=" + encodeURIComponent(r);
+      }
+      // More robust: many views resolve rowId in current table without specifying table
+      return baseUrl + "#?rowId=" + encodeURIComponent(r);
     }
 
     function updateFrame(){
@@ -84,7 +87,7 @@
       const usp = new URLSearchParams(window.location.search || "");
       const srcQ = usp.get("src");
       const tableQ = usp.get("table");
-      const rowIdQ = usp.get("rowId");
+      const rowIdQ = usp.get("rowId") || usp.get("recordId");
 
       // Ancien format : le Grist est dans le hash
       const hashRaw = window.location.hash ? window.location.hash.substring(1) : "";
