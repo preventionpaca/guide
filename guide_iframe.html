@@ -11,11 +11,12 @@
   <style>
     :root {
       --bg: #020617;
-      --grist-offset: 56px;
+      --grist-offset: 56px; /* ajuste si besoin */
     }
     html, body { margin:0; padding:0; height:100%; background:var(--bg); }
     #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
-    #gristFrame { position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%; height:calc(100% + var(--grist-offset)); border:0; }
+    #gristFrame { position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%;
+      height:calc(100% + var(--grist-offset)); border:0; }
   </style>
 </head>
 <body>
@@ -24,66 +25,81 @@
   </div>
 
   <script>
-    // Nettoyage / normalisation de l'URL qui arrive après le #
-    // IMPORTANT : on ne touche PAS au fragment Grist "#?table=...&rowId=..."
-    function cleanUrl(raw) {
-      if (!raw) return "";
-
-      let u = decodeURIComponent(raw.trim());
-
-      // On sépare la partie "avant hash" et le fragment (ex: "#?table=...&rowId=...")
-      const hashIndex = u.indexOf('#');
-      const basePart  = (hashIndex >= 0) ? u.slice(0, hashIndex) : u;
-      const hashPart  = (hashIndex >= 0) ? u.slice(hashIndex) : "";
-
-      // 1) On nettoie seulement la partie base (query string), pas le hash Grist
-      let base = basePart;
-
-      // On enlève éventuellement des paramètres parasites
-      base = base.replace(/([?&])(themeMode|tour|layout|view)=[^&]*/g, '$1');
-      // On enlève d'éventuels anciens embed/style/exclude-headers pour éviter les doublons
-      base = base.replace(/([?&])(embed|style|exclude-headers)=[^&]*/g, '$1');
-
-      // Nettoyage des séparateurs ?/& résiduels
-      base = base.replace(/[?&]$/,'');
-      base = base.replace(/\?&/g,'?');
-
-      // 2) On (re)pose les paramètres requis sur la query string
-      const params = new URLSearchParams();
-      // On repart de la query existante si elle existe
-      const qIndex = base.indexOf('?');
-      let origin = base;
-      if (qIndex >= 0) {
-        origin = base.slice(0, qIndex);
-        const existingQs = base.slice(qIndex + 1);
-        try { new URLSearchParams(existingQs).forEach((v,k)=>params.set(k,v)); } catch(e) {}
+    // Décodage "défensif" (QR scanners / OS décodent parfois une ou deux fois)
+    function safeDecode(s, maxPasses=3){
+      let out = (s || "").trim();
+      for(let i=0;i<maxPasses;i++){
+        try{
+          const dec = decodeURIComponent(out);
+          if(dec === out) break;
+          out = dec;
+        }catch(e){
+          break;
+        }
       }
-
-      // Paramètres obligatoires
-      params.set('style', 'singlePage');
-      params.set('embed', 'true');
-      params.set('exclude-headers', 'true');
-
-      const rebuilt = origin + '?' + params.toString();
-
-      // 3) On recolle le hash Grist intact (si présent)
-      return rebuilt + hashPart;
+      return out;
     }
 
-    function updateFrameFromHash() {
-      // 1) Priorité au paramètre ?src=... (plus robuste pour les QR codes sur mobile)
-      const sp = new URLSearchParams(window.location.search || "");
-      const rawSrc = sp.get("src");
-      const raw = rawSrc ? rawSrc : (window.location.hash ? window.location.hash.substring(1) : "");
-      const url = cleanUrl(raw);
-      if (!url) return;
+    // Nettoyage / normalisation URL Grist de base
+    function cleanBaseUrl(raw) {
+      if (!raw) return "";
+      let u = safeDecode(raw, 3);
 
+      // Si on nous donne un "inner" avec deep-link encodé (%23? ou %2523?), on le coupe : on reconstruira derrière.
+      u = u.split('%23?')[0].split('%2523?')[0].split('#?')[0];
+
+      // On enlève des paramètres parasites
+      u = u.replace(/[?&](themeMode|tour|layout|view)=[^&]*/g, "");
+
+      // On enlève d'éventuels anciens embed/style/exclude-headers (on les remet proprement)
+      u = u.replace(/[?&](embed|style|exclude-headers)=[^&]*/g, "");
+
+      const hasQuery = u.includes("?");
+      u += hasQuery ? "" : "?";
+
+      const params = [];
+      params.push("style=singlePage");
+      params.push("embed=true");
+      params.push("exclude-headers=true");
+
+      if (!u.endsWith("?") && !u.endsWith("&")) u += "&";
+      u += params.join("&");
+
+      return u;
+    }
+
+    function buildDeepLink(baseUrl, table, rowId){
+      if(!table || !rowId) return baseUrl;
+      const t = String(table).trim();
+      const r = String(rowId).trim();
+      if(!t || !r) return baseUrl;
+      return baseUrl + "#?table=" + encodeURIComponent(t) + "&rowId=" + encodeURIComponent(r);
+    }
+
+    function updateFrame(){
       const frame = document.getElementById("gristFrame");
-      if (frame.src !== url) frame.src = url;
+
+      // Nouveau format robuste (recommandé) :
+      // guide_iframe.html?src=<BASE_GRIST_URL>&table=Liste_des_equipements&rowId=62
+      const usp = new URLSearchParams(window.location.search || "");
+      const srcQ = usp.get("src");
+      const tableQ = usp.get("table");
+      const rowIdQ = usp.get("rowId");
+
+      // Ancien format : le Grist est dans le hash
+      const hashRaw = window.location.hash ? window.location.hash.substring(1) : "";
+
+      const baseRaw = srcQ || hashRaw;
+      if(!baseRaw) return;
+
+      const base = cleanBaseUrl(baseRaw);
+      const finalUrl = buildDeepLink(base, tableQ, rowIdQ);
+
+      if (frame.src !== finalUrl) frame.src = finalUrl;
     }
 
-    updateFrameFromHash();
-    window.addEventListener("hashchange", updateFrameFromHash);
+    updateFrame();
+    window.addEventListener("hashchange", updateFrame);
   </script>
 </body>
 </html>
