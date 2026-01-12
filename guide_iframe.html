@@ -71,7 +71,10 @@
     }
 
     function updateFrameFromHash() {
-      const raw = window.location.hash ? window.location.hash.substring(1) : "";
+      // 1) Priorité au paramètre ?src=... (plus robuste pour les QR codes sur mobile)
+      const sp = new URLSearchParams(window.location.search || "");
+      const rawSrc = sp.get("src");
+      const raw = rawSrc ? rawSrc : (window.location.hash ? window.location.hash.substring(1) : "");
       const url = cleanUrl(raw);
       if (!url) return;
 
