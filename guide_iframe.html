@@ -4,68 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Prévention PACA – Vue intégrée</title>
+
   <link rel="preconnect" href="https://docs.getgrist.com">
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
+
   <style>
     :root { --bg:#020617; --grist-offset:56px; }
-    html,body{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg);}
-    #gristFrame{position:absolute;top:calc(-1 * var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:#0b1220;}
-    #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#e5e7eb;padding:24px;pointer-events:none;}
-    #hint .box{max-width:720px;background:rgba(15,23,42,.85);border:1px solid rgba(148,163,184,.25);border-radius:16px;padding:16px 18px;line-height:1.4}
-    #hint .box b{display:block;margin-bottom:6px}
-    #hint code{background:rgba(2,6,23,.6);padding:2px 6px;border-radius:8px}
+    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
+    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    #gristFrame {
+      position:absolute;
+      top: calc(-1 * var(--grist-offset));
+      left:0;
+      width:100%;
+      height: calc(100% + var(--grist-offset));
+      border:0;
+      background:var(--bg);
+    }
+    #hint{
+      position:fixed; inset:0;
+      display:none; align-items:center; justify-content:center;
+      color:#e5e7eb; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      padding:24px; text-align:center;
+    }
+    #hint code{ color:#93c5fd; }
   </style>
 </head>
 <body>
   <div id="wrapper">
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
-    <div id="hint"><div class="box">
-      <b>Chargement de la fiche…</b>
-      Si tu vois un écran vide, c’est souvent que Grist demande une connexion (session). Ouvre d’abord <code>docs.getgrist.com</code> et connecte‑toi, puis rescannes le QR.
-    </div></div>
+  </div>
+  <div id="hint">
+    <div>
+      <div style="font-weight:700; margin-bottom:8px;">Chargement Grist…</div>
+      <div>Si tu vois cet écran, aucune cible n’a été fournie.<br>
+      Exemple : <code>?rowId=70</code> ou <code>?src=https://docs.getgrist.com/…</code></div>
+    </div>
   </div>
 
-<script>
-(function(){
-  const GRIST_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
-  const TABLE = "Liste_des_equipements";
+  <script>
+    // ✅ Cible par défaut (ta page "Liste_des_equipements")
+    const DEFAULT_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
 
-  function buildUrl(rowId){
-    const u = new URL(GRIST_BASE);
-    u.searchParams.set("style","singlePage");
-    u.searchParams.set("embed","true");
-    u.searchParams.set("exclude-headers","true");
-    // Deep-link Grist
-    const hash = `?table=${encodeURIComponent(TABLE)}&rowId=${encodeURIComponent(rowId)}`;
-    return u.toString() + "#"+hash;
-  }
+    function forceEmbedParams(urlStr){
+      let base = urlStr, hash = "";
+      const p = base.indexOf("#");
+      if (p !== -1){ hash = base.slice(p); base = base.slice(0,p); }
+      let u;
+      try { u = new URL(base); } catch(e){ return urlStr; }
 
-  function getParam(name){
-    const sp = new URLSearchParams(window.location.search || "");
-    const v = sp.get(name);
-    return v ? String(v).trim() : "";
-  }
-
-  function update(){
-    const rowId = getParam("rowId") || "";
-    const frame = document.getElementById("gristFrame");
-    const hint = document.getElementById("hint");
-
-    if(!rowId){
-      hint.style.display = "flex";
-      hint.querySelector("b").textContent = "Lien incomplet";
-      hint.querySelector(".box").lastElementChild && (hint.querySelector(".box").lastElementChild.textContent = "");
-      return;
+      ["themeMode","tour","layout","view"].forEach(k => u.searchParams.delete(k));
+      u.searchParams.set("style","singlePage");
+      u.searchParams.set("embed","true");
+      u.searchParams.set("exclude-headers","true");
+      return u.toString() + hash;
     }
 
-    const url = buildUrl(rowId);
-    if(frame.src !== url) frame.src = url;
-    hint.style.display = "none";
-  }
+    function decodeMany(s, max=3){
+      let out = (s || "");
+      for (let i=0;i<max;i++){
+        try{
+          const dec = decodeURIComponent(out);
+          if (dec === out) break;
+          out = dec;
+        } catch(e){ break; }
+      }
+      return out;
+    }
 
-  update();
-})();
-</script>
+    function buildTarget(){
+      const sp = new URLSearchParams(window.location.search);
+      const srcRaw = sp.get("src");
+      const rowId = sp.get("rowId") || sp.get("recordId");
+
+      // 1) Nouveau mode : ?src=... (&rowId=...)
+      if (srcRaw){
+        const src = decodeMany(srcRaw, 3);
+        const hash = rowId ? `#?table=Liste_des_equipements&rowId=${encodeURIComponent(rowId)}` : "";
+        return forceEmbedParams(src + hash);
+      }
+
+      // 2) Mode simple : ?rowId=70
+      if (rowId){
+        const hash = `#?table=Liste_des_equipements&rowId=${encodeURIComponent(rowId)}`;
+        return forceEmbedParams(DEFAULT_BASE + hash);
+      }
+
+      // 3) Ancien mode : #https://docs.getgrist.com/...
+      if (window.location.hash && window.location.hash.length > 1){
+        const raw = window.location.hash.substring(1);
+        const decoded = decodeMany(raw, 3);
+        if (/^https?:\/\//i.test(decoded)) return forceEmbedParams(decoded);
+      }
+
+      // 4) Rien -> page par défaut
+      return forceEmbedParams(DEFAULT_BASE);
+    }
+
+    function updateFrame(){
+      const target = buildTarget();
+      const frame = document.getElementById("gristFrame");
+      const hint = document.getElementById("hint");
+
+      if (!target){
+        hint.style.display = "flex";
+        return;
+      }
+      hint.style.display = "none";
+      if (frame.src !== target) frame.src = target;
+    }
+
+    updateFrame();
+    window.addEventListener("hashchange", updateFrame);
+  </script>
 </body>
 </html>
