@@ -37,14 +37,15 @@
   <div id="hint">
     <div>
       <div style="font-weight:700; margin-bottom:8px;">Chargement Grist…</div>
-      <div>Si tu vois cet écran, aucune cible n’a été fournie.<br>
-      Exemple : <code>?rowId=70</code> ou <code>?src=https://docs.getgrist.com/…</code></div>
+      <div>Exemples : <code>?rowId=70</code> (ouvre la fiche équipement) ou <code>#https://docs.getgrist.com/…</code></div>
     </div>
   </div>
 
   <script>
-    // ✅ Cible par défaut (ta page "Liste_des_equipements")
-    const DEFAULT_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+    // ✅ Page d'accueil (à ouvrir par défaut)
+    const DEFAULT_HOME = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59";
+    // ✅ Page "Liste_des_equipements" (utilisée pour les QR codes)
+    const EQUIP_PAGE   = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
 
     function forceEmbedParams(urlStr){
       let base = urlStr, hash = "";
@@ -84,10 +85,10 @@
         return forceEmbedParams(src + hash);
       }
 
-      // 2) Mode simple : ?rowId=70
+      // 2) Mode QR : ?rowId=70 -> ouvre la page équipements (p/119)
       if (rowId){
         const hash = `#?table=Liste_des_equipements&rowId=${encodeURIComponent(rowId)}`;
-        return forceEmbedParams(DEFAULT_BASE + hash);
+        return forceEmbedParams(EQUIP_PAGE + hash);
       }
 
       // 3) Ancien mode : #https://docs.getgrist.com/...
@@ -97,8 +98,8 @@
         if (/^https?:\/\//i.test(decoded)) return forceEmbedParams(decoded);
       }
 
-      // 4) Rien -> page par défaut
-      return forceEmbedParams(DEFAULT_BASE);
+      // 4) Rien -> page d'accueil (p/59)
+      return forceEmbedParams(DEFAULT_HOME);
     }
 
     function updateFrame(){
