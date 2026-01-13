@@ -4,82 +4,62 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Prévention PACA – Vue intégrée</title>
-
   <link rel="preconnect" href="https://docs.getgrist.com">
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
-
   <style>
-    :root{
-      --bg:#020617;
-      --grist-offset:56px;
-    }
-    html,body{margin:0;padding:0;height:100%;background:var(--bg);}
-    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg);}
-    #gristFrame{
-      position:absolute;
-      top:calc(-1 * var(--grist-offset));
-      left:0;
-      width:100%;
-      height:calc(100% + var(--grist-offset));
-      border:0;
-      background:var(--bg);
-    }
+    :root { --bg:#020617; --grist-offset:56px; }
+    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
+    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    #gristFrame { position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%; height:calc(100% + var(--grist-offset)); border:0; background:white; }
+    #fallback { position:fixed; inset:0; display:none; align-items:center; justify-content:center; color:#fff; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding:24px; text-align:center; }
+    #fallback a { color:#93c5fd; }
   </style>
 </head>
 <body>
   <div id="wrapper">
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
+  <div id="fallback">
+    <div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Lien incomplet</div>
+      <div style="opacity:.9;line-height:1.35">Le paramètre <b>rowId</b> est présent, mais l’URL Grist de base est manquante.<br>Vérifie que tu as bien remplacé le fichier <b>guide_iframe.html</b> par la dernière version.</div>
+      <div style="margin-top:12px;opacity:.9">Exemple attendu : <code>?rowId=73</code> suffit avec cette version.</div>
+    </div>
+  </div>
 
   <script>
-    // Fixed targets for this project
-    const DOC_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+    // Configuration "fixe" : ta page Grist intégrée
+    const GRIST_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+    const DEFAULT_QUERY = "embed=true&style=singlePage&exclude-headers=true";
     const TABLE_NAME = "Liste_des_equipements";
 
-    function buildGristUrl(rowId){
-      // Keep Grist embed options in query, and table/row selection in hash.
-      const base = new URL(DOC_BASE);
-      base.searchParams.set("embed","true");
-      base.searchParams.set("style","singlePage");
-      base.searchParams.set("exclude-headers","true");
-      const rid = String(rowId||"").trim();
-      const hash = rid ? `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(rid)}` : "";
-      return base.toString() + hash;
+    function getParam(name) {
+      const u = new URL(window.location.href);
+      return u.searchParams.get(name) || "";
     }
 
-    function update(){
-      const sp = new URLSearchParams(window.location.search);
-      const rowId = sp.get("rowId") || sp.get("recordId") || "";
+    function buildGristUrl(rowId) {
+      const base = new URL(GRIST_BASE);
+      // force embed params
+      base.search = DEFAULT_QUERY;
+      // deep-link (robuste mobile)
+      return `${base.toString()}#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(rowId)}`;
+    }
 
-      // Backward compat: allow ?src=... (encoded) + optional rowId, for older QR links
-      const src = sp.get("src");
-      let finalUrl = "";
-      if(src){
-        try{
-          const decoded = decodeURIComponent(src);
-          // If caller provides its own grist base, we just add/replace embed params,
-          // then append hash selection.
-          const u = new URL(decoded);
-          u.searchParams.set("embed","true");
-          u.searchParams.set("style","singlePage");
-          u.searchParams.set("exclude-headers","true");
-          const hash = rowId ? `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(String(rowId))}` : "";
-          finalUrl = u.toString() + hash;
-        }catch(e){
-          finalUrl = buildGristUrl(rowId);
-        }
-      }else{
-        finalUrl = buildGristUrl(rowId);
-      }
-
+    function boot() {
+      const rowId = getParam("rowId");
       const frame = document.getElementById("gristFrame");
-      if(frame && frame.src !== finalUrl){
-        frame.src = finalUrl;
+
+      if (!rowId) {
+        document.getElementById("fallback").style.display = "flex";
+        return;
       }
+
+      const url = buildGristUrl(rowId);
+      frame.src = url;
     }
 
-    update();
-    window.addEventListener("popstate", update);
+    boot();
   </script>
 </body>
 </html>
