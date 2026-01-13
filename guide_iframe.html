@@ -21,31 +21,84 @@
       border:0;
       background:var(--bg);
     }
-    #hint{
+    #overlay{
       position:fixed; inset:0;
-      display:none; align-items:center; justify-content:center;
-      color:#e5e7eb; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex; align-items:center; justify-content:center;
+      color:#e5e7eb;
+      font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       padding:24px; text-align:center;
+      background: radial-gradient(1200px 600px at 50% 30%, rgba(59,130,246,.15), rgba(2,6,23,1));
     }
-    #hint code{ color:#93c5fd; }
+    #overlay.hidden{ display:none; }
+    #overlay .box{
+      max-width:900px;
+      width:100%;
+      background: rgba(15,23,42,.65);
+      border:1px solid rgba(148,163,184,.25);
+      border-radius:16px;
+      padding:18px 18px 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    #overlay h1{ font-size:16px; margin:0 0 10px; }
+    #overlay p{ margin:6px 0; color:#cbd5e1; }
+    #overlay code{
+      display:block;
+      text-align:left;
+      white-space:pre-wrap;
+      word-break:break-all;
+      background: rgba(2,6,23,.55);
+      border:1px solid rgba(148,163,184,.18);
+      padding:10px 12px;
+      border-radius:12px;
+      color:#93c5fd;
+      margin-top:10px;
+      font-size:12px;
+    }
+    #overlay .small{ font-size:12px; color:#94a3b8; }
+    #overlay a{ color:#93c5fd; }
+    #overlay .row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+    #overlay button{
+      appearance:none; border:1px solid rgba(148,163,184,.25);
+      background: rgba(30,41,59,.7); color:#e5e7eb;
+      padding:8px 10px; border-radius:10px; cursor:pointer;
+    }
+    #overlay button:hover{ background: rgba(51,65,85,.75); }
   </style>
 </head>
 <body>
   <div id="wrapper">
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
-  <div id="hint">
-    <div>
-      <div style="font-weight:700; margin-bottom:8px;">Chargement Grist…</div>
-      <div>Exemples : <code>?rowId=70</code> (ouvre la fiche équipement) ou <code>#https://docs.getgrist.com/…</code></div>
+
+  <div id="overlay" aria-live="polite">
+    <div class="box">
+      <h1>Prévention PACA – Chargement…</h1>
+      <p id="status">Initialisation du lien…</p>
+      <div class="small">Si cet écran reste, c’est que l’iframe n’a pas pu charger (cache GitHub, URL cible vide, ou blocage embed).</div>
+      <code id="dbg">—</code>
+      <div class="row">
+        <button id="btnReload">Recharger</button>
+        <button id="btnCopy">Copier l’URL cible</button>
+        <button id="btnHide">Masquer</button>
+      </div>
+      <p class="small" style="margin-top:12px;">
+        Astuce : pour tester le bon fichier GitHub, ajoute <code style="display:inline;background:none;border:none;padding:0;color:#93c5fd;">?v=12</code> à l’URL.
+      </p>
     </div>
   </div>
 
   <script>
-    // ✅ Page d'accueil (à ouvrir par défaut)
+    // ✅ Page d'accueil (par défaut)
     const DEFAULT_HOME = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59";
-    // ✅ Page "Liste_des_equipements" (utilisée pour les QR codes)
+    // ✅ Page équipements (pour les QR)
     const EQUIP_PAGE   = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+
+    const overlay = document.getElementById("overlay");
+    const statusEl = document.getElementById("status");
+    const dbgEl = document.getElementById("dbg");
+    const frame = document.getElementById("gristFrame");
+
+    function setDebug(text){ dbgEl.textContent = text || "—"; }
 
     function forceEmbedParams(urlStr){
       let base = urlStr, hash = "";
@@ -78,14 +131,14 @@
       const srcRaw = sp.get("src");
       const rowId = sp.get("rowId") || sp.get("recordId");
 
-      // 1) Nouveau mode : ?src=... (&rowId=...)
+      // 1) Mode ?src=... (&rowId=...)
       if (srcRaw){
         const src = decodeMany(srcRaw, 3);
         const hash = rowId ? `#?table=Liste_des_equipements&rowId=${encodeURIComponent(rowId)}` : "";
         return forceEmbedParams(src + hash);
       }
 
-      // 2) Mode QR : ?rowId=70 -> ouvre la page équipements (p/119)
+      // 2) Mode QR : ?rowId=70 -> ouvre /p/119
       if (rowId){
         const hash = `#?table=Liste_des_equipements&rowId=${encodeURIComponent(rowId)}`;
         return forceEmbedParams(EQUIP_PAGE + hash);
@@ -98,25 +151,59 @@
         if (/^https?:\/\//i.test(decoded)) return forceEmbedParams(decoded);
       }
 
-      // 4) Rien -> page d'accueil (p/59)
+      // 4) Rien -> accueil /p/59
       return forceEmbedParams(DEFAULT_HOME);
     }
 
+    let lastTarget = "";
+
     function updateFrame(){
       const target = buildTarget();
-      const frame = document.getElementById("gristFrame");
-      const hint = document.getElementById("hint");
+      lastTarget = target;
+      statusEl.textContent = "URL cible calculée. Chargement de Grist…";
+      setDebug(target);
 
-      if (!target){
-        hint.style.display = "flex";
-        return;
-      }
-      hint.style.display = "none";
+      // Montre overlay tant que l'iframe n'a pas chargé
+      overlay.classList.remove("hidden");
+
+      // Charge l'iframe
       if (frame.src !== target) frame.src = target;
+
+      // Timeout de secours : si rien n'arrive, on garde l'overlay avec l'URL affichée
+      window.clearTimeout(updateFrame._t);
+      updateFrame._t = window.setTimeout(() => {
+        statusEl.textContent = "Toujours en attente… Si tu viens de remplacer le fichier sur GitHub, ajoute ?v=12 pour forcer le rechargement.";
+      }, 2500);
     }
 
-    updateFrame();
-    window.addEventListener("hashchange", updateFrame);
+    // Quand l'iframe charge, on masque l'overlay
+    frame.addEventListener("load", () => {
+      // Note: si Grist renvoie une page de login, on masque quand même, mais l'utilisateur verra l'écran de login.
+      overlay.classList.add("hidden");
+    });
+
+    // Boutons overlay
+    document.getElementById("btnReload").addEventListener("click", () => location.reload());
+    document.getElementById("btnHide").addEventListener("click", () => overlay.classList.add("hidden"));
+    document.getElementById("btnCopy").addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(lastTarget || "");
+        statusEl.textContent = "URL cible copiée dans le presse-papier.";
+      } catch(e){
+        statusEl.textContent = "Impossible de copier automatiquement. URL affichée ci-dessous.";
+      }
+      overlay.classList.remove("hidden");
+    });
+
+    // Init
+    try{
+      updateFrame();
+      window.addEventListener("hashchange", updateFrame);
+    } catch(e){
+      statusEl.textContent = "Erreur JavaScript dans le wrapper.";
+      setDebug(String(e && e.stack ? e.stack : e));
+      overlay.classList.remove("hidden");
+    }
   </script>
 </body>
 </html>
