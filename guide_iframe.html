@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prévention PACA</title>
+  <title>Prévention PACA – Vue intégrée</title>
 
   <link rel="preconnect" href="https://docs.getgrist.com">
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
@@ -39,9 +39,9 @@
       display:inline-block;
       padding: 2px 8px;
       border-radius: 999px;
-      background: rgba(34,197,94,.14);
-      border: 1px solid rgba(34,197,94,.35);
-      color: #bbf7d0;
+      background: rgba(234,179,8,.14);
+      border: 1px solid rgba(234,179,8,.35);
+      color: #fde68a;
       font-weight: 800;
       letter-spacing: .3px;
     }
@@ -76,7 +76,7 @@
 
   <div id="dbg" aria-live="polite">
     <div class="row">
-      <span class="tag">guide_iframe.html V15</span>
+      <span class="tag">guide_iframe.html V16</span>
       <span id="dbgLine">…</span>
       <button id="copyBtn">Copier l’URL cible</button>
       <button id="hideBtn">Masquer</button>
@@ -108,7 +108,6 @@
     const h = window.location.hash ? window.location.hash.substring(1) : "";
     if (!h) return "";
     const decoded = decodeMany(h, 3);
-
     try {
       const qp = decoded.startsWith("?") ? decoded.substring(1) : decoded;
       const sp2 = new URLSearchParams(qp);
@@ -135,8 +134,26 @@
              + "&rowId=" + encodeURIComponent(rowId)
              + "&recordId=" + encodeURIComponent(rowId);
     }
-
     return u.toString();
+  }
+
+  function readHashTargetUrl() {
+    if (!window.location.hash || window.location.hash.length <= 1) return "";
+    const raw = window.location.hash.substring(1);
+    const decoded = decodeMany(raw, 4);
+
+    if (/^https?:\/\//i.test(decoded)) return decoded;
+
+    if (decoded.startsWith("src=") || decoded.includes("src=")) {
+      try {
+        const sp = new URLSearchParams(decoded.startsWith("?") ? decoded.substring(1) : decoded);
+        const s = sp.get("src");
+        return s ? decodeMany(s,4) : "";
+      } catch(e) {
+        return "";
+      }
+    }
+    return "";
   }
 
   function buildTarget() {
@@ -144,8 +161,18 @@
     const srcRaw = sp.get("src");
     const rowId = readRowId();
 
+    const hashTarget = readHashTargetUrl();
+    if (hashTarget) {
+      try {
+        const base = hashTarget.split("#")[0];
+        return buildGristUrl(base, rowId);
+      } catch(e) {
+        return hashTarget;
+      }
+    }
+
     if (srcRaw) {
-      const src = decodeMany(srcRaw, 3);
+      const src = decodeMany(srcRaw, 4);
       try {
         const base = src.split("#")[0];
         return buildGristUrl(base, rowId);
@@ -162,11 +189,13 @@
   const frame   = document.getElementById("gristFrame");
   let lastTarget = "";
 
-  function updateFrame() {
+  function updateFrame(reason) {
     const rowId = readRowId();
     lastTarget = buildTarget();
 
-    dbgLine.textContent = rowId ? "rowId détecté = " + rowId : "aucun rowId (accueil)";
+    const h = readHashTargetUrl();
+    const page = h ? ("page via hash = p/" + (h.split("/p/")[1] || "").split("?")[0]) : "page = accueil/rowId";
+    dbgLine.textContent = (rowId ? ("rowId=" + rowId + " • ") : "aucun rowId • ") + page + (reason ? (" • " + reason) : "");
     dbgUrl.textContent = lastTarget;
 
     if (frame.src !== lastTarget) frame.src = lastTarget;
@@ -184,8 +213,8 @@
     document.getElementById("dbg").style.display = "none";
   });
 
-  updateFrame();
-  window.addEventListener("hashchange", updateFrame);
+  updateFrame("init");
+  window.addEventListener("hashchange", () => updateFrame("hashchange"));
 </script>
 </body>
 </html>
