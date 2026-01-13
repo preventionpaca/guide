@@ -9,78 +9,77 @@
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
   <style>
-    :root{ --bg:#020617; --grist-offset:56px; }
-    html,body{ margin:0; padding:0; height:100%; background:var(--bg); }
-    #wrapper{ position:fixed; inset:0; overflow:hidden; background:var(--bg); }
-    #gristFrame{ position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%; height:calc(100% + var(--grist-offset)); border:0; }
+    :root{
+      --bg:#020617;
+      --grist-offset:56px;
+    }
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);}
+    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg);}
+    #gristFrame{
+      position:absolute;
+      top:calc(-1 * var(--grist-offset));
+      left:0;
+      width:100%;
+      height:calc(100% + var(--grist-offset));
+      border:0;
+      background:var(--bg);
+    }
   </style>
 </head>
 <body>
-  <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
+  <div id="wrapper">
+    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
+  </div>
 
   <script>
-    // Decode defensively (QR scanners/OS may decode once, twice, or partially)
-    function safeDecode(s, maxPasses=4){
-      let out = (s || "").trim();
-      for(let i=0;i<maxPasses;i++){
+    // Fixed targets for this project
+    const DOC_BASE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+    const TABLE_NAME = "Liste_des_equipements";
+
+    function buildGristUrl(rowId){
+      // Keep Grist embed options in query, and table/row selection in hash.
+      const base = new URL(DOC_BASE);
+      base.searchParams.set("embed","true");
+      base.searchParams.set("style","singlePage");
+      base.searchParams.set("exclude-headers","true");
+      const rid = String(rowId||"").trim();
+      const hash = rid ? `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(rid)}` : "";
+      return base.toString() + hash;
+    }
+
+    function update(){
+      const sp = new URLSearchParams(window.location.search);
+      const rowId = sp.get("rowId") || sp.get("recordId") || "";
+
+      // Backward compat: allow ?src=... (encoded) + optional rowId, for older QR links
+      const src = sp.get("src");
+      let finalUrl = "";
+      if(src){
         try{
-          const dec = decodeURIComponent(out);
-          if(dec === out) break;
-          out = dec;
-        }catch(e){ break; }
+          const decoded = decodeURIComponent(src);
+          // If caller provides its own grist base, we just add/replace embed params,
+          // then append hash selection.
+          const u = new URL(decoded);
+          u.searchParams.set("embed","true");
+          u.searchParams.set("style","singlePage");
+          u.searchParams.set("exclude-headers","true");
+          const hash = rowId ? `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(String(rowId))}` : "";
+          finalUrl = u.toString() + hash;
+        }catch(e){
+          finalUrl = buildGristUrl(rowId);
+        }
+      }else{
+        finalUrl = buildGristUrl(rowId);
       }
-      return out;
+
+      const frame = document.getElementById("gristFrame");
+      if(frame && frame.src !== finalUrl){
+        frame.src = finalUrl;
+      }
     }
 
-    function cleanBaseUrl(raw){
-      if(!raw) return "";
-      let u = safeDecode(raw, 4);
-
-      // Drop any fragment/hash entirely; we rebuild a clean deep-link ourselves.
-      u = u.split('#')[0];
-
-      let url;
-      try{ url = new URL(u); }catch(e){ return u; }
-
-      // Remove noisy params
-      ['themeMode','tour','layout','view','embed','style','exclude-headers','rowId','recordId','table'].forEach(k=>url.searchParams.delete(k));
-
-      // Force embed params
-      url.searchParams.set('style','singlePage');
-      url.searchParams.set('embed','true');
-      url.searchParams.set('exclude-headers','true');
-      return url.toString();
-    }
-
-    function buildDeepLink(baseUrl, table, rowId){
-      const r = String(rowId || '').trim();
-      if(!r) return baseUrl;
-      const t = String(table || '').trim();
-      if(t) return baseUrl + '#?table=' + encodeURIComponent(t) + '&rowId=' + encodeURIComponent(r);
-      return baseUrl + '#?rowId=' + encodeURIComponent(r);
-    }
-
-    function updateFrame(){
-      const frame = document.getElementById('gristFrame');
-
-      // Preferred: guide_iframe.html?src=<BASE_GRIST_URL>&table=...&rowId=...
-      const usp = new URLSearchParams(window.location.search || '');
-      const srcQ = usp.get('src');
-      const tableQ = usp.get('table');
-      const rowIdQ = usp.get('rowId') || usp.get('recordId');
-
-      // Fallback legacy: hash
-      const hashRaw = window.location.hash ? window.location.hash.substring(1) : '';
-      const baseRaw = srcQ || hashRaw;
-      if(!baseRaw) return;
-
-      const base = cleanBaseUrl(baseRaw);
-      const finalUrl = buildDeepLink(base, tableQ, rowIdQ);
-      if(frame.src !== finalUrl) frame.src = finalUrl;
-    }
-
-    updateFrame();
-    window.addEventListener('hashchange', updateFrame);
+    update();
+    window.addEventListener("popstate", update);
   </script>
 </body>
 </html>
