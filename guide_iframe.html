@@ -1,137 +1,100 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prévention PACA – Vue intégrée</title>
-
-  <link rel="preconnect" href="https://docs.getgrist.com">
-  <link rel="dns-prefetch" href="https://docs.getgrist.com">
-
-  <style>
-    :root { --bg:#020617; --grist-offset:56px; }
-    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
-    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
-    #gristFrame {
-      position:absolute;
-      top: calc(-1 * var(--grist-offset));
-      left:0; width:100%;
-      height: calc(100% + var(--grist-offset));
-      border:0;
-      background:#0b1220;
-    }
-    #ppVer {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      z-index: 99999;
-      font: 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: rgba(226,232,240,.8);
-      background: rgba(2,6,23,.55);
-      border: 1px solid rgba(148,163,184,.18);
-      border-radius: 999px;
-      padding: 6px 10px;
-      user-select: none;
-      pointer-events: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prévention PACA – Vue intégrée</title>
+<link rel="preconnect" href="https://docs.getgrist.com">
+<link rel="dns-prefetch" href="https://docs.getgrist.com">
+<style>
+:root{--bg:#020617;--grist-offset:56px}
+html,body{margin:0;padding:0;height:100%;background:var(--bg)}
+#wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+#gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:#0b1220}
+#ppVer{position:fixed;right:10px;bottom:10px;z-index:99999;font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:rgba(226,232,240,.8);background:rgba(2,6,23,.55);border:1px solid rgba(148,163,184,.18);border-radius:999px;padding:6px 10px;user-select:none;pointer-events:none}
+</style>
 </head>
 <body>
-  <div id="wrapper">
-    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
-  </div>
-  <div id="ppVer">guide_iframe V18c</div>
+<div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
+<div id="ppVer">guide_iframe V18d</div>
+<script>
+  // V18d : init-only + sélection via recordId (prioritaire), avec hash interne.
+  const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
+  const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
+  const DEFAULT_TABLE = 'Liste_des_equipements';
 
-  <script>
-    // V18c : init-only (rapide) + QR robuste:
-    // - support ?page=119
-    // - sélection record forcée EN QUERY + EN HASH (Grist varie selon les vues)
-
-    const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
-    const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
-    const DEFAULT_TABLE = 'Liste_des_equipements';
-
-    function decodeMany(s, max=4) {
-      let out = (s || "");
-      for (let i=0;i<max;i++) {
-        try {
-          const dec = decodeURIComponent(out);
-          if (dec === out) break;
-          out = dec;
-        } catch(e) { break; }
-      }
-      return out;
+  function decodeMany(s, max=4) {
+    let out = (s || "");
+    for (let i=0;i<max;i++) {
+      try {
+        const dec = decodeURIComponent(out);
+        if (dec === out) break;
+        out = dec;
+      } catch(e) { break; }
     }
+    return out;
+  }
+  function qs() { return new URLSearchParams(window.location.search); }
 
-    function qs() { return new URLSearchParams(window.location.search); }
+  function readRecordId() {
+    const sp = qs();
+    // recordId prioritaire, sinon rowId (pour compat)
+    return sp.get("recordId") || sp.get("rowId") || "";
+  }
+  function readTableName() {
+    const sp = qs();
+    return sp.get("table") || DEFAULT_TABLE;
+  }
+  function readPageParamUrl() {
+    const sp = qs();
+    const page = sp.get("page");
+    if (!page) return "";
+    if (!/^\d+$/.test(page)) return "";
+    return DOC_BASE + page;
+  }
+  function readHashTargetUrl() {
+    if (!window.location.hash || window.location.hash.length <= 1) return "";
+    const decoded = decodeMany(window.location.hash.substring(1), 4);
+    if (/^https?:\/\//i.test(decoded)) return decoded;
+    return "";
+  }
+  function ensureEmbedParams(baseUrl) {
+    const u = new URL(baseUrl);
+    u.searchParams.set("embed","true");
+    u.searchParams.set("style","singlePage");
+    u.searchParams.set("exclude-headers","true");
+    return u;
+  }
+  function addSelection(u, recordId, tableName) {
+    if (!recordId) return u;
 
-    function readRowId() {
-      const sp = qs();
-      return sp.get("rowId") || sp.get("recordId") || "";
-    }
+    // Query : recordId (plus fiable que rowId dans certains écrans)
+    u.searchParams.set("table", tableName);
+    u.searchParams.set("recordId", recordId);
 
-    function readTableName() {
-      const sp = qs();
-      return sp.get("table") || DEFAULT_TABLE;
-    }
+    // On laisse rowId absent volontairement (évite certaines vues qui l'ignorent)
+    // Hash interne : table + recordId (+rowId pour compat)
+    u.hash = "?table=" + encodeURIComponent(tableName)
+           + "&recordId=" + encodeURIComponent(recordId)
+           + "&rowId=" + encodeURIComponent(recordId);
 
-    function readHashTargetUrl() {
-      if (!window.location.hash || window.location.hash.length <= 1) return "";
-      const decoded = decodeMany(window.location.hash.substring(1), 4);
-      if (/^https?:\/\//i.test(decoded)) return decoded;
-      return "";
-    }
+    return u;
+  }
+  function buildInitialTarget() {
+    const sp = qs();
+    const src = sp.get("src") ? decodeMany(sp.get("src"),4) : "";
+    const pageTarget = readPageParamUrl();
+    const hashTarget = readHashTargetUrl();
 
-    function readPageParamUrl() {
-      const sp = qs();
-      const page = sp.get("page");
-      if (!page) return "";
-      if (!/^\d+$/.test(page)) return "";
-      return DOC_BASE + page;
-    }
+    const recordId = readRecordId();
+    const tableName = readTableName();
 
-    function ensureEmbedParams(baseUrl) {
-      const u = new URL(baseUrl);
-      u.searchParams.set("embed", "true");
-      u.searchParams.set("style", "singlePage");
-      u.searchParams.set("exclude-headers", "true");
-      return u;
-    }
-
-    function addRowSelection(u, rowId, tableName) {
-      if (!rowId) return u;
-
-      // ✅ Query (certains écrans Grist lisent recordId/rowId ici)
-      u.searchParams.set("table", tableName);
-      u.searchParams.set("rowId", rowId);
-      u.searchParams.set("recordId", rowId);
-
-      // ✅ Hash (d'autres écrans lisent ici)
-      u.hash = "?table=" + encodeURIComponent(tableName)
-            + "&rowId=" + encodeURIComponent(rowId)
-            + "&recordId=" + encodeURIComponent(rowId);
-
-      return u;
-    }
-
-    function buildInitialTarget() {
-      const sp = qs();
-      const src = sp.get("src") ? decodeMany(sp.get("src"), 4) : "";
-      const hashTarget = readHashTargetUrl();
-      const pageTarget = readPageParamUrl();
-
-      const rowId = readRowId();
-      const tableName = readTableName();
-
-      const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
-      let u = ensureEmbedParams(base);
-      u = addRowSelection(u, rowId, tableName);
-      return u.toString();
-    }
-
-    (function initOnce() {
-      document.getElementById("gristFrame").src = buildInitialTarget();
-    })();
-  </script>
+    const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
+    let u = ensureEmbedParams(base);
+    u = addSelection(u, recordId, tableName);
+    return u.toString();
+  }
+  document.getElementById("gristFrame").src = buildInitialTarget();
+</script>
 </body>
 </html>
