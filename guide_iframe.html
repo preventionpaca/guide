@@ -9,100 +9,78 @@
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
   <style>
-    :root {
-      --bg: #020617;
-      --grist-offset: 56px; /* ajuste si besoin */
-    }
-    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
-    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
-    #gristFrame { position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%;
-      height:calc(100% + var(--grist-offset)); border:0; }
+    :root{ --bg:#020617; --grist-offset:56px; }
+    html,body{ margin:0; padding:0; height:100%; background:var(--bg); }
+    #wrapper{ position:fixed; inset:0; overflow:hidden; background:var(--bg); }
+    #gristFrame{ position:absolute; top:calc(-1 * var(--grist-offset)); left:0; width:100%; height:calc(100% + var(--grist-offset)); border:0; }
   </style>
 </head>
 <body>
-  <div id="wrapper">
-    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
-  </div>
+  <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
 
   <script>
-    // Décodage "défensif" (QR scanners / OS décodent parfois une ou deux fois)
-    function safeDecode(s, maxPasses=3){
+    // Decode defensively (QR scanners/OS may decode once, twice, or partially)
+    function safeDecode(s, maxPasses=4){
       let out = (s || "").trim();
       for(let i=0;i<maxPasses;i++){
         try{
           const dec = decodeURIComponent(out);
           if(dec === out) break;
           out = dec;
-        }catch(e){
-          break;
-        }
+        }catch(e){ break; }
       }
       return out;
     }
 
-    // Nettoyage / normalisation URL Grist de base
-    function cleanBaseUrl(raw) {
-      if (!raw) return "";
-      let u = safeDecode(raw, 3);
+    function cleanBaseUrl(raw){
+      if(!raw) return "";
+      let u = safeDecode(raw, 4);
 
-      // Si on nous donne un "inner" avec deep-link encodé (%23? ou %2523?), on le coupe : on reconstruira derrière.
-      u = u.split('%23?')[0].split('%2523?')[0].split('#?')[0];
+      // Drop any fragment/hash entirely; we rebuild a clean deep-link ourselves.
+      u = u.split('#')[0];
 
-      // On enlève des paramètres parasites
-      u = u.replace(/[?&](themeMode|tour|layout|view)=[^&]*/g, "");
+      let url;
+      try{ url = new URL(u); }catch(e){ return u; }
 
-      // On enlève d'éventuels anciens embed/style/exclude-headers (on les remet proprement)
-      u = u.replace(/[?&](embed|style|exclude-headers)=[^&]*/g, "");
+      // Remove noisy params
+      ['themeMode','tour','layout','view','embed','style','exclude-headers','rowId','recordId','table'].forEach(k=>url.searchParams.delete(k));
 
-      const hasQuery = u.includes("?");
-      u += hasQuery ? "" : "?";
-
-      const params = [];
-      params.push("style=singlePage");
-      params.push("embed=true");
-      params.push("exclude-headers=true");
-
-      if (!u.endsWith("?") && !u.endsWith("&")) u += "&";
-      u += params.join("&");
-
-      return u;
+      // Force embed params
+      url.searchParams.set('style','singlePage');
+      url.searchParams.set('embed','true');
+      url.searchParams.set('exclude-headers','true');
+      return url.toString();
     }
 
     function buildDeepLink(baseUrl, table, rowId){
       const r = String(rowId || '').trim();
-      const t = String(table || '').trim();
       if(!r) return baseUrl;
-      if(t){
-        return baseUrl + "#?table=" + encodeURIComponent(t) + "&rowId=" + encodeURIComponent(r);
-      }
-      // More robust: many views resolve rowId in current table without specifying table
-      return baseUrl + "#?rowId=" + encodeURIComponent(r);
+      const t = String(table || '').trim();
+      if(t) return baseUrl + '#?table=' + encodeURIComponent(t) + '&rowId=' + encodeURIComponent(r);
+      return baseUrl + '#?rowId=' + encodeURIComponent(r);
     }
 
     function updateFrame(){
-      const frame = document.getElementById("gristFrame");
+      const frame = document.getElementById('gristFrame');
 
-      // Nouveau format robuste (recommandé) :
-      // guide_iframe.html?src=<BASE_GRIST_URL>&table=Liste_des_equipements&rowId=62
-      const usp = new URLSearchParams(window.location.search || "");
-      const srcQ = usp.get("src");
-      const tableQ = usp.get("table");
-      const rowIdQ = usp.get("rowId") || usp.get("recordId");
+      // Preferred: guide_iframe.html?src=<BASE_GRIST_URL>&table=...&rowId=...
+      const usp = new URLSearchParams(window.location.search || '');
+      const srcQ = usp.get('src');
+      const tableQ = usp.get('table');
+      const rowIdQ = usp.get('rowId') || usp.get('recordId');
 
-      // Ancien format : le Grist est dans le hash
-      const hashRaw = window.location.hash ? window.location.hash.substring(1) : "";
-
+      // Fallback legacy: hash
+      const hashRaw = window.location.hash ? window.location.hash.substring(1) : '';
       const baseRaw = srcQ || hashRaw;
       if(!baseRaw) return;
 
       const base = cleanBaseUrl(baseRaw);
       const finalUrl = buildDeepLink(base, tableQ, rowIdQ);
-
-      if (frame.src !== finalUrl) frame.src = finalUrl;
+      if(frame.src !== finalUrl) frame.src = finalUrl;
     }
 
     updateFrame();
-    window.addEventListener("hashchange", updateFrame);
+    window.addEventListener('hashchange', updateFrame);
   </script>
 </body>
 </html>
