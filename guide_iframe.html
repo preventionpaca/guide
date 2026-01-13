@@ -9,30 +9,16 @@
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
   <style>
-    :root {
-      --bg: #020617;
-      --grist-offset: 56px;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: var(--bg);
-    }
-    #wrapper {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-      background: var(--bg);
-    }
+    :root { --bg:#020617; --grist-offset:56px; }
+    html, body { margin:0; padding:0; height:100%; background:var(--bg); }
+    #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
     #gristFrame {
-      position: absolute;
+      position:absolute;
       top: calc(-1 * var(--grist-offset));
-      left: 0;
-      width: 100%;
+      left:0; width:100%;
       height: calc(100% + var(--grist-offset));
-      border: 0;
-      background: #0b1220;
+      border:0;
+      background:#0b1220;
     }
     #ppVer {
       position: fixed;
@@ -54,10 +40,13 @@
   <div id="wrapper">
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
-  <div id="ppVer">guide_iframe V18b</div>
+  <div id="ppVer">guide_iframe V18c</div>
 
   <script>
-    // V18b : init-only + support QR sans fragment (#) via ?page=100&rowId=XX
+    // V18c : init-only (rapide) + QR robuste:
+    // - support ?page=119
+    // - sélection record forcée EN QUERY + EN HASH (Grist varie selon les vues)
+
     const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
     const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
     const DEFAULT_TABLE = 'Liste_des_equipements';
@@ -74,9 +63,7 @@
       return out;
     }
 
-    function qs() {
-      return new URLSearchParams(window.location.search);
-    }
+    function qs() { return new URLSearchParams(window.location.search); }
 
     function readRowId() {
       const sp = qs();
@@ -90,14 +77,12 @@
 
     function readHashTargetUrl() {
       if (!window.location.hash || window.location.hash.length <= 1) return "";
-      const raw = window.location.hash.substring(1);
-      const decoded = decodeMany(raw, 4);
+      const decoded = decodeMany(window.location.hash.substring(1), 4);
       if (/^https?:\/\//i.test(decoded)) return decoded;
       return "";
     }
 
     function readPageParamUrl() {
-      // Format QR recommandé: guide_iframe.html?page=100&rowId=82&table=Liste_des_equipements
       const sp = qs();
       const page = sp.get("page");
       if (!page) return "";
@@ -116,10 +101,12 @@
     function addRowSelection(u, rowId, tableName) {
       if (!rowId) return u;
 
+      // ✅ Query (certains écrans Grist lisent recordId/rowId ici)
       u.searchParams.set("table", tableName);
       u.searchParams.set("rowId", rowId);
       u.searchParams.set("recordId", rowId);
 
+      // ✅ Hash (d'autres écrans lisent ici)
       u.hash = "?table=" + encodeURIComponent(tableName)
             + "&rowId=" + encodeURIComponent(rowId)
             + "&recordId=" + encodeURIComponent(rowId);
@@ -136,12 +123,9 @@
       const rowId = readRowId();
       const tableName = readTableName();
 
-      // Priorité: ?page= (QR sans #) > #https://... > ?src=... > HOME
       const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
-
       let u = ensureEmbedParams(base);
       u = addRowSelection(u, rowId, tableName);
-
       return u.toString();
     }
 
