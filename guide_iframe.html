@@ -12,23 +12,21 @@
     :root { --bg:#020617; --grist-offset:56px; }
     html, body { margin:0; padding:0; height:100%; background:var(--bg); }
     #wrapper { position:fixed; inset:0; overflow:hidden; background:var(--bg); }
-    #gristFrame {
+    #gristFrame{
       position:absolute;
       top: calc(-1 * var(--grist-offset));
-      left:0;
-      width:100%;
+      left:0; width:100%;
       height: calc(100% + var(--grist-offset));
       border:0;
-      background:var(--bg);
+      background: #0b1220;
     }
-    /* Bandeau debug (toujours visible, pour vérifier qu'on est sur le bon fichier) */
     #dbg {
       position: fixed;
       left: 10px;
       bottom: 10px;
       z-index: 999999;
-      max-width: min(920px, calc(100vw - 20px));
-      background: rgba(2,6,23,.78);
+      max-width: min(980px, calc(100vw - 20px));
+      background: rgba(2,6,23,.82);
       border: 1px solid rgba(148,163,184,.22);
       border-radius: 12px;
       padding: 10px 12px;
@@ -41,10 +39,10 @@
       display:inline-block;
       padding: 2px 8px;
       border-radius: 999px;
-      background: rgba(59,130,246,.18);
-      border: 1px solid rgba(59,130,246,.35);
-      color: #bfdbfe;
-      font-weight: 700;
+      background: rgba(34,197,94,.14);
+      border: 1px solid rgba(34,197,94,.35);
+      color: #bbf7d0;
+      font-weight: 800;
       letter-spacing: .3px;
     }
     #dbg code {
@@ -78,7 +76,7 @@
 
   <div id="dbg" aria-live="polite">
     <div class="row">
-      <span class="tag">guide_iframe.html V14</span>
+      <span class="tag">guide_iframe.html V15</span>
       <span id="dbgLine">…</span>
       <button id="copyBtn">Copier l’URL cible</button>
       <button id="hideBtn">Masquer</button>
@@ -86,119 +84,108 @@
     <code id="dbgUrl">—</code>
   </div>
 
-  <script>
-    // ⚠️ IMPORTANT : /p/59 = page d'accueil (tu y tiens)
-    const HOME_PAGE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59";
+<script>
+  const HOME_PAGE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59";
+  const TABLE_NAME = "Liste_des_equipements";
 
-    // Table à cibler (celle que tu as confirmée)
-    const TABLE_NAME = "Liste_des_equipements";
-
-    function forceEmbedParams(urlStr) {
-      let base = urlStr, hash = "";
-      const p = base.indexOf("#");
-      if (p !== -1) { hash = base.slice(p); base = base.slice(0,p); }
-      let u;
-      try { u = new URL(base); } catch(e) { return urlStr; }
-
-      ["themeMode","tour","layout","view"].forEach(k => u.searchParams.delete(k));
-      u.searchParams.set("style","singlePage");
-      u.searchParams.set("embed","true");
-      u.searchParams.set("exclude-headers","true");
-
-      return u.toString() + hash;
-    }
-
-    function decodeMany(s, max=3) {
-      let out = (s || "");
-      for (let i=0;i<max;i++) {
-        try {
-          const dec = decodeURIComponent(out);
-          if (dec === out) break;
-          out = dec;
-        } catch(e) { break; }
-      }
-      return out;
-    }
-
-    function readRowId() {
-      const sp = new URLSearchParams(window.location.search);
-      let rowId = sp.get("rowId") || sp.get("recordId") || "";
-      if (rowId) return rowId;
-
-      // Tolérance : certains scanners mettent tout dans le hash
-      // ex: #rowId=73 ou #?rowId=73
-      const h = window.location.hash ? window.location.hash.substring(1) : "";
-      if (!h) return "";
-      const decoded = decodeMany(h, 3);
-
+  function decodeMany(s, max=3) {
+    let out = (s || "");
+    for (let i=0;i<max;i++) {
       try {
-        const qp = decoded.startsWith("?") ? decoded.substring(1) : decoded;
-        const sp2 = new URLSearchParams(qp);
-        return sp2.get("rowId") || sp2.get("recordId") || "";
-      } catch(e) {
-        return "";
-      }
+        const dec = decodeURIComponent(out);
+        if (dec === out) break;
+        out = dec;
+      } catch(e) { break; }
+    }
+    return out;
+  }
+
+  function readRowId() {
+    const sp = new URLSearchParams(window.location.search);
+    let rowId = sp.get("rowId") || sp.get("recordId") || "";
+    if (rowId) return rowId;
+
+    const h = window.location.hash ? window.location.hash.substring(1) : "";
+    if (!h) return "";
+    const decoded = decodeMany(h, 3);
+
+    try {
+      const qp = decoded.startsWith("?") ? decoded.substring(1) : decoded;
+      const sp2 = new URLSearchParams(qp);
+      return sp2.get("rowId") || sp2.get("recordId") || "";
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function buildGristUrl(base, rowId) {
+    const u = new URL(base);
+
+    u.searchParams.set("embed", "true");
+    u.searchParams.set("style", "singlePage");
+    u.searchParams.set("exclude-headers", "true");
+    ["themeMode","tour","layout","view"].forEach(k => u.searchParams.delete(k));
+
+    if (rowId) {
+      u.searchParams.set("table", TABLE_NAME);
+      u.searchParams.set("rowId", rowId);
+      u.searchParams.set("recordId", rowId);
+
+      u.hash = "?table=" + encodeURIComponent(TABLE_NAME)
+             + "&rowId=" + encodeURIComponent(rowId)
+             + "&recordId=" + encodeURIComponent(rowId);
     }
 
-    function buildTarget() {
-      const sp = new URLSearchParams(window.location.search);
-      const srcRaw = sp.get("src");
-      const rowId = readRowId();
+    return u.toString();
+  }
 
-      // 1) Mode ?src=... (&rowId=...)
-      if (srcRaw) {
-        const src = decodeMany(srcRaw, 3);
-        const hash = rowId ? `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(rowId)}` : "";
-        return forceEmbedParams(src + hash);
-      }
+  function buildTarget() {
+    const sp = new URLSearchParams(window.location.search);
+    const srcRaw = sp.get("src");
+    const rowId = readRowId();
 
-      // 2) Mode QR : ?rowId=73 -> HOME_PAGE + sélection
-      if (rowId) {
-        const hash = `#?table=${encodeURIComponent(TABLE_NAME)}&rowId=${encodeURIComponent(rowId)}`;
-        return forceEmbedParams(HOME_PAGE + hash);
-      }
-
-      // 3) Ancien mode : #https://docs.getgrist.com/...
-      if (window.location.hash && window.location.hash.length > 1) {
-        const raw = window.location.hash.substring(1);
-        const decoded = decodeMany(raw, 3);
-        if (/^https?:\/\//i.test(decoded)) return forceEmbedParams(decoded);
-      }
-
-      // 4) Rien -> accueil
-      return forceEmbedParams(HOME_PAGE);
-    }
-
-    const dbgLine = document.getElementById("dbgLine");
-    const dbgUrl = document.getElementById("dbgUrl");
-    const frame = document.getElementById("gristFrame");
-
-    let lastTarget = "";
-
-    function updateFrame() {
-      const rowId = readRowId();
-      lastTarget = buildTarget();
-
-      dbgLine.textContent = rowId ? `rowId détecté = ${rowId}` : "aucun rowId (accueil)";
-      dbgUrl.textContent = lastTarget;
-
-      if (frame.src !== lastTarget) frame.src = lastTarget;
-    }
-
-    document.getElementById("copyBtn").addEventListener("click", async () => {
+    if (srcRaw) {
+      const src = decodeMany(srcRaw, 3);
       try {
-        await navigator.clipboard.writeText(lastTarget || "");
-        dbgLine.textContent = "URL cible copiée ✅";
+        const base = src.split("#")[0];
+        return buildGristUrl(base, rowId);
       } catch(e) {
-        dbgLine.textContent = "Copie auto impossible (URL affichée ci-dessous).";
+        return src;
       }
-    });
-    document.getElementById("hideBtn").addEventListener("click", () => {
-      document.getElementById("dbg").style.display = "none";
-    });
+    }
 
-    updateFrame();
-    window.addEventListener("hashchange", updateFrame);
-  </script>
+    return buildGristUrl(HOME_PAGE, rowId);
+  }
+
+  const dbgLine = document.getElementById("dbgLine");
+  const dbgUrl  = document.getElementById("dbgUrl");
+  const frame   = document.getElementById("gristFrame");
+  let lastTarget = "";
+
+  function updateFrame() {
+    const rowId = readRowId();
+    lastTarget = buildTarget();
+
+    dbgLine.textContent = rowId ? "rowId détecté = " + rowId : "aucun rowId (accueil)";
+    dbgUrl.textContent = lastTarget;
+
+    if (frame.src !== lastTarget) frame.src = lastTarget;
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(lastTarget || "");
+      dbgLine.textContent = "URL cible copiée ✅";
+    } catch(e) {
+      dbgLine.textContent = "Copie auto impossible (URL affichée).";
+    }
+  });
+  document.getElementById("hideBtn").addEventListener("click", () => {
+    document.getElementById("dbg").style.display = "none";
+  });
+
+  updateFrame();
+  window.addEventListener("hashchange", updateFrame);
+</script>
 </body>
 </html>
