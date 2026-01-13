@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prévention PACA – V</title>
+  <title>Prévention PACA – Vue intégrée</title>
 
   <link rel="preconnect" href="https://docs.getgrist.com">
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
@@ -11,7 +11,7 @@
   <style>
     :root {
       --bg: #020617;
-      --grist-offset: 56px; /* ajuste si besoin */
+      --grist-offset: 56px;
     }
     html, body {
       margin: 0;
@@ -34,8 +34,6 @@
       border: 0;
       background: #0b1220;
     }
-
-    /* Indicateur discret version */
     #ppVer {
       position: fixed;
       right: 10px;
@@ -56,13 +54,12 @@
   <div id="wrapper">
     <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
   </div>
-  <div id="ppVer">guide_iframe V18</div>
+  <div id="ppVer">guide_iframe V18b</div>
 
   <script>
-    // V18 : chargement INITIAL uniquement.
-    // => On NE réagit PAS aux hashchange ensuite, pour ne pas casser/ralentir la navigation interne Grist.
-
+    // V18b : init-only + support QR sans fragment (#) via ?page=100&rowId=XX
     const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
+    const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
     const DEFAULT_TABLE = 'Liste_des_equipements';
 
     function decodeMany(s, max=4) {
@@ -77,13 +74,17 @@
       return out;
     }
 
+    function qs() {
+      return new URLSearchParams(window.location.search);
+    }
+
     function readRowId() {
-      const sp = new URLSearchParams(window.location.search);
+      const sp = qs();
       return sp.get("rowId") || sp.get("recordId") || "";
     }
 
     function readTableName() {
-      const sp = new URLSearchParams(window.location.search);
+      const sp = qs();
       return sp.get("table") || DEFAULT_TABLE;
     }
 
@@ -93,6 +94,15 @@
       const decoded = decodeMany(raw, 4);
       if (/^https?:\/\//i.test(decoded)) return decoded;
       return "";
+    }
+
+    function readPageParamUrl() {
+      // Format QR recommandé: guide_iframe.html?page=100&rowId=82&table=Liste_des_equipements
+      const sp = qs();
+      const page = sp.get("page");
+      if (!page) return "";
+      if (!/^\d+$/.test(page)) return "";
+      return DOC_BASE + page;
     }
 
     function ensureEmbedParams(baseUrl) {
@@ -118,14 +128,16 @@
     }
 
     function buildInitialTarget() {
-      const sp = new URLSearchParams(window.location.search);
+      const sp = qs();
       const src = sp.get("src") ? decodeMany(sp.get("src"), 4) : "";
       const hashTarget = readHashTargetUrl();
+      const pageTarget = readPageParamUrl();
 
       const rowId = readRowId();
       const tableName = readTableName();
 
-      const base = (hashTarget || src || HOME_PAGE).split("#")[0];
+      // Priorité: ?page= (QR sans #) > #https://... > ?src=... > HOME
+      const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
 
       let u = ensureEmbedParams(base);
       u = addRowSelection(u, rowId, tableName);
@@ -134,8 +146,7 @@
     }
 
     (function initOnce() {
-      const frame = document.getElementById("gristFrame");
-      frame.src = buildInitialTarget();
+      document.getElementById("gristFrame").src = buildInitialTarget();
     })();
   </script>
 </body>
