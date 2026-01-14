@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Prévention PACA – Vue intégrée</title>
+<title>Prévention PACA – frame </title>
 <link rel="preconnect" href="https://docs.getgrist.com">
 <link rel="dns-prefetch" href="https://docs.getgrist.com">
 <style>
@@ -22,14 +22,13 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
 <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
 <div id="ppBadge">guide_iframe V19_rowid_hash_only</div>
 <div id="ppDebug"></div>
+
 <script>
-  // V20 : priorité à src= (conserve #a1.s452.rX), sinon fallback home/page/rowId
   const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
   const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
   const DEFAULT_TABLE = 'Liste_des_equipements';
 
-  // IMPORTANT : ton "prefix" d’ancre Grist (celui que tu as trouvé)
-  // On l'utilise seulement si on doit reconstruire une URL à partir de rowId
+  // ton ancre Grist stable (celle que tu as observée)
   const GRIST_ANCHOR_PREFIX = 'a1.s452.r';
 
   function decodeMany(s, max=4) {
@@ -46,101 +45,108 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
 
   function qs() { return new URLSearchParams(window.location.search); }
 
-  function readRowId() {
-    const sp = qs();
-    return sp.get("rowId") || sp.get("recordId") || "";
-  }
-
-  function readTableName() {
-    const sp = qs();
-    return sp.get("table") || DEFAULT_TABLE;
-  }
-
-  function readPageParamUrl() {
-    const sp = qs();
-    const page = sp.get("page");
-    if (!page) return "";
-    if (!/^\d+$/.test(page)) return "";
-    return DOC_BASE + page;
-  }
-
-  // Conserve le hash si présent (#a1.s452.rX)
   function ensureEmbedParamsPreserveHash(fullUrl) {
     const u = new URL(fullUrl);
-    const h = u.hash; // on garde le hash tel quel
+    const h = u.hash;
     u.searchParams.set("embed","true");
     u.searchParams.set("style","singlePage");
     u.searchParams.set("exclude-headers","true");
-    u.hash = h; // on le remet
+    u.hash = h;
     return u;
   }
 
-  // Si on doit reconstruire à partir d’un rowId (sans src), on utilise l’ancre fiable
   function addAnchorRow(u, rowId) {
     if (!rowId) return u;
     u.hash = GRIST_ANCHOR_PREFIX + encodeURIComponent(String(rowId));
     return u;
   }
 
-  function buildInitialTarget() {
-    const sp = qs();
+  // 1) Lire une cible "URL Grist" depuis le hash de la page wrapper (clic tuile)
+  function readHashTargetUrl() {
+    if (!location.hash || location.hash.length <= 1) return "";
+    const decoded = decodeMany(location.hash.substring(1), 4);
 
-    // 1) src= a PRIORITÉ ABSOLUE (QR code mobile-safe)
-    const srcRaw = sp.get("src");
-    const src = srcRaw ? decodeMany(srcRaw, 4) : "";
+    // Cas 1 : le hash contient directement une URL Grist complète
+    if (/^https?:\/\//i.test(decoded)) return decoded;
 
-    // 2) fallback page=...
-    const pageTarget = readPageParamUrl();
-
-    // 3) fallback HOME
-    const rowId = readRowId();
-    const tableName = readTableName();
-
-    let finalUrl;
-    let reason = "";
-
-    if (src && /^https?:\/\//i.test(src)) {
-      // On ne touche PAS au hash de src (sinon on perd rX)
-      const u = ensureEmbedParamsPreserveHash(src);
-      finalUrl = u.toString();
-      reason = "srcParam";
-    } else {
-      // Pas de src => on construit une URL
-      const base = (pageTarget || HOME_PAGE);
-      const u = ensureEmbedParamsPreserveHash(base);
-      // Si on a rowId, on met l’ancre Grist robuste
-      addAnchorRow(u, rowId);
-      finalUrl = u.toString();
-      reason = pageTarget ? "pageParam" : "home";
-    }
-
-    return {
-      iframeSrc: finalUrl,
-      reason,
-      srcParam: src,
-      pageTarget,
-      rowId,
-      table: tableName
-    };
+    // Cas 2 : le hash pourrait contenir une chaîne du type "#p=119" etc. -> on ignore
+    return "";
   }
 
-  (function initOnce() {
-    const data = buildInitialTarget();
-    document.getElementById("gristFrame").src = data.iframeSrc;
+  // 2) Construire la meilleure URL iframe à partir de l'état actuel (query + hash)
+  function buildTargetFromLocation() {
+    const sp = qs();
 
+    // PRIORITÉ ABSOLUE : src= (QR code)
+    const srcRaw = sp.get("src");
+    const src = srcRaw ? decodeMany(srcRaw, 4) : "";
+    if (src && /^https?:\/\//i.test(src)) {
+      return ensureEmbedParamsPreserveHash(src).toString();
+    }
+
+    // Ensuite : hash URL (clic tuiles)
+    const hashTarget = readHashTargetUrl();
+    if (hashTarget) {
+      return ensureEmbedParamsPreserveHash(hashTarget).toString();
+    }
+
+    // Ensuite : page=...
+    const page = sp.get("page");
+    if (page && /^\d+$/.test(page)) {
+      const u = ensureEmbedParamsPreserveHash(DOC_BASE + page);
+      const rowId = sp.get("rowId") || sp.get("recordId") || "";
+      addAnchorRow(u, rowId);
+      return u.toString();
+    }
+
+    // Ensuite : rowId seul -> home + ancre row
+    const rowId = sp.get("rowId") || sp.get("recordId") || "";
+    if (rowId) {
+      const u = ensureEmbedParamsPreserveHash(HOME_PAGE);
+      addAnchorRow(u, rowId);
+      return u.toString();
+    }
+
+    // Sinon : home
+    return ensureEmbedParamsPreserveHash(HOME_PAGE).toString();
+  }
+
+  function setIframeSrc(nextUrl) {
+    const fr = document.getElementById("gristFrame");
+    if (!fr) return;
+    if (fr.src === nextUrl) return;
+    fr.src = nextUrl;
+  }
+
+  // INIT
+  (function init() {
+    setIframeSrc(buildTargetFromLocation());
+
+    // ✅ clé : si une tuile change le hash, on recharge l’iframe
+    window.addEventListener("hashchange", () => {
+      // Si on est dans un lien QR (src=...), on ignore les hashchange éventuels
+      if (qs().get("src")) return;
+      setIframeSrc(buildTargetFromLocation());
+    });
+
+    // ✅ sécurité : certains clics changent le hash sans déclencher hashchange selon le navigateur
+    // (et parfois GitHub Pages fait des trucs charmants)
+    document.addEventListener("click", () => {
+      if (qs().get("src")) return;
+      setIframeSrc(buildTargetFromLocation());
+    }, true);
+
+    // debug si besoin
     if (qs().get("debug") === "1") {
       const d = document.getElementById("ppDebug");
       if (d){
         d.style.display = "block";
         d.textContent =
-          "Wrapper: V20_src_priority_anchor\n" +
-          "location.href: " + window.location.href + "\n\n" +
-          "reason: " + data.reason + "\n" +
-          "pageTarget: " + (data.pageTarget || "(none)") + "\n" +
-          "srcParam: " + (data.srcParam || "(none)") + "\n" +
-          "rowId: " + (data.rowId || "(none)") + "\n" +
-          "table: " + (data.table || "(none)") + "\n\n" +
-          "iframe.src: " + data.iframeSrc;
+          "Wrapper: V18_propre_nav\n" +
+          "location.href: " + location.href + "\n\n" +
+          "hashTarget: " + (readHashTargetUrl() || "(none)") + "\n" +
+          "srcParam: " + (qs().get("src") || "(none)") + "\n\n" +
+          "iframe.src: " + buildTargetFromLocation();
       }
     }
   })();
@@ -148,4 +154,5 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
 
 </body>
 </html>
+
 
