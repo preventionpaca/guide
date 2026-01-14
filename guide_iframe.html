@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Prévention PACA – Porteur</title>
+    <title>Prévention PACA – P</title>
     <link rel="preconnect" href="https://docs.getgrist.com">
     <link rel="dns-prefetch" href="https://docs.getgrist.com">
     <style>
@@ -20,54 +20,133 @@
 
 <script>
   const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
+  const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
+  const DEFAULT_TABLE = 'Liste_des_equipements';
+
+  // ton ancre Grist stable (celle que tu as observée)
   const GRIST_ANCHOR_PREFIX = 'a1.s452.r';
 
-  function ensureEmbedParams(urlStr) {
-    try {
-      const u = new URL(urlStr);
-      u.searchParams.set("embed", "true");
-      u.searchParams.set("style", "singlePage");
-      u.searchParams.set("exclude-headers", "true");
+  function decodeMany(s, max=4) {
+    let out = (s || "");
+    for (let i=0;i<max;i++) {
+      try {
+        const dec = decodeURIComponent(out);
+        if (dec === out) break;
+        out = dec;
+      } catch(e) { break; }
+    }
+    return out;
+  }
+
+  function qs() { return new URLSearchParams(window.location.search); }
+
+  function ensureEmbedParamsPreserveHash(fullUrl) {
+    const u = new URL(fullUrl);
+    const h = u.hash;
+    u.searchParams.set("embed","true");
+    u.searchParams.set("style","singlePage");
+    u.searchParams.set("exclude-headers","true");
+    u.hash = h;
+    return u;
+  }
+
+  function addAnchorRow(u, rowId) {
+    if (!rowId) return u;
+    u.hash = GRIST_ANCHOR_PREFIX + encodeURIComponent(String(rowId));
+    return u;
+  }
+
+  // 1) Lire une cible "URL Grist" depuis le hash de la page wrapper (clic tuile)
+  function readHashTargetUrl() {
+    if (!location.hash || location.hash.length <= 1) return "";
+    const decoded = decodeMany(location.hash.substring(1), 4);
+
+    // Cas 1 : le hash contient directement une URL Grist complète
+    if (/^https?:\/\//i.test(decoded)) return decoded;
+
+    // Cas 2 : le hash pourrait contenir une chaîne du type "#p=119" etc. -> on ignore
+    return "";
+  }
+
+  // 2) Construire la meilleure URL iframe à partir de l'état actuel (query + hash)
+  function buildTargetFromLocation() {
+    const sp = qs();
+
+    // PRIORITÉ ABSOLUE : src= (QR code)
+    const srcRaw = sp.get("src");
+    const src = srcRaw ? decodeMany(srcRaw, 4) : "";
+    if (src && /^https?:\/\//i.test(src)) {
+      return ensureEmbedParamsPreserveHash(src).toString();
+    }
+
+    // Ensuite : hash URL (clic tuiles)
+    const hashTarget = readHashTargetUrl();
+    if (hashTarget) {
+      return ensureEmbedParamsPreserveHash(hashTarget).toString();
+    }
+
+    // Ensuite : page=...
+    const page = sp.get("page");
+    if (page && /^\d+$/.test(page)) {
+      const u = ensureEmbedParamsPreserveHash(DOC_BASE + page);
+      const rowId = sp.get("rowId") || sp.get("recordId") || "";
+      addAnchorRow(u, rowId);
       return u.toString();
-    } catch(e) { return urlStr; }
+    }
+
+    // Ensuite : rowId seul -> home + ancre row
+    const rowId = sp.get("rowId") || sp.get("recordId") || "";
+    if (rowId) {
+      const u = ensureEmbedParamsPreserveHash(HOME_PAGE);
+      addAnchorRow(u, rowId);
+      return u.toString();
+    }
+
+    // Sinon : home
+    return ensureEmbedParamsPreserveHash(HOME_PAGE).toString();
   }
 
-  function getTargetUrl() {
-    const sp = new URLSearchParams(window.location.search);
-    // 1. Priorité au paramètre ?src= (QR Codes)
-    if (sp.has("src")) return ensureEmbedParams(decodeURIComponent(sp.get("src")));
-    
-    // 2. Priorité au Hash (Navigation entre pages via le Portail)
-    if (window.location.hash.length > 1) {
-      const hashContent = decodeURIComponent(window.location.hash.substring(1));
-      if (/^https?:\/\//i.test(hashContent)) return ensureEmbedParams(hashContent);
-    }
-    return ensureEmbedParams(HOME_PAGE);
+  function setIframeSrc(nextUrl) {
+    const fr = document.getElementById("gristFrame");
+    if (!fr) return;
+    if (fr.src === nextUrl) return;
+    fr.src = nextUrl;
   }
 
-  const fr = document.getElementById("gristFrame");
-  let lastUrl = "";
+  // INIT
+  (function init() {
+    setIframeSrc(buildTargetFromLocation());
 
-  function updateIframe() {
-    const nextUrl = getTargetUrl();
-    if (nextUrl !== lastUrl) {
-      lastUrl = nextUrl;
-      fr.src = nextUrl;
+    // ✅ clé : si une tuile change le hash, on recharge l’iframe
+    window.addEventListener("hashchange", () => {
+      // Si on est dans un lien QR (src=...), on ignore les hashchange éventuels
+      if (qs().get("src")) return;
+      setIframeSrc(buildTargetFromLocation());
+    });
+
+    // ✅ sécurité : certains clics changent le hash sans déclencher hashchange selon le navigateur
+    // (et parfois GitHub Pages fait des trucs charmants)
+    document.addEventListener("click", () => {
+      if (qs().get("src")) return;
+      setIframeSrc(buildTargetFromLocation());
+    }, true);
+
+    // debug si besoin
+    if (qs().get("debug") === "1") {
+      const d = document.getElementById("ppDebug");
+      if (d){
+        d.style.display = "block";
+        d.textContent =
+          "Wrapper: V18_propre_nav\n" +
+          "location.href: " + location.href + "\n\n" +
+          "hashTarget: " + (readHashTargetUrl() || "(none)") + "\n" +
+          "srcParam: " + (qs().get("src") || "(none)") + "\n\n" +
+          "iframe.src: " + buildTargetFromLocation();
+      }
     }
-  }
-
-  // Initialisation
-  updateIframe();
-
-  // Écoute uniquement le changement de hash (plus performant que le click)
-  window.addEventListener("hashchange", updateIframe);
-
-  // Écoute les messages envoyés par le widget HTML pour une transition fluide
-  window.addEventListener("message", (e) => {
-    if (e.data.type === "GOTO_PAGE" && e.data.url) {
-      window.location.hash = encodeURIComponent(e.data.url);
-    }
-  });
+  })();
 </script>
+
 </body>
 </html>
+
