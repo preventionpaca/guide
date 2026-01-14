@@ -11,14 +11,21 @@
 html,body{margin:0;padding:0;height:100%;background:var(--bg)}
 #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
 #gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:#0b1220}
-#ppVer{position:fixed;right:10px;bottom:10px;z-index:99999;font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:rgba(226,232,240,.8);background:rgba(2,6,23,.55);border:1px solid rgba(148,163,184,.18);border-radius:999px;padding:6px 10px;user-select:none;pointer-events:none}
+#ppBadge{position:fixed;right:10px;bottom:10px;z-index:99999;font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:rgba(226,232,240,.85);
+background:rgba(2,6,23,.55);border:1px solid rgba(148,163,184,.18);border-radius:999px;padding:6px 10px;user-select:none;pointer-events:none}
+#ppDebug{position:fixed;left:10px;right:10px;top:10px;z-index:99999;display:none;
+font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:10px;white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
-<div id="ppVer">guide_iframe V18d</div>
+<div id="ppBadge">guide_iframe V19_rowid_hash_only</div>
+<div id="ppDebug"></div>
 <script>
-  // V18d : init-only + sélection via recordId (prioritaire), avec hash interne.
+  // V19 : init-only + sélection STRICTE via hash Grist #?table=...&rowId=...
+  // (on évite recordId en query : certaines vues l’ignorent, ou l’écrasent)
+
   const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
   const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
   const DEFAULT_TABLE = 'Liste_des_equipements';
@@ -34,17 +41,19 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg)}
     }
     return out;
   }
+
   function qs() { return new URLSearchParams(window.location.search); }
 
-  function readRecordId() {
+  function readRowId() {
     const sp = qs();
-    // recordId prioritaire, sinon rowId (pour compat)
-    return sp.get("recordId") || sp.get("rowId") || "";
+    return sp.get("rowId") || sp.get("recordId") || "";
   }
+
   function readTableName() {
     const sp = qs();
     return sp.get("table") || DEFAULT_TABLE;
   }
+
   function readPageParamUrl() {
     const sp = qs();
     const page = sp.get("page");
@@ -52,12 +61,14 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg)}
     if (!/^\d+$/.test(page)) return "";
     return DOC_BASE + page;
   }
+
   function readHashTargetUrl() {
     if (!window.location.hash || window.location.hash.length <= 1) return "";
     const decoded = decodeMany(window.location.hash.substring(1), 4);
     if (/^https?:\/\//i.test(decoded)) return decoded;
     return "";
   }
+
   function ensureEmbedParams(baseUrl) {
     const u = new URL(baseUrl);
     u.searchParams.set("embed","true");
@@ -65,36 +76,57 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg)}
     u.searchParams.set("exclude-headers","true");
     return u;
   }
-  function addSelection(u, recordId, tableName) {
-    if (!recordId) return u;
 
-    // Query : recordId (plus fiable que rowId dans certains écrans)
-    u.searchParams.set("table", tableName);
-    u.searchParams.set("recordId", recordId);
-
-    // On laisse rowId absent volontairement (évite certaines vues qui l'ignorent)
-    // Hash interne : table + recordId (+rowId pour compat)
+  function addRowSelectionHashOnly(u, rowId, tableName) {
+    if (!rowId) return u;
     u.hash = "?table=" + encodeURIComponent(tableName)
-           + "&recordId=" + encodeURIComponent(recordId)
-           + "&rowId=" + encodeURIComponent(recordId);
-
+           + "&rowId=" + encodeURIComponent(String(rowId));
     return u;
   }
+
   function buildInitialTarget() {
     const sp = qs();
     const src = sp.get("src") ? decodeMany(sp.get("src"),4) : "";
     const pageTarget = readPageParamUrl();
     const hashTarget = readHashTargetUrl();
 
-    const recordId = readRecordId();
+    const rowId = readRowId();
     const tableName = readTableName();
 
     const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
     let u = ensureEmbedParams(base);
-    u = addSelection(u, recordId, tableName);
-    return u.toString();
+    u = addRowSelectionHashOnly(u, rowId, tableName);
+
+    return {
+      iframeSrc: u.toString(),
+      baseUsed: base,
+      rowId: rowId,
+      table: tableName,
+      pageTarget: pageTarget,
+      hashTarget: hashTarget,
+      srcParam: src
+    };
   }
-  document.getElementById("gristFrame").src = buildInitialTarget();
+
+  (function initOnce() {
+    const data = buildInitialTarget();
+    document.getElementById("gristFrame").src = data.iframeSrc;
+
+    if (qs().get("debug") === "1") {
+      const d = document.getElementById("ppDebug");
+      d.style.display = "block";
+      d.textContent =
+        "Wrapper: " + 'V19_rowid_hash_only' + "\n" +
+        "location.href: " + window.location.href + "\n\n" +
+        "baseUsed: " + data.baseUsed + "\n" +
+        "pageTarget: " + (data.pageTarget || "(none)") + "\n" +
+        "hashTarget: " + (data.hashTarget || "(none)") + "\n" +
+        "srcParam: " + (data.srcParam || "(none)") + "\n" +
+        "table: " + (data.table || "(none)") + "\n" +
+        "rowId: " + (data.rowId || "(none)") + "\n\n" +
+        "iframe.src: " + data.iframeSrc;
+    }
+  })();
 </script>
 </body>
 </html>
