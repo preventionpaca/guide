@@ -65,12 +65,12 @@
         <div>
           <p class="ppTitle">Chargement…</p>
           <p class="ppMsg">Si l’écran reste noir sur mobile, c’est souvent le navigateur “intégré” du lecteur de QR code qui bloque l’iframe.</p>
-          <p class="ppSmall">Essayez “Accès direct” (ouvre Grist hors iframe) ou “Ouvrir dans le navigateur”.</p>
+          <p class="ppSmall">Essayez “Ouvrir dans le navigateur” (Chrome/Safari). Si vous êtes dans un lecteur de QR code avec navigateur “intégré”, c’est souvent lui le coupable.</p>
         </div>
       </div>
       <div class="ppActions">
         <a id="ppReloadBtn" class="ppBtn" href="#">Recharger</a>
-        <a id="ppOpenDirectBtn" class="ppBtn primary" href="#" target="_blank" rel="noopener noreferrer">Accès direct</a>
+        <a id="ppOpenBrowserBtn" class="ppBtn primary" href="#" target="_blank" rel="noopener noreferrer">Ouvrir dans le navigateur</a>
       </div>
     </div>
   </div>
@@ -161,14 +161,14 @@
 
     // Make buttons work even if JS later gets blocked (we set real hrefs)
     const reloadA = document.getElementById("ppReloadBtn");
-    const directA = document.getElementById("ppOpenDirectBtn");
+    const openA = document.getElementById("ppOpenBrowserBtn");
     if(reloadA){
       reloadA.href = window.location.href;
       reloadA.addEventListener("click", (e)=>{ e.preventDefault(); window.location.reload(); });
     }
-    if(directA){
-      directA.href = directUrl;
-      directA.addEventListener("click", ()=>{ /* keep default anchor behavior */ });
+    if(openA){
+      openA.href = directUrl;
+      openA.addEventListener("click", ()=>{ /* keep default anchor behavior */ });
     }
 
     // Start loading
