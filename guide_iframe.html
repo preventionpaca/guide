@@ -12,180 +12,189 @@
     :root{--bg:#020617;--grist-offset:56px}
     html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden}
     #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
-    #gristFrame{position:absolute;top:calc(-1* var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:var(--bg)}
+    #gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:var(--bg)}
 
-    /* Loader / fallback */
-    #ppLoader{
-      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-      background:rgba(2,6,23,.92);z-index:999999;
-      font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      color:#e2e8f0;
-    }
-    #ppLoader.hidden{display:none}
-    .ppCard{
-      width:min(520px,92vw);border-radius:16px;
-      background:rgba(15,23,42,.88);border:1px solid rgba(148,163,184,.18);
-      box-shadow:0 18px 50px rgba(0,0,0,.35);
-      padding:16px 16px 14px;
-    }
-    .ppRow{display:flex;gap:12px;align-items:flex-start}
-    .ppSpin{
-      width:22px;height:22px;border-radius:999px;border:3px solid rgba(148,163,184,.25);
-      border-top-color:rgba(249,115,22,.95);
-      animation:spin 1s linear infinite;flex:0 0 auto;margin-top:2px;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .ppTitle{font-weight:650;font-size:15px;margin:0}
-    .ppMsg{opacity:.9;margin:8px 0 0;line-height:1.35}
-    .ppSmall{opacity:.65;font-size:12px;margin:10px 0 0}
-    .ppActions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
-    .ppBtn{
-      display:inline-flex;align-items:center;justify-content:center;
-      appearance:none;border:1px solid rgba(148,163,184,.25);
-      background:rgba(30,41,59,.55);color:#e2e8f0;
-      padding:8px 10px;border-radius:10px;
-      font:13px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      cursor:pointer;text-decoration:none;
-    }
-    .ppBtn:hover{background:rgba(30,41,59,.75)}
-    .ppBtn.primary{background:rgba(249,115,22,.85);border-color:rgba(249,115,22,.9);color:#0b1220}
-    .ppBtn.primary:hover{background:rgba(249,115,22,.95)}
+    /* Overlay (affiché seulement si l’iframe ne charge pas) */
+    #ppOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;background:rgba(2,6,23,.68);backdrop-filter:blur(2px)}
+    .pp-card{width:min(720px,calc(100vw - 24px));border-radius:18px;padding:18px 18px 14px;background:rgba(15,23,42,.92);box-shadow:0 18px 60px rgba(0,0,0,.45);color:#e2e8f0;font:14px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .pp-row{display:flex;gap:12px;align-items:flex-start}
+    .pp-spin{width:18px;height:18px;border-radius:50%;border:3px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite;margin-top:2px}
+    @keyframes ppSpin{to{transform:rotate(360deg)}}
+    .pp-title{font-weight:800;font-size:16px;margin:0 0 6px 0}
+    .pp-msg{margin:0;line-height:1.35;color:rgba(226,232,240,.9)}
+    .pp-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .pp-btn{border:1px solid rgba(148,163,184,.35);background:rgba(2,6,23,.35);color:#e2e8f0;border-radius:999px;padding:9px 14px;font:600 13px system-ui;cursor:pointer}
+    .pp-btn.primary{border-color:rgba(251,146,60,.65);background:rgba(251,146,60,.95);color:#0b1220}
+    .pp-btn:active{transform:translateY(1px)}
+
+    /* Mini loader discret (affiché au tout début seulement) */
+    #ppMini{position:fixed;left:12px;bottom:12px;z-index:9998;display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(15,23,42,.75);color:rgba(226,232,240,.85);font:12px system-ui}
+    #ppMini .pp-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite}
   </style>
 </head>
 <body>
-  <div id="wrapper">
-    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
-  </div>
+  <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
 
-  <!-- Loader + fallback (mobile/in-app) -->
-  <div id="ppLoader" aria-live="polite">
-    <div class="ppCard">
-      <div class="ppRow">
-        <div class="ppSpin" aria-hidden="true"></div>
+  <div id="ppMini"><span class="pp-dot"></span><span>Chargement…</span></div>
+
+  <div id="ppOverlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="pp-card">
+      <div class="pp-row">
+        <div class="pp-spin" aria-hidden="true"></div>
         <div>
-          <p class="ppTitle">Chargement…</p>
-          <p class="ppMsg">Si l’écran reste noir sur mobile, c’est souvent le navigateur “intégré” du lecteur de QR code qui bloque l’iframe.</p>
-          <p class="ppSmall">Essayez “Ouvrir dans le navigateur” (Chrome/Safari). Si vous êtes dans un lecteur de QR code avec navigateur “intégré”, c’est souvent lui le coupable.</p>
+          <div class="pp-title">Chargement…</div>
+          <p class="pp-msg" id="ppOverlayMsg">
+            Si l’écran reste noir sur mobile, c’est souvent le lecteur de QR code (navigateur “intégré”) qui bloque l’iframe.
+            Essayez d’ouvrir le lien dans le navigateur (Chrome/Safari).
+          </p>
         </div>
       </div>
-      <div class="ppActions">
-        <a id="ppReloadBtn" class="ppBtn" href="#">Recharger</a>
-        <a id="ppOpenBrowserBtn" class="ppBtn primary" href="#" target="_blank" rel="noopener noreferrer">Ouvrir dans le navigateur</a>
+      <div class="pp-actions">
+        <button class="pp-btn" id="ppReload" type="button">Recharger</button>
+        <button class="pp-btn primary" id="ppOpenBrowser" type="button">Ouvrir dans le navigateur</button>
       </div>
     </div>
   </div>
 
 <script>
-  // ========= CONFIG =========
-  const HOME_PAGE = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59";
-  const DOC_BASE  = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/";
-  const DEFAULT_TABLE = "Liste_des_equipements";
+  // Wrapper V25 : overlay uniquement si l’iframe ne charge pas (évite de bloquer le portail)
 
-  // ========= UTILS =========
+  const HOME = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
+
   function decodeMany(s, max=4){
-    let out = (s || "");
+    let out = s || "";
     for(let i=0;i<max;i++){
-      try{
-        const d = decodeURIComponent(out);
-        if(d === out) break;
-        out = d;
-      }catch(e){ break; }
+      try{ const d = decodeURIComponent(out); if(d === out) break; out = d; }
+      catch(e){ break; }
     }
     return out;
   }
-  function qs(){ return new URLSearchParams(window.location.search); }
 
-  function ensureEmbedParams(baseUrl){
-    const u = new URL(baseUrl);
-    u.searchParams.set("embed","true");
-    u.searchParams.set("style","singlePage");
-    u.searchParams.set("exclude-headers","true");
-    return u;
-  }
-
-  // ========= TARGET BUILD =========
-  function getBaseTarget(){
-    const sp = qs();
-
-    // 1) src= (recommandé pour QR)
+  function getTarget(){
+    const sp = new URLSearchParams(window.location.search);
     const src = sp.get("src");
-    if(src) return decodeMany(src, 4);
+    if(src) return decodeMany(src, 6);
 
-    // 2) compat: wrapper#https://...
+    // compat : ancien mode hash "wrapper#https://..."
     const h = window.location.hash ? window.location.hash.slice(1) : "";
-    const dh = decodeMany(h, 2);
-    if(dh && /^https?:\/\//i.test(dh)) return dh;
+    const hd = decodeMany(h, 3);
+    if(hd && /^https?:\/\//i.test(hd)) return hd;
 
-    // 3) page=119 etc.
-    const page = sp.get("page");
-    if(page && /^\d+$/.test(page)) return (DOC_BASE + page);
-
-    return HOME_PAGE;
+    return HOME;
   }
 
-  function addRowSelection(u){
-    const sp = qs();
-    const rowId = sp.get("rowId") || sp.get("recordId") || "";
-    const table = sp.get("table") || DEFAULT_TABLE;
-    if(!rowId) return u;
-    // IMPORTANT: row selection is in hash (#?table=...&rowId=...)
-    u.hash = "?table=" + encodeURIComponent(table) + "&rowId=" + encodeURIComponent(String(rowId));
-    return u;
+  function isMobile(){
+    const ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod/i.test(ua);
   }
 
-  function buildUrls(){
-    // base target (can itself include a #... anchor — we drop it, we rebuild ours)
-    const base = (getBaseTarget() || HOME_PAGE).split("#")[0];
+  const frame   = document.getElementById("gristFrame");
+  const mini    = document.getElementById("ppMini");
+  const overlay = document.getElementById("ppOverlay");
+  const btnReload = document.getElementById("ppReload");
+  const btnOpen   = document.getElementById("ppOpenBrowser");
 
-    // iframe URL: embed params + row selection hash
-    let iframeU = ensureEmbedParams(base);
-    iframeU = addRowSelection(iframeU);
+  let loadedOnce = false;
+  let slowTimer  = null;
+  let hardTimer  = null;
 
-    // direct URL: NO iframe. We still add the row selection hash to help Grist position.
-    // (embed params left ON; that keeps the UI light even in direct mode)
-    const directU = iframeU.toString();
-
-    return { iframeSrc: iframeU.toString(), directUrl: directU, baseUsed: base };
+  function hideOverlay(){
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden","true");
   }
 
-  function showLoader(show){
-    const el = document.getElementById("ppLoader");
-    if(!el) return;
-    if(show) el.classList.remove("hidden");
-    else el.classList.add("hidden");
+  function showMini(){
+    // mini loader discret, maximum 6s (il se cache au load)
+    mini.style.display = "flex";
+    window.setTimeout(()=>{ if(!loadedOnce) mini.style.display = "none"; }, 6000);
   }
 
-  // ========= INIT =========
-  (function init(){
-    const { iframeSrc, directUrl } = buildUrls();
+  function hideMini(){
+    mini.style.display = "none";
+  }
 
-    // Make buttons work even if JS later gets blocked (we set real hrefs)
-    const reloadA = document.getElementById("ppReloadBtn");
-    const openA = document.getElementById("ppOpenBrowserBtn");
-    if(reloadA){
-      reloadA.href = window.location.href;
-      reloadA.addEventListener("click", (e)=>{ e.preventDefault(); window.location.reload(); });
-    }
-    if(openA){
-      openA.href = directUrl;
-      openA.addEventListener("click", ()=>{ /* keep default anchor behavior */ });
-    }
+  function showOverlay(){
+    overlay.style.display = "flex";
+    overlay.setAttribute("aria-hidden","false");
+  }
 
-    // Start loading
-    showLoader(true);
-    const fr = document.getElementById("gristFrame");
-    fr.src = iframeSrc;
+  function buildOpenInBrowserUrl(){
+    // On force l’ouverture dans le vrai navigateur via un param "open=1".
+    // Le lecteur QR “intégré” a parfois un cache / sandbox, mais l’URL reste utile.
+    const u = new URL(window.location.href);
+    u.searchParams.set('open','1');
+    return u.toString();
+  }
 
-    // Hide loader when iframe loads
-    fr.addEventListener("load", ()=> {
-      // Certains navigateurs "in-app" déclenchent load même si la page est blanche.
-      // On attend un peu : si rien n’affiche, l’utilisateur a toujours "Accès direct".
-      setTimeout(()=>showLoader(false), 250);
-    });
+  function setFrame(){
+    const url = getTarget();
 
-    // Safety timeout: if still black after 6s, keep loader visible (user can use direct)
-    setTimeout(()=>showLoader(true), 6000);
-  })();
+    loadedOnce = false;
+    hideOverlay();
+    showMini();
+
+    // Timers :
+    // - Après 8s sans load -> on affiche l’overlay UNIQUEMENT sur mobile et surtout si deep-link (src ou hash)
+    // - Après 25s -> overlay aussi sur desktop (rare) pour éviter l’impression “site figé”
+    if(slowTimer) window.clearTimeout(slowTimer);
+    if(hardTimer) window.clearTimeout(hardTimer);
+
+    const sp = new URLSearchParams(window.location.search);
+    const isDeepLink = !!sp.get('src') || (!!window.location.hash && window.location.hash.length>1);
+
+    slowTimer = window.setTimeout(()=>{
+      if(loadedOnce) return;
+      if(isMobile() && isDeepLink){
+        showOverlay();
+      }
+    }, 8000);
+
+    hardTimer = window.setTimeout(()=>{
+      if(loadedOnce) return;
+      // Sur desktop, on n’affiche pas l’overlay si on est juste sur la page d’accueil (ça chargerait quand même)
+      if(isDeepLink){
+        showOverlay();
+      }
+    }, 25000);
+
+    frame.src = url || HOME;
+  }
+
+  frame.addEventListener('load', ()=>{
+    loadedOnce = true;
+    hideMini();
+    hideOverlay();
+    if(slowTimer) window.clearTimeout(slowTimer);
+    if(hardTimer) window.clearTimeout(hardTimer);
+  });
+
+  // Actions overlay
+  btnReload.addEventListener('click', ()=>{
+    try{ hideOverlay(); }catch(e){}
+    // relance
+    setFrame();
+  });
+
+  btnOpen.addEventListener('click', ()=>{
+    // IMPORTANT: le lecteur QR « intégré » bloque parfois les iframes.
+    // Ici on force une ouverture "vraie" dans le navigateur :
+    const url = buildOpenInBrowserUrl();
+    // Essai Android "intent" (ouvre Chrome)
+    try{
+      if(/Android/i.test(navigator.userAgent||"")){
+        const iu = new URL(url);
+        const intent = "intent://" + iu.host + iu.pathname + iu.search + iu.hash + "#Intent;scheme=" + iu.protocol.replace(':','') + ";package=com.android.chrome;end";
+        window.location.href = intent;
+        return;
+      }
+    }catch(e){}
+    // Fallback standard
+    window.location.href = url;
+  });
+
+  // Init
+  setFrame();
+  window.addEventListener("hashchange", setFrame);
 </script>
 </body>
 </html>
