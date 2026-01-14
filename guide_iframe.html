@@ -148,11 +148,12 @@
   frame.addEventListener("load", ()=>{ hideLoader(); });
 
   // Boutons
-  openDirectBtn.addEventListener("click", ()=>{
+  openDirectBtn.addEventListener("click", (ev)=>{
+    try{ ev.preventDefault(); }catch(e){}
     // Sur mobile, c’est souvent la seule solution si l’iframe est bloquée (cookies tiers / politiques navigateur).
     // On ouvre l’URL Grist en "plein écran" (1er niveau).
     const url = currentTarget || getTarget() || HOME;
-    window.location.href = url;
+    window.location.assign(url);
   });
 
   retryBtn.addEventListener("click", ()=>{
