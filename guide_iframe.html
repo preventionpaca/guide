@@ -23,12 +23,14 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
 <div id="ppBadge">guide_iframe V19_rowid_hash_only</div>
 <div id="ppDebug"></div>
 <script>
-  // V19 : init-only + sélection STRICTE via hash Grist #?table=...&rowId=...
-  // (on évite recordId en query : certaines vues l’ignorent, ou l’écrasent)
-
+  // V20 : priorité à src= (conserve #a1.s452.rX), sinon fallback home/page/rowId
   const HOME_PAGE = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59';
   const DOC_BASE  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/';
   const DEFAULT_TABLE = 'Liste_des_equipements';
+
+  // IMPORTANT : ton "prefix" d’ancre Grist (celui que tu as trouvé)
+  // On l'utilise seulement si on doit reconstruire une URL à partir de rowId
+  const GRIST_ANCHOR_PREFIX = 'a1.s452.r';
 
   function decodeMany(s, max=4) {
     let out = (s || "");
@@ -62,49 +64,63 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
     return DOC_BASE + page;
   }
 
-  function readHashTargetUrl() {
-    if (!window.location.hash || window.location.hash.length <= 1) return "";
-    const decoded = decodeMany(window.location.hash.substring(1), 4);
-    if (/^https?:\/\//i.test(decoded)) return decoded;
-    return "";
-  }
-
-  function ensureEmbedParams(baseUrl) {
-    const u = new URL(baseUrl);
+  // Conserve le hash si présent (#a1.s452.rX)
+  function ensureEmbedParamsPreserveHash(fullUrl) {
+    const u = new URL(fullUrl);
+    const h = u.hash; // on garde le hash tel quel
     u.searchParams.set("embed","true");
     u.searchParams.set("style","singlePage");
     u.searchParams.set("exclude-headers","true");
+    u.hash = h; // on le remet
     return u;
   }
 
-  function addRowSelectionHashOnly(u, rowId, tableName) {
+  // Si on doit reconstruire à partir d’un rowId (sans src), on utilise l’ancre fiable
+  function addAnchorRow(u, rowId) {
     if (!rowId) return u;
-    u.hash = "?table=" + encodeURIComponent(tableName)
-           + "&rowId=" + encodeURIComponent(String(rowId));
+    u.hash = GRIST_ANCHOR_PREFIX + encodeURIComponent(String(rowId));
     return u;
   }
 
   function buildInitialTarget() {
     const sp = qs();
-    const src = sp.get("src") ? decodeMany(sp.get("src"),4) : "";
-    const pageTarget = readPageParamUrl();
-    const hashTarget = readHashTargetUrl();
 
+    // 1) src= a PRIORITÉ ABSOLUE (QR code mobile-safe)
+    const srcRaw = sp.get("src");
+    const src = srcRaw ? decodeMany(srcRaw, 4) : "";
+
+    // 2) fallback page=...
+    const pageTarget = readPageParamUrl();
+
+    // 3) fallback HOME
     const rowId = readRowId();
     const tableName = readTableName();
 
-    const base = (pageTarget || hashTarget || src || HOME_PAGE).split("#")[0];
-    let u = ensureEmbedParams(base);
-    u = addRowSelectionHashOnly(u, rowId, tableName);
+    let finalUrl;
+    let reason = "";
+
+    if (src && /^https?:\/\//i.test(src)) {
+      // On ne touche PAS au hash de src (sinon on perd rX)
+      const u = ensureEmbedParamsPreserveHash(src);
+      finalUrl = u.toString();
+      reason = "srcParam";
+    } else {
+      // Pas de src => on construit une URL
+      const base = (pageTarget || HOME_PAGE);
+      const u = ensureEmbedParamsPreserveHash(base);
+      // Si on a rowId, on met l’ancre Grist robuste
+      addAnchorRow(u, rowId);
+      finalUrl = u.toString();
+      reason = pageTarget ? "pageParam" : "home";
+    }
 
     return {
-      iframeSrc: u.toString(),
-      baseUsed: base,
-      rowId: rowId,
-      table: tableName,
-      pageTarget: pageTarget,
-      hashTarget: hashTarget,
-      srcParam: src
+      iframeSrc: finalUrl,
+      reason,
+      srcParam: src,
+      pageTarget,
+      rowId,
+      table: tableName
     };
   }
 
@@ -114,19 +130,22 @@ color:#e2e8f0;background:rgba(2,6,23,.82);border:1px solid rgba(148,163,184,.25)
 
     if (qs().get("debug") === "1") {
       const d = document.getElementById("ppDebug");
-      d.style.display = "block";
-      d.textContent =
-        "Wrapper: " + 'V19_rowid_hash_only' + "\n" +
-        "location.href: " + window.location.href + "\n\n" +
-        "baseUsed: " + data.baseUsed + "\n" +
-        "pageTarget: " + (data.pageTarget || "(none)") + "\n" +
-        "hashTarget: " + (data.hashTarget || "(none)") + "\n" +
-        "srcParam: " + (data.srcParam || "(none)") + "\n" +
-        "table: " + (data.table || "(none)") + "\n" +
-        "rowId: " + (data.rowId || "(none)") + "\n\n" +
-        "iframe.src: " + data.iframeSrc;
+      if (d){
+        d.style.display = "block";
+        d.textContent =
+          "Wrapper: V20_src_priority_anchor\n" +
+          "location.href: " + window.location.href + "\n\n" +
+          "reason: " + data.reason + "\n" +
+          "pageTarget: " + (data.pageTarget || "(none)") + "\n" +
+          "srcParam: " + (data.srcParam || "(none)") + "\n" +
+          "rowId: " + (data.rowId || "(none)") + "\n" +
+          "table: " + (data.table || "(none)") + "\n\n" +
+          "iframe.src: " + data.iframeSrc;
+      }
     }
   })();
 </script>
+
 </body>
 </html>
+
