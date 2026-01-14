@@ -1,27 +1,94 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Prévention PACA – P</title>
-    <link rel="preconnect" href="https://docs.getgrist.com">
-    <link rel="dns-prefetch" href="https://docs.getgrist.com">
-    <style>
-        :root{--bg:#020617;--grist-offset:56px}
-        html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden}
-        #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
-        #gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:var(--bg)}
-        #ppBadge{position:fixed;right:10px;bottom:10px;z-index:9999;font:10px system-ui;color:rgba(226,232,240,.4);pointer-events:none}
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prévention PACA – Vue intégrée</title>
+
+  <link rel="preconnect" href="https://docs.getgrist.com">
+  <link rel="dns-prefetch" href="https://docs.getgrist.com">
+
+  <style>
+    :root{--bg:#020617;--grist-offset:56px}
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden}
+    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+    #gristFrame{
+      position:absolute;top:calc(-1*var(--grist-offset));left:0;
+      width:100%;height:calc(100% + var(--grist-offset));
+      border:0;background:var(--bg)
+    }
+
+    /* Loader */
+    #ppLoader{
+      position:fixed;inset:0;z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(2,6,23,.92);
+      color:#e2e8f0;
+      font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+    #ppLoader.hidden{display:none}
+    .ppCard{
+      width:min(520px,92vw);
+      border:1px solid rgba(148,163,184,.25);
+      border-radius:14px;
+      padding:18px 18px 14px;
+      background:rgba(15,23,42,.65);
+      box-shadow:0 14px 40px rgba(0,0,0,.35);
+    }
+    .ppRow{display:flex;gap:14px;align-items:center}
+    .ppSpinner{
+      width:28px;height:28px;border-radius:50%;
+      border:3px solid rgba(226,232,240,.25);
+      border-top-color:rgba(226,232,240,.9);
+      animation:spin 1s linear infinite;
+      flex:0 0 auto;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .ppTitle{font-weight:650;font-size:15px;margin:0}
+    .ppMsg{opacity:.9;margin:8px 0 0;line-height:1.35}
+    .ppSmall{opacity:.65;font-size:12px;margin:10px 0 0}
+    .ppActions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+    .ppBtn{
+      appearance:none;border:1px solid rgba(148,163,184,.25);
+      background:rgba(30,41,59,.55);color:#e2e8f0;
+      padding:8px 10px;border-radius:10px;
+      font:13px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      cursor:pointer;
+    }
+    .ppBtn:hover{background:rgba(30,41,59,.75)}
+    .ppBtn.primary{background:rgba(249,115,22,.85);border-color:rgba(249,115,22,.9);color:#0b1220}
+    .ppBtn.primary:hover{background:rgba(249,115,22,.95)}
+  </style>
 </head>
 <body>
-<div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
-<div id="ppBadge">V20_Performance_Optimized</div>
+  <div id="wrapper">
+    <iframe id="gristFrame" src="about:blank" allowfullscreen loading="eager"></iframe>
+  </div>
+
+  <div id="ppLoader" class="hidden" aria-live="polite">
+    <div class="ppCard">
+      <div class="ppRow">
+        <div class="ppSpinner" aria-hidden="true"></div>
+        <div>
+          <p class="ppTitle" id="ppLoaderTitle">Chargement…</p>
+          <p class="ppMsg" id="ppLoaderMsg">La page Grist se charge. Cela peut prendre quelques secondes.</p>
+          <p class="ppSmall" id="ppLoaderSmall" style="display:none">
+            Si l’écran reste noir sur mobile, utilisez “Ouvrir directement”.
+          </p>
+        </div>
+      </div>
+      <div class="ppActions">
+        <button class="ppBtn" id="ppRetryBtn" type="button">Recharger</button>
+        <button class="ppBtn primary" id="ppOpenDirectBtn" type="button">Ouvrir directement</button>
+      </div>
+    </div>
+  </div>
 
 <script>
+  // Wrapper "léger" : charge une URL Grist passée via ?src= (encodée) ou via hash (#https://...)
   const HOME = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
 
-  function decodeMany(s, max=3){
+  function decodeMany(s, max=4){
     let out = s || "";
     for(let i=0;i<max;i++){
       try{
@@ -36,26 +103,65 @@
   function getTarget(){
     const sp = new URLSearchParams(window.location.search);
     const src = sp.get("src");
-    if(src) return decodeMany(src, 4);
+    if(src) return decodeMany(src, 5);
 
     // compat : ancien mode hash "wrapper#https://..."
     const h = window.location.hash ? window.location.hash.slice(1) : "";
-    if(h && /^https?:\/\//i.test(decodeMany(h, 2))) return decodeMany(h, 2);
+    const dh = decodeMany(h, 3);
+    if(dh && /^https?:\/\//i.test(dh)) return dh;
 
     return HOME;
   }
 
-  function setFrame(){
-    const url = getTarget();
-    document.getElementById("gristFrame").src = url || HOME;
+  const frame = document.getElementById("gristFrame");
+  const loader = document.getElementById("ppLoader");
+  const loaderSmall = document.getElementById("ppLoaderSmall");
+  const openDirectBtn = document.getElementById("ppOpenDirectBtn");
+  const retryBtn = document.getElementById("ppRetryBtn");
+
+  let currentTarget = "";
+  let slowTimer = null;
+
+  function showLoader(){
+    loader.classList.remove("hidden");
+    loaderSmall.style.display = "none";
+    if(slowTimer) clearTimeout(slowTimer);
+    slowTimer = setTimeout(()=>{
+      // au bout de ~12s : on affiche une aide (et le bouton direct)
+      loaderSmall.style.display = "block";
+    }, 12000);
   }
 
+  function hideLoader(){
+    if(slowTimer) clearTimeout(slowTimer);
+    loader.classList.add("hidden");
+  }
+
+  function setFrame(){
+    const url = getTarget() || HOME;
+    currentTarget = url;
+    showLoader();
+    frame.src = url;
+  }
+
+  // Quand le contenu charge, on masque le loader
+  frame.addEventListener("load", ()=>{ hideLoader(); });
+
+  // Boutons
+  openDirectBtn.addEventListener("click", ()=>{
+    // Sur mobile, c’est souvent la seule solution si l’iframe est bloquée (cookies tiers / politiques navigateur).
+    // On ouvre l’URL Grist en "plein écran" (1er niveau).
+    const url = currentTarget || getTarget() || HOME;
+    window.location.href = url;
+  });
+
+  retryBtn.addEventListener("click", ()=>{
+    setFrame();
+  });
+
+  // Init
   setFrame();
   window.addEventListener("hashchange", setFrame);
 </script>
-
-
 </body>
 </html>
-
-
