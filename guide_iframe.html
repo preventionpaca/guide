@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Redirection…</title>
   <script>
-    location.replace("./index.html" + location.search + location.hash);
+    // Conserve query + hash (essentiel pour vos QR: ?src=... + #a1.s...)
+    location.replace('./index.html' + location.search + location.hash);
   </script>
 </head>
 <body></body>
