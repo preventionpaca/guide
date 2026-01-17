@@ -3,110 +3,174 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prévention PACA – Portail</title>
+  <title>Prévention PACA</title>
 
-  <!-- ===============================
-       OPTIMISATION WARM-UP GRIST
-       =============================== -->
   <link rel="preconnect" href="https://docs.getgrist.com" crossorigin>
   <link rel="dns-prefetch" href="https://docs.getgrist.com">
 
-  <script>
-    /**
-     * Warm-up Grist :
-     * - déclenche le cold start dès l'arrivée sur le portail
-     * - iframe invisible, non interactive
-     * - n'affecte pas l'UX
-     */
-    (function warmUpGrist(){
-      const GRIST_HOME =
-        "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59" +
-        "?embed=true&style=singlePage&exclude-headers=true";
-
-      // On lance le warm-up le plus tôt possible
-      document.addEventListener("DOMContentLoaded", () => {
-        const prewarm = document.createElement("iframe");
-        prewarm.src = GRIST_HOME;
-        prewarm.setAttribute("aria-hidden", "true");
-        prewarm.style.position = "absolute";
-        prewarm.style.width = "1px";
-        prewarm.style.height = "1px";
-        prewarm.style.opacity = "0";
-        prewarm.style.pointerEvents = "none";
-        prewarm.style.border = "0";
-        document.body.appendChild(prewarm);
-      });
-    })();
-  </script>
-
-  <!-- ===============================
-       STYLES EXISTANTS
-       =============================== -->
   <style>
     :root{--bg:#020617;--grist-offset:56px}
     html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden}
-    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
-    #gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:var(--bg)}
+    #app{position:fixed;inset:0;background:var(--bg);overflow:hidden}
 
-    #ppOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;background:rgba(2,6,23,.68);backdrop-filter:blur(2px)}
-    .pp-card{width:min(720px,calc(100vw - 24px));border-radius:18px;padding:18px 18px 14px;background:rgba(15,23,42,.92);box-shadow:0 18px 60px rgba(0,0,0,.45);color:#e2e8f0;font:14px system-ui}
-    .pp-row{display:flex;gap:12px;align-items:flex-start}
-    .pp-spin{width:18px;height:18px;border-radius:50%;border:3px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite;margin-top:2px}
-    @keyframes ppSpin{to{transform:rotate(360deg)}}
-    .pp-title{font-weight:800;font-size:16px;margin:0 0 6px}
-    .pp-msg{margin:0;line-height:1.35;color:rgba(226,232,240,.9)}
-    .pp-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    .pp-btn{border:1px solid rgba(148,163,184,.35);background:rgba(2,6,23,.35);color:#e2e8f0;border-radius:999px;padding:9px 14px;font:600 13px system-ui;cursor:pointer}
-    .pp-btn.primary{border-color:rgba(251,146,60,.65);background:rgba(251,146,60,.95);color:#0b1220}
+    .frame{position:absolute;inset:0;display:none;overflow:hidden;background:var(--bg)}
+    .frame.active{display:block}
 
-    #ppMini{position:fixed;left:12px;bottom:12px;z-index:9998;display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(15,23,42,.75);color:rgba(226,232,240,.85);font:12px system-ui}
-    #ppMini .pp-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite}
+    .frame iframe{
+      position:absolute;
+      top:calc(-1*var(--grist-offset));
+      left:0;
+      width:100%;
+      height:calc(100% + var(--grist-offset));
+      border:0;
+      background:var(--bg);
+    }
+
+    #mini{
+      position:fixed;left:12px;bottom:12px;z-index:9999;
+      display:none;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;
+      background:rgba(15,23,42,.75);
+      color:rgba(226,232,240,.85);
+      font:12px system-ui;
+      border:1px solid rgba(148,163,184,.2);
+    }
+    #mini .dot{
+      width:10px;height:10px;border-radius:50%;
+      border:2px solid rgba(226,232,240,.25);
+      border-top-color:#fb923c;
+      animation:spin 1s linear infinite
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
-
 <body>
-  <div id="wrapper">
-    <iframe id="gristFrame" src="about:blank" allowfullscreen></iframe>
-  </div>
+  <div id="app">
+    <div id="mini"><span class="dot"></span><span>Chargement…</span></div>
 
-  <div id="ppMini"><span class="pp-dot"></span><span>Chargement…</span></div>
-
-  <div id="ppOverlay" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="pp-card">
-      <div class="pp-row">
-        <div class="pp-spin"></div>
-        <div>
-          <div class="pp-title">Chargement…</div>
-          <p class="pp-msg">
-            Si l’écran reste noir, ouvrez le lien dans le navigateur (Chrome/Safari).
-          </p>
-        </div>
-      </div>
-      <div class="pp-actions">
-        <button class="pp-btn" id="ppReload">Recharger</button>
-        <button class="pp-btn primary" id="ppOpenBrowser">Ouvrir dans le navigateur</button>
-      </div>
-    </div>
+    <div class="frame" id="f-home"><iframe title="Accueil" loading="eager"></iframe></div>
+    <div class="frame" id="f-base"><iframe title="Base" loading="lazy"></iframe></div>
+    <div class="frame" id="f-med"><iframe title="Avis médical" loading="lazy"></iframe></div>
+    <div class="frame" id="f-dyn"><iframe title="QR / lien direct" loading="eager"></iframe></div>
   </div>
 
 <script>
-  const HOME =
-    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59" +
-    "?embed=true&style=singlePage&exclude-headers=true";
+  // URLs Grist
+  const HOME_URL =
+    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
+  const BASE_URL =
+    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119?embed=true&style=singlePage&exclude-headers=true";
+  const MEDICAL_URL =
+    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/67?embed=true&style=singlePage&exclude-headers=true";
 
-  const frame = document.getElementById("gristFrame");
-  const mini = document.getElementById("ppMini");
+  const mini = document.getElementById("mini");
 
-  function setFrame(){
-    mini.style.display = "flex";
-    frame.src = HOME;
+  function decodeMany(s, max=10){
+    let out = s || "";
+    for(let i=0;i<max;i++){
+      try{ const d = decodeURIComponent(out); if(d === out) break; out = d; }
+      catch(e){ break; }
+    }
+    return out;
   }
 
-  frame.addEventListener("load", ()=> {
-    mini.style.display = "none";
-  });
+  function getSrcParamTarget(){
+    const sp = new URLSearchParams(window.location.search);
+    const src = sp.get("src");
+    return src ? decodeMany(src, 12) : null;
+  }
 
-  setFrame();
+  function getHashTargetUrl(){
+    const h = (window.location.hash || "").slice(1);
+    const hd = decodeMany(h, 8);
+    return /^https?:\/\//i.test(hd) ? hd : null;
+  }
+
+  function showFrame(id){
+    ["f-home","f-base","f-med","f-dyn"].forEach(x=>{
+      document.getElementById(x).classList.toggle("active", x === id);
+    });
+  }
+
+  function loadOnce(iframe, url, state){
+    if(state.loaded) return;
+    mini.style.display = "flex";
+    iframe.addEventListener("load", ()=>{
+      state.loaded = true;
+      mini.style.display = "none";
+    }, { once:true });
+    iframe.src = url;
+  }
+
+  const ifHome = document.querySelector("#f-home iframe");
+  const ifBase = document.querySelector("#f-base iframe");
+  const ifMed  = document.querySelector("#f-med iframe");
+  const ifDyn  = document.querySelector("#f-dyn iframe");
+
+  const state = {
+    home:{loaded:false}, base:{loaded:false}, med:{loaded:false},
+    dyn:{loaded:false, url:""}
+  };
+
+  function routeFromHash(){
+    const h = (window.location.hash || "#home").replace("#","").trim().toLowerCase();
+    if(h === "base") return "base";
+    if(h === "medical" || h === "avis" || h === "avismedical") return "medical";
+    return "home";
+  }
+
+  function openDynamic(url){
+    showFrame("f-dyn");
+    if(state.dyn.url === url) return; // pas de reload si même cible
+    state.dyn.url = url;
+    state.dyn.loaded = false;
+
+    mini.style.display = "flex";
+    ifDyn.addEventListener("load", ()=>{
+      state.dyn.loaded = true;
+      mini.style.display = "none";
+    }, { once:true });
+    ifDyn.src = url;
+  }
+
+  function route(){
+    // Priorité QR: ?src= (votre format)
+    const srcTarget = getSrcParamTarget();
+    if(srcTarget){
+      // IMPORTANT: conserve #a1.s... etc si présent dans srcTarget
+      openDynamic(srcTarget);
+      return;
+    }
+
+    // Compat ancien: #https://docs.getgrist.com/...
+    const hashUrl = getHashTargetUrl();
+    if(hashUrl){
+      openDynamic(hashUrl);
+      return;
+    }
+
+    // Navigation "propre": #home/#base/#medical
+    const r = routeFromHash();
+    if(r === "base"){
+      showFrame("f-base");
+      loadOnce(ifBase, BASE_URL, state.base);
+      return;
+    }
+    if(r === "medical"){
+      showFrame("f-med");
+      loadOnce(ifMed, MEDICAL_URL, state.med);
+      return;
+    }
+    showFrame("f-home");
+    loadOnce(ifHome, HOME_URL, state.home);
+  }
+
+  route();
+  window.addEventListener("hashchange", route);
+
+  // Préchargement doux (évite 20 s au premier clic)
+  setTimeout(()=>loadOnce(ifBase, BASE_URL, state.base), 2500);
+  setTimeout(()=>loadOnce(ifMed,  MEDICAL_URL, state.med), 4500);
 </script>
 </body>
 </html>
