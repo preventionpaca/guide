@@ -1,15 +1,200 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>Prévention PACA</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prévention PACA – Vue intégrée</title>
+
+  <link rel="preconnect" href="https://docs.getgrist.com">
+  <link rel="dns-prefetch" href="https://docs.getgrist.com">
+
+  <style>
+    :root{--bg:#020617;--grist-offset:56px}
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);overflow:hidden}
+    #wrapper{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+    #gristFrame{position:absolute;top:calc(-1*var(--grist-offset));left:0;width:100%;height:calc(100% + var(--grist-offset));border:0;background:var(--bg)}
+
+    /* Overlay (affiché seulement si l’iframe ne charge pas) */
+    #ppOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;background:rgba(2,6,23,.68);backdrop-filter:blur(2px)}
+    .pp-card{width:min(720px,calc(100vw - 24px));border-radius:18px;padding:18px 18px 14px;background:rgba(15,23,42,.92);box-shadow:0 18px 60px rgba(0,0,0,.45);color:#e2e8f0;font:14px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .pp-row{display:flex;gap:12px;align-items:flex-start}
+    .pp-spin{width:18px;height:18px;border-radius:50%;border:3px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite;margin-top:2px}
+    @keyframes ppSpin{to{transform:rotate(360deg)}}
+    .pp-title{font-weight:800;font-size:16px;margin:0 0 6px 0}
+    .pp-msg{margin:0;line-height:1.35;color:rgba(226,232,240,.9)}
+    .pp-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .pp-btn{border:1px solid rgba(148,163,184,.35);background:rgba(2,6,23,.35);color:#e2e8f0;border-radius:999px;padding:9px 14px;font:600 13px system-ui;cursor:pointer}
+    .pp-btn.primary{border-color:rgba(251,146,60,.65);background:rgba(251,146,60,.95);color:#0b1220}
+    .pp-btn:active{transform:translateY(1px)}
+
+    /* Mini loader discret (affiché au tout début seulement) */
+    #ppMini{position:fixed;left:12px;bottom:12px;z-index:9998;display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(15,23,42,.75);color:rgba(226,232,240,.85);font:12px system-ui}
+    #ppMini .pp-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:ppSpin 1s linear infinite}
+  </style>
 </head>
-<body style="margin:0;height:100vh">
-  <iframe
-    src="./guide_iframe.html"
-    style="border:0;width:100%;height:100%"
-    allowfullscreen
-  ></iframe>
+<body>
+  <div id="wrapper"><iframe id="gristFrame" src="about:blank" allowfullscreen></iframe></div>
+
+  <div id="ppMini"><span class="pp-dot"></span><span>Chargement…</span></div>
+
+  <div id="ppOverlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="pp-card">
+      <div class="pp-row">
+        <div class="pp-spin" aria-hidden="true"></div>
+        <div>
+          <div class="pp-title">Chargement…</div>
+          <p class="pp-msg" id="ppOverlayMsg">
+            Si l’écran reste noir sur mobile, c’est souvent le lecteur de QR code (navigateur “intégré”) qui bloque l’iframe.
+            Essayez d’ouvrir le lien dans le navigateur (Chrome/Safari).
+          </p>
+        </div>
+      </div>
+      <div class="pp-actions">
+        <button class="pp-btn" id="ppReload" type="button">Recharger</button>
+        <button class="pp-btn primary" id="ppOpenBrowser" type="button">Ouvrir dans le navigateur</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Wrapper V25 : overlay uniquement si l’iframe ne charge pas (évite de bloquer le portail)
+
+  const HOME = "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
+
+  function decodeMany(s, max=4){
+    let out = s || "";
+    for(let i=0;i<max;i++){
+      try{ const d = decodeURIComponent(out); if(d === out) break; out = d; }
+      catch(e){ break; }
+    }
+    return out;
+  }
+
+  function getTarget(){
+    const sp = new URLSearchParams(window.location.search);
+    const src = sp.get("src");
+    if(src) return decodeMany(src, 6);
+
+    // compat : ancien mode hash "wrapper#https://..."
+    const h = window.location.hash ? window.location.hash.slice(1) : "";
+    const hd = decodeMany(h, 3);
+    if(hd && /^https?:\/\//i.test(hd)) return hd;
+
+    return HOME;
+  }
+
+  function isMobile(){
+    const ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod/i.test(ua);
+  }
+
+  const frame   = document.getElementById("gristFrame");
+  const mini    = document.getElementById("ppMini");
+  const overlay = document.getElementById("ppOverlay");
+  const btnReload = document.getElementById("ppReload");
+  const btnOpen   = document.getElementById("ppOpenBrowser");
+
+  let loadedOnce = false;
+  let slowTimer  = null;
+  let hardTimer  = null;
+
+  function hideOverlay(){
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden","true");
+  }
+
+  function showMini(){
+    // mini loader discret, maximum 6s (il se cache au load)
+    mini.style.display = "flex";
+    window.setTimeout(()=>{ if(!loadedOnce) mini.style.display = "none"; }, 6000);
+  }
+
+  function hideMini(){
+    mini.style.display = "none";
+  }
+
+  function showOverlay(){
+    overlay.style.display = "flex";
+    overlay.setAttribute("aria-hidden","false");
+  }
+
+  function buildOpenInBrowserUrl(){
+    // On force l’ouverture dans le vrai navigateur via un param "open=1".
+    // Le lecteur QR “intégré” a parfois un cache / sandbox, mais l’URL reste utile.
+    const u = new URL(window.location.href);
+    u.searchParams.set('open','1');
+    return u.toString();
+  }
+
+  function setFrame(){
+    const url = getTarget();
+
+    loadedOnce = false;
+    hideOverlay();
+    showMini();
+
+    // Timers :
+    // - Après 8s sans load -> on affiche l’overlay UNIQUEMENT sur mobile et surtout si deep-link (src ou hash)
+    // - Après 25s -> overlay aussi sur desktop (rare) pour éviter l’impression “site figé”
+    if(slowTimer) window.clearTimeout(slowTimer);
+    if(hardTimer) window.clearTimeout(hardTimer);
+
+    const sp = new URLSearchParams(window.location.search);
+    const isDeepLink = !!sp.get('src') || (!!window.location.hash && window.location.hash.length>1);
+
+    slowTimer = window.setTimeout(()=>{
+      if(loadedOnce) return;
+      if(isMobile() && isDeepLink){
+        showOverlay();
+      }
+    }, 8000);
+
+    hardTimer = window.setTimeout(()=>{
+      if(loadedOnce) return;
+      // Sur desktop, on n’affiche pas l’overlay si on est juste sur la page d’accueil (ça chargerait quand même)
+      if(isDeepLink){
+        showOverlay();
+      }
+    }, 25000);
+
+    frame.src = url || HOME;
+  }
+
+  frame.addEventListener('load', ()=>{
+    loadedOnce = true;
+    hideMini();
+    hideOverlay();
+    if(slowTimer) window.clearTimeout(slowTimer);
+    if(hardTimer) window.clearTimeout(hardTimer);
+  });
+
+  // Actions overlay
+  btnReload.addEventListener('click', ()=>{
+    try{ hideOverlay(); }catch(e){}
+    // relance
+    setFrame();
+  });
+
+  btnOpen.addEventListener('click', ()=>{
+    // IMPORTANT: le lecteur QR « intégré » bloque parfois les iframes.
+    // Ici on force une ouverture "vraie" dans le navigateur :
+    const url = buildOpenInBrowserUrl();
+    // Essai Android "intent" (ouvre Chrome)
+    try{
+      if(/Android/i.test(navigator.userAgent||"")){
+        const iu = new URL(url);
+        const intent = "intent://" + iu.host + iu.pathname + iu.search + iu.hash + "#Intent;scheme=" + iu.protocol.replace(':','') + ";package=com.android.chrome;end";
+        window.location.href = intent;
+        return;
+      }
+    }catch(e){}
+    // Fallback standard
+    window.location.href = url;
+  });
+
+  // Init
+  setFrame();
+  window.addEventListener("hashchange", setFrame);
+</script>
 </body>
 </html>
