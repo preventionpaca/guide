@@ -16,6 +16,7 @@
     .frame{position:absolute;inset:0;display:none;overflow:hidden;background:var(--bg)}
     .frame.active{display:block}
 
+    /* Iframe Grist + offset : masque la barre du haut (3 points / titre / filtre) */
     .frame iframe{
       position:absolute;
       top:calc(-1*var(--grist-offset));
@@ -26,6 +27,7 @@
       background:var(--bg);
     }
 
+    /* Mini loader discret */
     #mini{
       position:fixed;left:12px;bottom:12px;z-index:9999;
       display:none;align-items:center;gap:8px;
@@ -48,22 +50,28 @@
   <div id="app">
     <div id="mini"><span class="dot"></span><span>Chargement…</span></div>
 
+    <!-- Vues persistantes (ne pas changer les src après le 1er chargement) -->
     <div class="frame" id="f-home"><iframe title="Accueil" loading="eager"></iframe></div>
     <div class="frame" id="f-base"><iframe title="Base" loading="lazy"></iframe></div>
-    <div class="frame" id="f-med"><iframe title="Avis médical" loading="lazy"></iframe></div>
+    <div class="frame" id="f-med-std"><iframe title="Avis médical standard" loading="lazy"></iframe></div>
+    <div class="frame" id="f-med-custom"><iframe title="Avis médical personnalisé" loading="lazy"></iframe></div>
+
+    <!-- Deep-links QR / liens directs ( ?src=... ou #https://docs... ) -->
     <div class="frame" id="f-dyn"><iframe title="QR / lien direct" loading="eager"></iframe></div>
   </div>
 
 <script>
-  // URLs Grist
+  // === URLs Grist (persistantes) ===
   const HOME_URL =
     "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/59?embed=true&style=singlePage&exclude-headers=true";
   const BASE_URL =
     "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119?embed=true&style=singlePage&exclude-headers=true";
-  const MEDICAL_URL =
+  const MEDICAL_STD_URL =
     "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/67?embed=true&style=singlePage&exclude-headers=true";
+  const MEDICAL_CUSTOM_URL =
+    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/141?embed=true&style=singlePage&exclude-headers=true";
 
-  const mini = document.getElementById("mini");
+  const mini = document.getElementById('mini');
 
   function decodeMany(s, max=10){
     let out = s || "";
@@ -74,103 +82,121 @@
     return out;
   }
 
+  // Format QR : ?src=<urlenc>
   function getSrcParamTarget(){
     const sp = new URLSearchParams(window.location.search);
-    const src = sp.get("src");
+    const src = sp.get('src');
     return src ? decodeMany(src, 12) : null;
   }
 
+  // Compat ancien : #https://docs.getgrist.com/...
   function getHashTargetUrl(){
-    const h = (window.location.hash || "").slice(1);
+    const h = (window.location.hash || '').slice(1);
     const hd = decodeMany(h, 8);
     return /^https?:\/\//i.test(hd) ? hd : null;
   }
 
   function showFrame(id){
-    ["f-home","f-base","f-med","f-dyn"].forEach(x=>{
-      document.getElementById(x).classList.toggle("active", x === id);
+    ['f-home','f-base','f-med-std','f-med-custom','f-dyn'].forEach(x=>{
+      document.getElementById(x).classList.toggle('active', x === id);
     });
   }
 
   function loadOnce(iframe, url, state){
     if(state.loaded) return;
-    mini.style.display = "flex";
-    iframe.addEventListener("load", ()=>{
+    mini.style.display = 'flex';
+    iframe.addEventListener('load', ()=>{
       state.loaded = true;
-      mini.style.display = "none";
+      mini.style.display = 'none';
     }, { once:true });
     iframe.src = url;
   }
 
-  const ifHome = document.querySelector("#f-home iframe");
-  const ifBase = document.querySelector("#f-base iframe");
-  const ifMed  = document.querySelector("#f-med iframe");
-  const ifDyn  = document.querySelector("#f-dyn iframe");
+  const ifHome = document.querySelector('#f-home iframe');
+  const ifBase = document.querySelector('#f-base iframe');
+  const ifMedStd = document.querySelector('#f-med-std iframe');
+  const ifMedCustom = document.querySelector('#f-med-custom iframe');
+  const ifDyn  = document.querySelector('#f-dyn iframe');
 
   const state = {
-    home:{loaded:false}, base:{loaded:false}, med:{loaded:false},
-    dyn:{loaded:false, url:""}
+    home:{loaded:false},
+    base:{loaded:false},
+    medStd:{loaded:false},
+    medCustom:{loaded:false},
+    dyn:{loaded:false, url:''}
   };
 
   function routeFromHash(){
-    const h = (window.location.hash || "#home").replace("#","").trim().toLowerCase();
-    if(h === "base") return "base";
-    if(h === "medical" || h === "avis" || h === "avismedical") return "medical";
-    return "home";
+    const h = (window.location.hash || '#home').replace('#','').trim().toLowerCase();
+    if(h === 'base') return 'base';
+    if(h === 'medical' || h === 'avis' || h === 'avismedical') return 'medical';
+    if(h === 'medical-custom' || h === 'avismedical-custom' || h === 'avisperso' || h === 'medicalperso') return 'medical-custom';
+    return 'home';
   }
 
   function openDynamic(url){
-    showFrame("f-dyn");
-    if(state.dyn.url === url) return; // pas de reload si même cible
+    showFrame('f-dyn');
+    if(state.dyn.url === url) return; // évite un reload si même cible
+
     state.dyn.url = url;
     state.dyn.loaded = false;
 
-    mini.style.display = "flex";
-    ifDyn.addEventListener("load", ()=>{
+    mini.style.display = 'flex';
+    ifDyn.addEventListener('load', ()=>{
       state.dyn.loaded = true;
-      mini.style.display = "none";
+      mini.style.display = 'none';
     }, { once:true });
+
     ifDyn.src = url;
   }
 
   function route(){
-    // Priorité QR: ?src= (votre format)
+    // 1) Priorité au QR (vos fiches de poste)
     const srcTarget = getSrcParamTarget();
     if(srcTarget){
-      // IMPORTANT: conserve #a1.s... etc si présent dans srcTarget
+      // IMPORTANT : conserve l'ancre (#a1.s... etc.) si incluse dans src
       openDynamic(srcTarget);
       return;
     }
 
-    // Compat ancien: #https://docs.getgrist.com/...
+    // 2) Compat ancien hash direct
     const hashUrl = getHashTargetUrl();
     if(hashUrl){
       openDynamic(hashUrl);
       return;
     }
 
-    // Navigation "propre": #home/#base/#medical
+    // 3) Routes propres
     const r = routeFromHash();
-    if(r === "base"){
-      showFrame("f-base");
+    if(r === 'base'){
+      showFrame('f-base');
       loadOnce(ifBase, BASE_URL, state.base);
       return;
     }
-    if(r === "medical"){
-      showFrame("f-med");
-      loadOnce(ifMed, MEDICAL_URL, state.med);
+    if(r === 'medical-custom'){
+      showFrame('f-med-custom');
+      loadOnce(ifMedCustom, MEDICAL_CUSTOM_URL, state.medCustom);
       return;
     }
-    showFrame("f-home");
+    if(r === 'medical'){
+      showFrame('f-med-std');
+      loadOnce(ifMedStd, MEDICAL_STD_URL, state.medStd);
+      return;
+    }
+
+    // home
+    showFrame('f-home');
     loadOnce(ifHome, HOME_URL, state.home);
   }
 
+  // init
   route();
-  window.addEventListener("hashchange", route);
+  window.addEventListener('hashchange', route);
 
-  // Préchargement doux (évite 20 s au premier clic)
+  // Préchargement doux (optionnel) : évite 20 s au 1er clic
   setTimeout(()=>loadOnce(ifBase, BASE_URL, state.base), 2500);
-  setTimeout(()=>loadOnce(ifMed,  MEDICAL_URL, state.med), 4500);
+  setTimeout(()=>loadOnce(ifMedStd, MEDICAL_STD_URL, state.medStd), 4200);
+  setTimeout(()=>loadOnce(ifMedCustom, MEDICAL_CUSTOM_URL, state.medCustom), 5600);
 </script>
 </body>
 </html>
