@@ -35,7 +35,7 @@
     #preloadStatus .small{opacity:.75}
   </style>
 
-  <!-- Optionnel : si vous avez déjà pp-config.js dans /guide/js/, laissez-le. -->
+  <!-- Config (docId + liens + preload list) -->
   <script src="./js/pp-config.js"></script>
 </head>
 <body>
@@ -66,37 +66,33 @@
 
 <script>
   // ==========================================================
-  // CONFIG CENTRALISEE (docId + slug) : à mettre idéalement dans pp-config.js
+  // CONFIG centralisée (vient de pp-config.js)
   // ==========================================================
-  // Si pp-config.js définit déjà PP_GRIST_DOC_ID / PP_GRIST_DOC_PATH, on les utilise.
-  const DOC_ID   = window.PP_GRIST_DOC_ID   || "bFa3ksN92YFd";
-  const DOC_PATH = window.PP_GRIST_DOC_PATH || "Base-Equipements-et-Produits";
+  const DOC_ID   = window.PP_GRIST_DOC_ID;
+  const DOC_PATH = window.PP_GRIST_DOC_PATH;
+
+  if(!DOC_ID || !DOC_PATH){
+    document.body.innerHTML = "<div style='padding:16px;font:14px system-ui'>PP_GRIST_DOC_ID / PP_GRIST_DOC_PATH manquants dans pp-config.js</div>";
+    throw new Error("Config Grist manquante");
+  }
+
   const GRIST_ROOT = `https://docs.getgrist.com/${DOC_ID}/${DOC_PATH}`;
+  const IFRAME_PARAMS = (window.PP_GRIST_IFRAME_PARAMS || "embed=true&style=singlePage&exclude-headers=true");
 
-  // Paramètres iframe Grist (vos réglages)
-  const IFRAME_PARAMS = "embed=true&style=singlePage&exclude-headers=true";
-
-  // Pages (issues de votre inventaire : kind=page)
-  // NB : si un jour les IDs changent, vous ne changez qu'ici (ou dans pp-config.js).
-  const PAGES = {
-    home:      { id: 59,  label: "Portail (Accueil)" },
-    dashboard: { id: 143, label: "Tableau de bord" },
-
-    derogp:    { id: 60,  label: "Dérogation personnalisée" },
-    derogm:    { id: 136, label: "Dérogation mutualisée" },
-
-    avisp:     { id: 141, label: "Avis médical personnalisé" },
-    avism:     { id: 67,  label: "Avis médical mutualisé" },
-
-    ddfpt:     { id: 74,  label: "Accès DDFPT" },
-    admin:     { id: 75,  label: "Accès Admin" },
-
-    contact:   { id: 91,  label: "Contacts" },
-    analyse:   { id: 138, label: "Analyse par diplôme" },
-    ressources:{ id: 79,  label: "Ressources" },
-    guide:     { id: 78,  label: "Guide de prévention" },
-
-    base:      { id: 119, label: "Base (Consultation équipements/produits)" }
+  const PAGES = window.PP_PAGES || {
+    home:{id:59,label:"Portail (Accueil)"},
+    dashboard:{id:143,label:"Tableau de bord"},
+    derogp:{id:60,label:"Dérogation personnalisée"},
+    derogm:{id:136,label:"Dérogation mutualisée"},
+    avisp:{id:141,label:"Avis médical personnalisé"},
+    avism:{id:67,label:"Avis médical mutualisé"},
+    ddfpt:{id:74,label:"Accès DDFPT"},
+    admin:{id:75,label:"Accès Admin"},
+    contact:{id:91,label:"Contacts"},
+    analyse:{id:138,label:"Analyse par diplôme"},
+    ressources:{id:79,label:"Ressources"},
+    guide:{id:78,label:"Guide de prévention"},
+    base:{id:119,label:"Base"}
   };
 
   function pageUrl(pageId){
@@ -104,7 +100,7 @@
   }
 
   // ==========================================================
-  // ROUTES (hash) : #home, #base, etc.
+  // ROUTES : #home, #base, #admin, etc.
   // ==========================================================
   const ROUTES = {
     home:      { frame: "f-home",      url: pageUrl(PAGES.home.id) },
@@ -128,7 +124,7 @@
   };
 
   // ==========================================================
-  // DEEP LINK QR : ?src=...  + compat #https://...
+  // DEEP LINK QR : ?src=...  + compat ancien #https://...
   // ==========================================================
   function decodeMany(s, max=12){
     let out = s || "";
@@ -184,13 +180,7 @@
     if(!iframe) return;
 
     st.url = r.url;
-    mini.style.display = "flex";
-
-    iframe.addEventListener("load", () => {
-      st.loaded = true;
-      mini.style.display = "none";
-    }, { once:true });
-
+    iframe.addEventListener("load", () => { st.loaded = true; }, { once:true });
     iframe.src = r.url;
   }
 
@@ -214,7 +204,6 @@
     const raw = (window.location.hash || "#home").slice(1).trim().toLowerCase();
     if(!raw) return "home";
 
-    // alias tolérants
     const map = {
       accueil:"home", portail:"home", home:"home",
       tableau:"dashboard", dashboard:"dashboard", "tableau_de_bord":"dashboard",
@@ -235,48 +224,35 @@
   }
 
   function route(){
-    // Priorité : ?src= (QR)
     const srcTarget = getSrcParamTarget();
-    if(srcTarget){
-      openDynamic(srcTarget);
-      return;
-    }
+    if(srcTarget){ openDynamic(srcTarget); return; }
 
-    // Compat ancien : #https://...
     const hashUrl = getHashTargetUrl();
-    if(hashUrl){
-      openDynamic(hashUrl);
-      return;
-    }
+    if(hashUrl){ openDynamic(hashUrl); return; }
 
     const key = routeKeyFromHash();
     const r = ROUTES[key] ? key : "home";
 
     showFrame(ROUTES[r].frame);
+
+    // loader visible seulement pour la page demandée (pas pour le preload)
+    if(!state[r].loaded) mini.style.display = "flex";
     loadOnce(r);
+
+    // on masque quand la page a fini
+    const check = setInterval(() => {
+      if(state[r].loaded){
+        clearInterval(check);
+        mini.style.display = "none";
+      }
+    }, 120);
   }
 
   window.addEventListener("hashchange", route);
 
   // ==========================================================
-  // PRECHARGEMENT : la liste demandée (ordre ajustable)
+  // PRELOAD — 2 en parallèle max (copier-coller demandé)
   // ==========================================================
-  const PRELOAD = [
-    "home",
-    "dashboard",
-    "derogp",
-    "derogm",
-    "avism",
-    "avisp",
-    "ddfpt",
-    "admin",
-    "contact",
-    "analyse",
-    "ressources",
-    "guide",
-    "base"
-  ].filter(k => ROUTES[k]);
-
   function requestIdle(fn){
     if("requestIdleCallback" in window){
       window.requestIdleCallback(fn, { timeout: 1500 });
@@ -285,58 +261,81 @@
     }
   }
 
-  function startPreload(){
-    if(!PRELOAD.length) return;
+  function loadOnceAsync(key, timeoutMs=20000){
+    return new Promise((resolve) => {
+      if(!ROUTES[key]) return resolve({key, ok:false, reason:"no-route"});
+      if(state[key].loaded) return resolve({key, ok:true, cached:true});
+
+      const iframe = frames[key];
+      if(!iframe) return resolve({key, ok:false, reason:"no-iframe"});
+
+      let done = false;
+      const onLoad = () => {
+        if(done) return;
+        done = true;
+        state[key].loaded = true;
+        resolve({key, ok:true});
+      };
+
+      iframe.addEventListener("load", onLoad, { once:true });
+
+      // lancer le chargement
+      loadOnce(key);
+
+      // timeout sécurité (on ne bloque pas tout)
+      setTimeout(() => {
+        if(done) return;
+        done = true;
+        resolve({key, ok:false, reason:"timeout"});
+      }, timeoutMs);
+    });
+  }
+
+  function startPreloadParallel2(){
+    const list = (window.PP_PRELOAD_KEYS || [
+      "dashboard","derogp","derogm","avism","avisp","ddfpt","admin","contact","analyse","ressources","guide","base"
+    ]).filter(k => ROUTES[k] && k !== "home");
+
+    if(!list.length) return;
 
     ps.style.display = "block";
-    psCount.textContent = `0/${PRELOAD.length}`;
+    psCount.textContent = `0/${list.length}`;
 
-    let done = 0;
+    let doneCount = 0;
+    let idx = 0;
+    let active = 0;
 
-    function step(i){
-      if(i >= PRELOAD.length){
-        psLabel.textContent = "Terminé.";
-        setTimeout(()=>{ ps.style.display = "none"; }, 2500);
-        return;
+    function pump(){
+      while(active < 2 && idx < list.length){
+        const key = list[idx++];
+        active++;
+
+        const label = (PAGES[key] && PAGES[key].label) ? PAGES[key].label : key;
+        psLabel.textContent = label;
+
+        requestIdle(() => {
+          loadOnceAsync(key, 25000).then(() => {
+            active--;
+            doneCount++;
+            psCount.textContent = `${doneCount}/${list.length}`;
+
+            if(doneCount >= list.length){
+              psLabel.textContent = "Terminé.";
+              setTimeout(()=>{ ps.style.display = "none"; }, 2500);
+            } else {
+              pump();
+            }
+          });
+        });
       }
-
-      const key = PRELOAD[i];
-      const label = (PAGES[key] && PAGES[key].label) ? PAGES[key].label : key;
-      psLabel.textContent = label;
-
-      // On ne force pas si l'utilisateur navigue déjà ailleurs : on reste discret.
-      requestIdle(() => {
-        loadOnce(key);
-
-        // On estime "chargé" quand l'iframe déclenche load
-        const check = setInterval(() => {
-          if(state[key].loaded){
-            clearInterval(check);
-            done += 1;
-            psCount.textContent = `${done}/${PRELOAD.length}`;
-            // petit délai entre chaque pour éviter de saturer
-            setTimeout(() => step(i+1), 650);
-          }
-        }, 200);
-
-        // sécurité : si Grist est lent, on passe quand même au suivant au bout de 12s
-        setTimeout(() => {
-          if(!state[key].loaded){
-            clearInterval(check);
-            done += 1;
-            psCount.textContent = `${done}/${PRELOAD.length}`;
-            setTimeout(() => step(i+1), 650);
-          }
-        }, 12000);
-      });
     }
 
-    step(0);
+    pump();
   }
 
   // Init : route immédiate, puis préchargement doux.
   route();
-  setTimeout(startPreload, 800);
+  setTimeout(startPreloadParallel2, 900);
 </script>
 </body>
 </html>
