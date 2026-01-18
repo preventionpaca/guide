@@ -14,7 +14,9 @@
     }
 
     try {
-      const res = await fetch(url, { cache: "no-store" });
+      // Le header est statique : on autorise le cache navigateur.
+      // (ça évite une requête réseau à chaque changement de page)
+      const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) throw new Error(`HTTP ${res.status} – ${res.statusText}`);
 
       const html = await res.text();
@@ -109,4 +111,3 @@ function buildBreadcrumb() {
     )
     .join("");
 }
-
