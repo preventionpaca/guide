@@ -18,7 +18,7 @@
   //  - DOC_ID
   //  - DOC_PATH (slug dans l'URL)
   // Et tout le reste (liens header + QR + wrappers) suit.
-  window.PP_GRIST_DOC_ID = window.PP_GRIST_DOC_ID || "bFa3ksN92YFd";
+  window.PP_GRIST_DOC_ID = window.PP_GRIST_DOC_ID || "4eHMq8g5jsqb";
   window.PP_GRIST_DOC_PATH = window.PP_GRIST_DOC_PATH || "Base-Equipements-et-Produits";
 
   // Paramètres iframe Grist (ceux qui masquent les éléments Grist côté UI)
