@@ -26,50 +26,111 @@
       background:var(--bg);
     }
 
-    #mini{
-      position:fixed;left:12px;bottom:12px;z-index:9999;
-      display:none;align-items:center;gap:8px;
-      padding:8px 10px;border-radius:999px;
-      background:rgba(15,23,42,.75);
-      color:rgba(226,232,240,.85);
-      font:12px system-ui;
-      border:1px solid rgba(148,163,184,.2);
-    }
-    #mini .dot{
-      width:10px;height:10px;border-radius:50%;
-      border:2px solid rgba(226,232,240,.25);
-      border-top-color:#fb923c;
-      animation:spin 1s linear infinite
-    }
+    #mini{position:fixed;left:12px;bottom:12px;z-index:9999;display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(15,23,42,.75);color:rgba(226,232,240,.85);font:12px system-ui;border:1px solid rgba(148,163,184,.2)}
+    #mini .dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(226,232,240,.25);border-top-color:#fb923c;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
+
+    #preloadStatus{position:fixed;right:12px;bottom:12px;z-index:9998;display:none;max-width:min(420px,calc(100vw - 24px));padding:10px 12px;border-radius:14px;background:rgba(2,6,23,.78);color:rgba(226,232,240,.9);font:12px system-ui;border:1px solid rgba(148,163,184,.22);backdrop-filter:blur(3px)}
+    #preloadStatus b{font-weight:800}
+    #preloadStatus .small{opacity:.75}
   </style>
+
+  <!-- Optionnel : si vous avez déjà pp-config.js dans /guide/js/, laissez-le. -->
+  <script src="./js/pp-config.js"></script>
 </head>
 <body>
   <div id="app">
     <div id="mini"><span class="dot"></span><span>Chargement…</span></div>
+    <div id="preloadStatus"><b>Préchargement</b> <span id="psCount">0/0</span><div class="small" id="psLabel"></div></div>
 
-    <div class="frame" id="f-home"><iframe title="Accueil" loading="eager"></iframe></div>
+    <div class="frame" id="f-home"><iframe title="Portail" loading="eager"></iframe></div>
+    <div class="frame" id="f-dashboard"><iframe title="Tableau de bord" loading="lazy"></iframe></div>
+
+    <div class="frame" id="f-derogp"><iframe title="Dérogation personnalisée" loading="lazy"></iframe></div>
+    <div class="frame" id="f-derogm"><iframe title="Dérogation mutualisée" loading="lazy"></iframe></div>
+
+    <div class="frame" id="f-avisp"><iframe title="Avis médical personnalisé" loading="lazy"></iframe></div>
+    <div class="frame" id="f-avism"><iframe title="Avis médical mutualisé" loading="lazy"></iframe></div>
+
+    <div class="frame" id="f-ddfpt"><iframe title="Accès DDFPT" loading="lazy"></iframe></div>
+    <div class="frame" id="f-admin"><iframe title="Accès Admin" loading="lazy"></iframe></div>
+
+    <div class="frame" id="f-contact"><iframe title="Contacts" loading="lazy"></iframe></div>
+    <div class="frame" id="f-analyse"><iframe title="Analyse par diplôme" loading="lazy"></iframe></div>
+    <div class="frame" id="f-ressources"><iframe title="Ressources" loading="lazy"></iframe></div>
+    <div class="frame" id="f-guide"><iframe title="Guide de prévention" loading="lazy"></iframe></div>
     <div class="frame" id="f-base"><iframe title="Base" loading="lazy"></iframe></div>
-    <div class="frame" id="f-med"><iframe title="Avis médical" loading="lazy"></iframe></div>
-    <div class="frame" id="f-medc"><iframe title="Avis médical personnalisé" loading="lazy"></iframe></div>
+
     <div class="frame" id="f-dyn"><iframe title="Lien direct (QR/deep-link)" loading="eager"></iframe></div>
   </div>
 
 <script>
-  // === Votre nouveau document Grist ===
-  const DOC_ID   = "bFa3ksN92YFd";
-  const DOC_PATH = "Base-Equipements-et-Produits"; // slug dans l'URL
+  // ==========================================================
+  // CONFIG CENTRALISEE (docId + slug) : à mettre idéalement dans pp-config.js
+  // ==========================================================
+  // Si pp-config.js définit déjà PP_GRIST_DOC_ID / PP_GRIST_DOC_PATH, on les utilise.
+  const DOC_ID   = window.PP_GRIST_DOC_ID   || "bFa3ksN92YFd";
+  const DOC_PATH = window.PP_GRIST_DOC_PATH || "Base-Equipements-et-Produits";
   const GRIST_ROOT = `https://docs.getgrist.com/${DOC_ID}/${DOC_PATH}`;
 
-  // Pages (à adapter si vous changez vos p/xxx)
-  const HOME_URL  = `${GRIST_ROOT}/p/59?embed=true&style=singlePage&exclude-headers=true`;
-  const BASE_URL  = `${GRIST_ROOT}/p/119?embed=true&style=singlePage&exclude-headers=true`;
-  const MED_URL   = `${GRIST_ROOT}/p/67?embed=true&style=singlePage&exclude-headers=true`;
-  const MEDC_URL  = `${GRIST_ROOT}/p/141?embed=true&style=singlePage&exclude-headers=true`;
+  // Paramètres iframe Grist (vos réglages)
+  const IFRAME_PARAMS = "embed=true&style=singlePage&exclude-headers=true";
 
-  const mini = document.getElementById("mini");
+  // Pages (issues de votre inventaire : kind=page)
+  // NB : si un jour les IDs changent, vous ne changez qu'ici (ou dans pp-config.js).
+  const PAGES = {
+    home:      { id: 59,  label: "Portail (Accueil)" },
+    dashboard: { id: 143, label: "Tableau de bord" },
 
-  function decodeMany(s, max=10){
+    derogp:    { id: 60,  label: "Dérogation personnalisée" },
+    derogm:    { id: 136, label: "Dérogation mutualisée" },
+
+    avisp:     { id: 141, label: "Avis médical personnalisé" },
+    avism:     { id: 67,  label: "Avis médical mutualisé" },
+
+    ddfpt:     { id: 74,  label: "Accès DDFPT" },
+    admin:     { id: 75,  label: "Accès Admin" },
+
+    contact:   { id: 91,  label: "Contacts" },
+    analyse:   { id: 138, label: "Analyse par diplôme" },
+    ressources:{ id: 79,  label: "Ressources" },
+    guide:     { id: 78,  label: "Guide de prévention" },
+
+    base:      { id: 119, label: "Base (Consultation équipements/produits)" }
+  };
+
+  function pageUrl(pageId){
+    return `${GRIST_ROOT}/p/${pageId}?${IFRAME_PARAMS}`;
+  }
+
+  // ==========================================================
+  // ROUTES (hash) : #home, #base, etc.
+  // ==========================================================
+  const ROUTES = {
+    home:      { frame: "f-home",      url: pageUrl(PAGES.home.id) },
+    dashboard: { frame: "f-dashboard", url: pageUrl(PAGES.dashboard.id) },
+
+    derogp:    { frame: "f-derogp",    url: pageUrl(PAGES.derogp.id) },
+    derogm:    { frame: "f-derogm",    url: pageUrl(PAGES.derogm.id) },
+
+    avisp:     { frame: "f-avisp",     url: pageUrl(PAGES.avisp.id) },
+    avism:     { frame: "f-avism",     url: pageUrl(PAGES.avism.id) },
+
+    ddfpt:     { frame: "f-ddfpt",     url: pageUrl(PAGES.ddfpt.id) },
+    admin:     { frame: "f-admin",     url: pageUrl(PAGES.admin.id) },
+
+    contact:   { frame: "f-contact",   url: pageUrl(PAGES.contact.id) },
+    analyse:   { frame: "f-analyse",   url: pageUrl(PAGES.analyse.id) },
+    ressources:{ frame: "f-ressources",url: pageUrl(PAGES.ressources.id) },
+    guide:     { frame: "f-guide",     url: pageUrl(PAGES.guide.id) },
+
+    base:      { frame: "f-base",      url: pageUrl(PAGES.base.id) }
+  };
+
+  // ==========================================================
+  // DEEP LINK QR : ?src=...  + compat #https://...
+  // ==========================================================
+  function decodeMany(s, max=12){
     let out = s || "";
     for(let i=0;i<max;i++){
       try{ const d = decodeURIComponent(out); if(d === out) break; out = d; }
@@ -78,75 +139,103 @@
     return out;
   }
 
-  // Deep-link QR : ?src=<url encodée>
   function getSrcParamTarget(){
     const sp = new URLSearchParams(window.location.search);
     const src = sp.get("src");
     return src ? decodeMany(src, 12) : null;
   }
 
-  // Compat ancien : #https://docs.getgrist.com/...
   function getHashTargetUrl(){
     const h = (window.location.hash || "").slice(1);
     const hd = decodeMany(h, 8);
     return /^https?:\/\//i.test(hd) ? hd : null;
   }
 
-  function showFrame(id){
-    ["f-home","f-base","f-med","f-medc","f-dyn"].forEach(x=>{
-      document.getElementById(x).classList.toggle("active", x === id);
-    });
+  // ==========================================================
+  // FRAME CACHE ENGINE
+  // ==========================================================
+  const mini = document.getElementById("mini");
+  const ps = document.getElementById("preloadStatus");
+  const psCount = document.getElementById("psCount");
+  const psLabel = document.getElementById("psLabel");
+
+  const frames = {};
+  for (const k of Object.keys(ROUTES)){
+    frames[k] = document.querySelector(`#${ROUTES[k].frame} iframe`);
+  }
+  const ifDyn = document.querySelector("#f-dyn iframe");
+
+  const state = Object.fromEntries(Object.keys(ROUTES).map(k => [k, {loaded:false, url:""}]));
+  const dynState = {loaded:false, url:""};
+
+  function showFrame(frameId){
+    document.querySelectorAll(".frame").forEach(el => el.classList.remove("active"));
+    const el = document.getElementById(frameId);
+    if(el) el.classList.add("active");
   }
 
-  function loadOnce(iframe, url, state){
-    if(state.loaded) return;
-    state.url = url;
+  function loadOnce(key){
+    const r = ROUTES[key];
+    if(!r) return;
+    const st = state[key];
+    if(st.loaded) return;
+
+    const iframe = frames[key];
+    if(!iframe) return;
+
+    st.url = r.url;
     mini.style.display = "flex";
-    iframe.addEventListener("load", ()=>{
-      state.loaded = true;
+
+    iframe.addEventListener("load", () => {
+      st.loaded = true;
       mini.style.display = "none";
     }, { once:true });
-    iframe.src = url;
-  }
 
-  const ifHome = document.querySelector("#f-home iframe");
-  const ifBase = document.querySelector("#f-base iframe");
-  const ifMed  = document.querySelector("#f-med iframe");
-  const ifMedc = document.querySelector("#f-medc iframe");
-  const ifDyn  = document.querySelector("#f-dyn iframe");
-
-  const state = {
-    home:{loaded:false, url:""},
-    base:{loaded:false, url:""},
-    med:{loaded:false, url:""},
-    medc:{loaded:false, url:""},
-    dyn:{loaded:false, url:""}
-  };
-
-  function routeFromHash(){
-    const h = (window.location.hash || "#home").replace("#","").trim().toLowerCase();
-    if(h === "base") return "base";
-    if(h === "medical" || h === "avis" || h === "avismedical") return "medical";
-    if(h === "medical-custom" || h === "medicalcustom" || h === "avismedicalcustom") return "medical-custom";
-    return "home";
+    iframe.src = r.url;
   }
 
   function openDynamic(url){
     showFrame("f-dyn");
-    if(state.dyn.url === url) return; // pas de reload si même cible
-    state.dyn.url = url;
-    state.dyn.loaded = false;
+    if(dynState.url === url && dynState.loaded) return;
 
+    dynState.url = url;
+    dynState.loaded = false;
     mini.style.display = "flex";
-    ifDyn.addEventListener("load", ()=>{
-      state.dyn.loaded = true;
+
+    ifDyn.addEventListener("load", () => {
+      dynState.loaded = true;
       mini.style.display = "none";
     }, { once:true });
+
     ifDyn.src = url;
   }
 
+  function routeKeyFromHash(){
+    const raw = (window.location.hash || "#home").slice(1).trim().toLowerCase();
+    if(!raw) return "home";
+
+    // alias tolérants
+    const map = {
+      accueil:"home", portail:"home", home:"home",
+      tableau:"dashboard", dashboard:"dashboard", "tableau_de_bord":"dashboard",
+      base:"base",
+      admin:"admin", acces_admin:"admin",
+      ddfpt:"ddfpt", acces_ddfpt:"ddfpt",
+      derogp:"derogp", "derogation-personnalisee":"derogp",
+      derogm:"derogm", "derogation-mutualisee":"derogm",
+      avisp:"avisp", "avis-personnalise":"avisp",
+      avism:"avism", "avis-mutualise":"avism",
+      contact:"contact", contacts:"contact",
+      analyse:"analyse", "analyse-diplome":"analyse",
+      ressources:"ressources",
+      guide:"guide"
+    };
+
+    return map[raw] || raw;
+  }
+
   function route(){
-    // Priorité : ?src= (QR/deep-link)
+    // Priorité : ?src= (QR)
     const srcTarget = getSrcParamTarget();
     if(srcTarget){
       openDynamic(srcTarget);
@@ -160,34 +249,94 @@
       return;
     }
 
-    // Navigation interne : #home/#base/#medical/#medical-custom
-    const r = routeFromHash();
-    if(r === "base"){
-      showFrame("f-base");
-      loadOnce(ifBase, BASE_URL, state.base);
-      return;
-    }
-    if(r === "medical"){
-      showFrame("f-med");
-      loadOnce(ifMed, MED_URL, state.med);
-      return;
-    }
-    if(r === "medical-custom"){
-      showFrame("f-medc");
-      loadOnce(ifMedc, MEDC_URL, state.medc);
-      return;
-    }
-    showFrame("f-home");
-    loadOnce(ifHome, HOME_URL, state.home);
+    const key = routeKeyFromHash();
+    const r = ROUTES[key] ? key : "home";
+
+    showFrame(ROUTES[r].frame);
+    loadOnce(r);
   }
 
-  route();
   window.addEventListener("hashchange", route);
 
-  // Préchargement doux (facultatif mais pratique)
-  setTimeout(()=>loadOnce(ifBase, BASE_URL, state.base), 2500);
-  setTimeout(()=>loadOnce(ifMed,  MED_URL,  state.med),  4500);
-  setTimeout(()=>loadOnce(ifMedc, MEDC_URL, state.medc), 6500);
+  // ==========================================================
+  // PRECHARGEMENT : la liste demandée (ordre ajustable)
+  // ==========================================================
+  const PRELOAD = [
+    "home",
+    "dashboard",
+    "derogp",
+    "derogm",
+    "avism",
+    "avisp",
+    "ddfpt",
+    "admin",
+    "contact",
+    "analyse",
+    "ressources",
+    "guide",
+    "base"
+  ].filter(k => ROUTES[k]);
+
+  function requestIdle(fn){
+    if("requestIdleCallback" in window){
+      window.requestIdleCallback(fn, { timeout: 1500 });
+    } else {
+      setTimeout(fn, 350);
+    }
+  }
+
+  function startPreload(){
+    if(!PRELOAD.length) return;
+
+    ps.style.display = "block";
+    psCount.textContent = `0/${PRELOAD.length}`;
+
+    let done = 0;
+
+    function step(i){
+      if(i >= PRELOAD.length){
+        psLabel.textContent = "Terminé.";
+        setTimeout(()=>{ ps.style.display = "none"; }, 2500);
+        return;
+      }
+
+      const key = PRELOAD[i];
+      const label = (PAGES[key] && PAGES[key].label) ? PAGES[key].label : key;
+      psLabel.textContent = label;
+
+      // On ne force pas si l'utilisateur navigue déjà ailleurs : on reste discret.
+      requestIdle(() => {
+        loadOnce(key);
+
+        // On estime "chargé" quand l'iframe déclenche load
+        const check = setInterval(() => {
+          if(state[key].loaded){
+            clearInterval(check);
+            done += 1;
+            psCount.textContent = `${done}/${PRELOAD.length}`;
+            // petit délai entre chaque pour éviter de saturer
+            setTimeout(() => step(i+1), 650);
+          }
+        }, 200);
+
+        // sécurité : si Grist est lent, on passe quand même au suivant au bout de 12s
+        setTimeout(() => {
+          if(!state[key].loaded){
+            clearInterval(check);
+            done += 1;
+            psCount.textContent = `${done}/${PRELOAD.length}`;
+            setTimeout(() => step(i+1), 650);
+          }
+        }, 12000);
+      });
+    }
+
+    step(0);
+  }
+
+  // Init : route immédiate, puis préchargement doux.
+  route();
+  setTimeout(startPreload, 800);
 </script>
 </body>
 </html>
