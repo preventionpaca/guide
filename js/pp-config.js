@@ -79,17 +79,17 @@
   // ==========================================================
   window.PP_PRELOAD_KEYS = window.PP_PRELOAD_KEYS || [
     "dashboard",
+    "base"
+    "ddfpt",
     "derogp",
     "derogm",
+    "analyse",
     "avism",
     "avisp",
-    "ddfpt",
-    "admin",
-    "contact",
-    "analyse",
-    "ressources",
-    "guide",
-    "base"
+    "guide"
+    
+  
+   
   ];
 })();
 
