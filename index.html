@@ -336,7 +336,10 @@
 
   // Init : route immédiate, puis préchargement doux.
   route();
-  setTimeout(startPreloadParallel2, 900);
+  // Préchargement activable/désactivable via pp-config (PP_PRELOAD_ENABLED)
+  if(window.PP_PRELOAD_ENABLED !== false){
+    setTimeout(startPreloadParallel2, 900);
+  }
 </script>
 </body>
 </html>
