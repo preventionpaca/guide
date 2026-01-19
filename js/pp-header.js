@@ -39,30 +39,48 @@
     }
   }
 
-  function forceTopNavigation(href) {
-    if (!href) return;
+  // Navigation robuste en contexte Grist embed :
+  // 1) si on est dans une iframe, on demande au parent (index GitHub) de naviguer via postMessage
+  // 2) sinon, on applique une navigation classique
+  function navigateTo(key, href) {
+    if (!key && !href) return;
+
+    // 1) Contexte iframe : on demande au parent (index) de changer le hash.
+    // Dans Grist embed, la navigation top peut etre bloquee (sandbox).
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "pp:navigate", key: key || "home" }, "*");
+        return;
+      }
+    } catch (e) {
+      // on tombe en fallback ci-dessous
+    }
+
+    // 2) Fallback : navigation directe (hors iframe)
+    if (!href) {
+      try {
+        const base = (window.PP_SITE_BASE || (location.origin + location.pathname));
+        href = base.replace(/#.*$/, "") + "#" + (key || "home");
+      } catch (e) {
+        href = "#" + (key || "home");
+      }
+    }
+
     try {
       const topWin = (window.top && window.top !== window) ? window.top : window;
 
-      // Cas penible : si on clique sur EXACTEMENT la meme URL, le navigateur ne declenche pas hashchange.
-      // On force un changement de hash en 2 temps.
+      // Cas penible : recliquer sur la meme destination.
       const current = String(topWin.location.href);
       if (current === href) {
         const u = new URL(href);
         const wantedHash = u.hash || "";
-        // 1) on "decolle" le hash
         topWin.location.hash = "";
-        // 2) on remet le hash voulu
-        setTimeout(() => {
-          topWin.location.hash = wantedHash;
-        }, 30);
+        setTimeout(() => { topWin.location.hash = wantedHash; }, 30);
         return;
       }
 
       topWin.location.href = href;
-
     } catch (e) {
-      // Fallback (au pire)
       window.location.href = href;
     }
   }
@@ -86,7 +104,7 @@
         if (ev.defaultPrevented) return;
         if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
         ev.preventDefault();
-        forceTopNavigation(href);
+        navigateTo(key, href);
       });
     });
   }
