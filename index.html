@@ -249,28 +249,42 @@
     }, 120);
   }
 
-  // ==========================================================
-  // NAV depuis les iframes (Grist embed)
-  // Le header charge dans les pages Grist peut etre sandboxe :
-  // on remonte donc la demande de navigation au parent (ce fichier).
-  // ==========================================================
-  window.addEventListener("message", (ev) => {
-    const d = ev && ev.data;
-    if(!d || d.type !== "pp:navigate") return;
+  window.addEventListener("hashchange", route);
 
-    const key = String(d.key || "home").trim().toLowerCase();
-    const wanted = "#" + key;
-
-    // Si on reclique sur la meme destination, certains navigateurs ne declenchent pas hashchange
+  // ==========================================================
+  // NAVIGATION ROBUSTE DEPUIS DES IFRAMES (Grist sandbox)
+  // Les pages embarquées peuvent envoyer : parent.postMessage({type:'pp:navigate', key:'home'}, '*')
+  // ==========================================================
+  function navigateTo(key){
+    const k = String(key || 'home').trim().toLowerCase();
+    const wanted = '#' + k;
+    // Si on redemande la meme route, on force un hashchange
     if(window.location.hash === wanted){
-      window.location.hash = "";
-      setTimeout(() => { window.location.hash = wanted; }, 20);
+      window.location.hash = '';
+      setTimeout(()=>{ window.location.hash = wanted; }, 25);
     } else {
       window.location.hash = wanted;
     }
+  }
+
+  window.PP_NAVIGATE = navigateTo;
+
+  window.addEventListener('message', (ev) => {
+    try{
+      const d = ev.data;
+      if(!d) return;
+      // format objet
+      if(typeof d === 'object' && d.type === 'pp:navigate'){
+        navigateTo(d.key || 'home');
+        return;
+      }
+      // format string (plus simple a taper)
+      if(typeof d === 'string' && d.startsWith('pp:navigate:')){
+        navigateTo(d.split(':',3)[2] || 'home');
+      }
+    } catch(e){ /* silencieux */ }
   });
 
-  window.addEventListener("hashchange", route);
 
   // ==========================================================
   // PRELOAD — 2 en parallèle max (copier-coller demandé)
@@ -354,10 +368,17 @@
 
     pump();
   }
-
   // Init : route immédiate, puis préchargement doux.
   route();
-  setTimeout(startPreloadParallel2, 900);
+
+  // Préchargement activable/désactivable via pp-config (PP_PRELOAD_ENABLED).
+  // IMPORTANT : mettre EXACTEMENT false (pas "fails" 😄)
+  if (window.PP_PRELOAD_ENABLED === false) {
+    // on s'assure que l'UI ne s'affiche jamais
+    try { ps.style.display = 'none'; } catch(e) {}
+  } else {
+    setTimeout(startPreloadParallel2, 900);
+  }
 </script>
 </body>
 </html>
