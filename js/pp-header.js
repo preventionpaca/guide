@@ -1,5 +1,5 @@
 // ==========================================================
-// PP HEADER — loader + navigation robuste en iframe (Grist sandbox)
+// PP HEADER — loader + navigation robuste en iframe (Grist sandbox2)
 // ==========================================================
 (function () {
 
