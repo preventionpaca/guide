@@ -1,5 +1,5 @@
 // ==========================================================
-// PP HEADER — loader centralise (iframe-safe) + navigation fiable
+// PP HEADER — loader + navigation robuste en iframe (Grist sandbox)
 // ==========================================================
 (function () {
 
@@ -14,13 +14,9 @@
     }
 
     try {
-      // Header statique : on autorise le cache navigateur.
       const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) throw new Error(`HTTP ${res.status} – ${res.statusText}`);
-
       const html = await res.text();
-
-      // Anti-404 "silencieux"
       if (/404\s*:\s*Not\s*Found/i.test(html)) {
         throw new Error("Le contenu charge ressemble a une page 404");
       }
@@ -39,50 +35,41 @@
     }
   }
 
-  // Navigation robuste en contexte Grist embed :
-  // 1) si on est dans une iframe, on demande au parent (index GitHub) de naviguer via postMessage
-  // 2) sinon, on applique une navigation classique
-  function navigateTo(key, href) {
-    if (!key && !href) return;
+  function goToHref(href, key) {
+    if (!href) return;
 
-    // 1) Contexte iframe : on demande au parent (index) de changer le hash.
-    // Dans Grist embed, la navigation top peut etre bloquee (sandbox).
+    // 1) Voie la plus fiable depuis une iframe sandbox : demander au parent (routeur GitHub)
     try {
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: "pp:navigate", key: key || "home" }, "*");
-        return;
+        window.parent.postMessage({ type: "pp:navigate", href, key }, "*");
+        // On ne return pas : on garde un fallback au cas ou le parent n'ecoute pas.
       }
-    } catch (e) {
-      // on tombe en fallback ci-dessous
-    }
+    } catch (e) {}
 
-    // 2) Fallback : navigation directe (hors iframe)
-    if (!href) {
-      try {
-        const base = (window.PP_SITE_BASE || (location.origin + location.pathname));
-        href = base.replace(/#.*$/, "") + "#" + (key || "home");
-      } catch (e) {
-        href = "#" + (key || "home");
-      }
-    }
-
+    // 2) Fallback : essayer de naviguer dans la fenetre du haut (peut etre bloque)
     try {
       const topWin = (window.top && window.top !== window) ? window.top : window;
-
-      // Cas penible : recliquer sur la meme destination.
       const current = String(topWin.location.href);
       if (current === href) {
+        // decollage/recollage pour declencher un hashchange
         const u = new URL(href);
         const wantedHash = u.hash || "";
         topWin.location.hash = "";
         setTimeout(() => { topWin.location.hash = wantedHash; }, 30);
         return;
       }
-
       topWin.location.href = href;
-    } catch (e) {
-      window.location.href = href;
-    }
+      return;
+    } catch (e) {}
+
+    // 3) Dernier filet : tentative "_top" via window.open (souvent autorisee en sandbox)
+    try {
+      window.open(href, "_top");
+      return;
+    } catch (e) {}
+
+    // 4) En ultime recours : navigation locale (dans l'iframe)
+    window.location.href = href;
   }
 
   function bindNavLinks() {
@@ -92,19 +79,16 @@
       const href = links[key];
       if (!href) return;
 
-      // On met HREF pour hover/curseur
+      // rendre le lien "normal" (hover, barre d'etat etc.)
       el.setAttribute("href", href);
-      // Iframe-safe : on sort du cadre Grist
       el.setAttribute("target", "_top");
       el.setAttribute("rel", "noopener noreferrer");
 
-      // Navigation fiable (meme si on reclique sur le meme hash)
       el.addEventListener("click", (ev) => {
-        // Laisse les ctrl/cmd clic etc.
         if (ev.defaultPrevented) return;
         if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
         ev.preventDefault();
-        navigateTo(key, href);
+        goToHref(href, key);
       });
     });
   }
@@ -112,7 +96,6 @@
   function markActiveNav() {
     const current = (window.PP_PAGE || "").trim();
     if (!current) return;
-
     document.querySelectorAll(".ppp-nav-pill[data-nav]").forEach(a => {
       a.classList.toggle("ppp-nav-pill--active", a.dataset.nav === current);
     });
