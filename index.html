@@ -249,6 +249,27 @@
     }, 120);
   }
 
+  // ==========================================================
+  // NAV depuis les iframes (Grist embed)
+  // Le header charge dans les pages Grist peut etre sandboxe :
+  // on remonte donc la demande de navigation au parent (ce fichier).
+  // ==========================================================
+  window.addEventListener("message", (ev) => {
+    const d = ev && ev.data;
+    if(!d || d.type !== "pp:navigate") return;
+
+    const key = String(d.key || "home").trim().toLowerCase();
+    const wanted = "#" + key;
+
+    // Si on reclique sur la meme destination, certains navigateurs ne declenchent pas hashchange
+    if(window.location.hash === wanted){
+      window.location.hash = "";
+      setTimeout(() => { window.location.hash = wanted; }, 20);
+    } else {
+      window.location.hash = wanted;
+    }
+  });
+
   window.addEventListener("hashchange", route);
 
   // ==========================================================
@@ -336,10 +357,7 @@
 
   // Init : route immédiate, puis préchargement doux.
   route();
-  // Préchargement activable/désactivable via pp-config (PP_PRELOAD_ENABLED)
-  if(window.PP_PRELOAD_ENABLED !== false){
-    setTimeout(startPreloadParallel2, 900);
-  }
+  setTimeout(startPreloadParallel2, 900);
 </script>
 </body>
 </html>
