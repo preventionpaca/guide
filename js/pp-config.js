@@ -10,6 +10,11 @@
   window.PP_THEME_KEY  = "ppp-theme";
   window.PP_PAGE       = window.PP_PAGE || "";
 
+  // --- PRELOAD ---
+  // Mettre a false pour desactiver totalement le prechargement des pages.
+  // (Utile si tu veux tester la perf "sans preheat" ou si cela perturbe la navigation.)
+  window.PP_PRELOAD_ENABLED = false;
+
   // --- GRIST (a modifier uniquement ici si reimport) ---
   window.PP_GRIST_DOC_ID   = "4eHMq8g5jsqb";
   window.PP_GRIST_DOC_PATH = "Base-Equipements-et-Produits";
@@ -84,11 +89,11 @@
     "home",
     "base",
     "ddfpt",
-    "derogm",
-    "derogp",
     "admin",
     "avism",
     "avisp",
+    "derogm",
+    "derogp",
     "dashboard",
     "contact",
     "analyse",
