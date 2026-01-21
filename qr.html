@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualisation Équipement - Prévention PACA</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0f172a;
+    }
+    
+    #grist-viewer {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      z-index: 1000;
+    }
+    
+    .loading.hidden {
+      display: none;
+    }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(226, 232, 240, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+    
+    .error {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .error.hidden {
+      display: none;
+    }
+    
+    .error-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    
+    .error-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .error-message {
+      font-size: 16px;
+      opacity: 0.7;
+      max-width: 500px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <!-- Indicateur de chargement -->
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Chargement de l'équipement...</div>
+  </div>
+  
+  <!-- Message d'erreur -->
+  <div id="error" class="error hidden">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Aucun équipement spécifié</div>
+    <div class="error-message">
+      Cette page est conçue pour afficher des équipements via des QR codes.<br>
+      Scannez un QR code ou utilisez un lien valide pour continuer.
+    </div>
+  </div>
+  
+  <!-- Iframe pour afficher Grist -->
+  <iframe id="grist-viewer"></iframe>
+  
+  <script>
+    // Éléments DOM
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const iframeEl = document.getElementById('grist-viewer');
+    
+    // Lire le paramètre ?src= depuis l'URL
+    function getSourceUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const src = params.get('src');
+      
+      if (!src) {
+        console.warn('Aucun paramètre ?src= trouvé dans l\'URL');
+        return null;
+      }
+      
+      // Décoder l'URL
+      try {
+        const decodedSrc = decodeURIComponent(src);
+        console.log('Source URL décodée:', decodedSrc);
+        return decodedSrc;
+      } catch (e) {
+        console.error('Erreur lors du décodage de l\'URL:', e);
+        return null;
+      }
+    }
+    
+    // Afficher l'équipement dans l'iframe
+    function displayEquipment(url) {
+      console.log('Chargement de l\'équipement:', url);
+      
+      // Charger l'URL dans l'iframe
+      iframeEl.src = url;
+      
+      // Masquer le loading après un court délai (pour voir l'animation)
+      setTimeout(() => {
+        loadingEl.classList.add('hidden');
+      }, 500);
+      
+      // Gérer les erreurs de chargement de l'iframe
+      iframeEl.onerror = () => {
+        console.error('Erreur lors du chargement de l\'iframe');
+        loadingEl.classList.add('hidden');
+        errorEl.querySelector('.error-message').textContent = 
+          'Impossible de charger l\'équipement. Veuillez vérifier le lien ou réessayer plus tard.';
+        errorEl.classList.remove('hidden');
+      };
+    }
+    
+    // Afficher le message d'erreur
+    function showError() {
+      loadingEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+    }
+    
+    // Initialisation au chargement de la page
+    function init() {
+      const sourceUrl = getSourceUrl();
+      
+      if (sourceUrl) {
+        displayEquipment(sourceUrl);
+      } else {
+        showError();
+      }
+    }
+    
+    // Exécuter l'initialisation
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    
+    // Gestion du redimensionnement
+    window.addEventListener('resize', () => {
+      // L'iframe s'adapte automatiquement grâce au CSS
+    });
+    
+    // Log pour debug
+    console.log('Page QR Code - Prévention PACA');
+    console.log('URL complète:', window.location.href);
+    console.log('Paramètre src:', new URLSearchParams(window.location.search).get('src'));
+  </script>
+</body>
+</html>
