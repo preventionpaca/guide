@@ -375,6 +375,11 @@
       box-shadow: var(--shadow-pressed);
     }
 
+.tile--orange .tile-link {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
     .tile--dark {
       background: linear-gradient(145deg, #020617, #020617);
     }
