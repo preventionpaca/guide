@@ -860,4 +860,9 @@
 .ppp-header .ppp-pill-btn{
   transition: background-color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
+/* Personnalisé / Mutualisé : plus gros + gras (surcharge forte) */
+.tile-bottom-links .tile-link{
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+}
 
