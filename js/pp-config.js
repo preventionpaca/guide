@@ -3,8 +3,8 @@
    Renseigner ces 2 constantes UNE FOIS (valeurs exactes depuis l’URL Grist) :
    https://docs.getgrist.com/<DOC_ID>/<DOC_PATH>/p/...
    ========================================================= */
-window.PP_GRIST_DOC_ID   = window.PP_GRIST_DOC_ID   || "A_REMPLACER_DOC_ID";
-window.PP_GRIST_DOC_PATH = window.PP_GRIST_DOC_PATH || "A_REMPLACER_DOC_PATH";
+window.PP_GRIST_DOC_ID   = window.PP_GRIST_DOC_ID   || "4eHMq8g5jsqb";
+window.PP_GRIST_DOC_PATH = window.PP_GRIST_DOC_PATH || "Base-Equipements-et-Produits";
 /* (Optionnel) URL publique de base Grist si tu l’utilises ailleurs */
 // window.PP_GRIST_BASE_URL = `https://docs.getgrist.com/${window.PP_GRIST_DOC_ID}/${window.PP_GRIST_DOC_PATH}`;
 
