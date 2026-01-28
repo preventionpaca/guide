@@ -1,3 +1,13 @@
+/* =========================================================
+   PP-CONFIG — paramètres indispensables
+   Renseigner ces 2 constantes UNE FOIS (valeurs exactes depuis l’URL Grist) :
+   https://docs.getgrist.com/<DOC_ID>/<DOC_PATH>/p/...
+   ========================================================= */
+window.PP_GRIST_DOC_ID   = window.PP_GRIST_DOC_ID   || "A_REMPLACER_DOC_ID";
+window.PP_GRIST_DOC_PATH = window.PP_GRIST_DOC_PATH || "A_REMPLACER_DOC_PATH";
+/* (Optionnel) URL publique de base Grist si tu l’utilises ailleurs */
+// window.PP_GRIST_BASE_URL = `https://docs.getgrist.com/${window.PP_GRIST_DOC_ID}/${window.PP_GRIST_DOC_PATH}`;
+
 /* pp-config.js — PATCH JWT/Supabase + compat rpcFetch
    Objectif:
    - Fournir une auth unique (code -> token) via Supabase Edge Functions
