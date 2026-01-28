@@ -1,227 +1,78 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <title>Portail prévention PACA – Accès DDFPT</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+/* pp-config.js — PATCH JWT/Supabase + compat rpcFetch
+   Objectif:
+   - Fournir une auth unique (code -> token) via Supabase Edge Functions
+   - Stocker le token dans localStorage (pp_token) + sessionStorage (pp_auth) pour compat
+   - Exposer rpcFetch() attendu par certains widgets
+   - Ne dépend PAS de Grist (peut tourner dans GitHub Pages / wrapper / iframe)
+*/
+(function () {
+  'use strict';
 
-  <!-- API Grist (lecture des tuiles) -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  // ==== A ADAPTER SI BESOIN (ton projet Supabase) ====
+  const SB_PROJECT_URL = 'https://hpiqwvwpxzppxpxhjede.supabase.co';
+  const SB_FN = SB_PROJECT_URL.replace(/\/+$/, '') + '/functions/v1';
+  const AUTH_ENDPOINT = SB_FN + '/auth-code';     // POST {code:"..."}
+  // write-app est appelé par les widgets "base" (pas ici)
 
-  <!-- CSS commun + portail -->
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
+  const LS_TOKEN_KEY = 'pp_token';     // utilisé par baseareparer.html
+  const SS_AUTH_KEY  = 'pp_auth';      // utilisé par certains tests
 
-  <!-- pp-config (doit contenir auth Supabase + rpcFetch) -->
-  <script src="https://preventionpaca.github.io/guide/js/pp-config.js?v=20260128a"></script>
+  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
-  <style>
-    .pp-lock-overlay{position:fixed;inset:0;background:rgba(15,23,42,.9);z-index:9999;display:flex;align-items:center;justify-content:center}
-    .pp-lock-modal{background:#0b2238;color:#e5f0ff;border-radius:18px;padding:24px 28px;max-width:420px;width:92%;
-      box-shadow:0 20px 45px rgba(0,0,0,.6);border:1px solid #f97316;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    .pp-lock-title{margin:0 0 4px;font-size:1.15rem;font-weight:600}
-    .pp-lock-sub{margin:0 0 14px;font-size:.85rem;color:#9ca3af}
-    .pp-lock-input{width:100%;border-radius:999px;border:1px solid #374151;padding:10px 14px;margin-bottom:8px;background:#020617;color:#e5f0ff;font-size:.95rem}
-    .pp-lock-input:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 1px rgba(249,115,22,.7)}
-    .pp-lock-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px}
-    .pp-lock-btn{border-radius:999px;border:none;padding:8px 18px;font-size:.9rem;cursor:pointer;background:transparent;color:#e5f0ff}
-    .pp-lock-btn-primary{background:#f97316;color:#111827;font-weight:700}
-    .pp-lock-error{margin:6px 0 0;font-size:.85rem;color:#fecaca;min-height:1.1em;white-space:pre-wrap}
-    .pp-lock-attempts{margin-top:4px;font-size:.75rem;color:#9ca3af}
-  </style>
-</head>
-
-<body>
-<div class="page-wrap">
-  <div id="header-container"></div>
-  <section class="tile-frame"><main id="tileGrid" class="tile-grid"></main></section>
-</div>
-
-<div id="ppLockOverlay" class="pp-lock-overlay" aria-modal="true" role="dialog">
-  <div class="pp-lock-modal">
-    <h2 class="pp-lock-title">Accès réservé</h2>
-    <p class="pp-lock-sub">Cette page est réservée aux Directeurs Délégués aux Formations. Merci de saisir le code d’accès.</p>
-    <input id="ppLockInput" class="pp-lock-input" type="password" autocomplete="off" placeholder="Code DDFPT (ou Admin)" />
-    <div id="ppLockError" class="pp-lock-error"></div>
-    <div id="ppLockAttempts" class="pp-lock-attempts"></div>
-    <div class="pp-lock-actions">
-      <button id="ppLockCancel" class="pp-lock-btn" type="button">Annuler</button>
-      <button id="ppLockSubmit" class="pp-lock-btn pp-lock-btn-primary" type="button">Valider</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  // IMPORTANT: ce widget sert uniquement à authentifier + afficher des tuiles (lecture)
-  const PAGE_NAME = 'Acces_DDFPT';
-  const MAX_ATTEMPTS = 3;
-  let attemptCount = 0, accessGranted = false;
-
-  const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
-  const HOME_URL = PORTAL_ROOT + '#home';
-
-  function goHome(evt){
-    if(evt && evt.preventDefault) evt.preventDefault();
-    try{ if(window.parent && window.parent!==window){ window.parent.postMessage({type:'pp:navigate', key:'home'}, '*'); } }catch(e){}
-    try{ if(window.top && window.top!==window){ window.top.location.href = HOME_URL; return; } }catch(e){}
-    try{ window.location.href = HOME_URL; }catch(e){}
+  function getToken() {
+    // priorité: localStorage (persistant), puis sessionStorage
+    const t1 = (typeof localStorage !== 'undefined') ? localStorage.getItem(LS_TOKEN_KEY) : null;
+    if (t1) return t1;
+    const raw = (typeof sessionStorage !== 'undefined') ? sessionStorage.getItem(SS_AUTH_KEY) : null;
+    const obj = raw ? safeJsonParse(raw) : null;
+    return obj && obj.token ? obj.token : null;
   }
 
-  function rowsToRecordsCompat(table){
-    if(window.grist && typeof grist.rowsToRecords==='function') return grist.rowsToRecords(table);
-    const ids = table.id || [];
-    const fields = table.fields || {};
-    const recs = [];
-    for(let i=0;i<ids.length;i++){
-      const r={id:ids[i]};
-      for(const [k,arr] of Object.entries(fields)) r[k]=arr[i];
-      recs.push(r);
+  function setAuth(payload) {
+    // payload attendu: {token, role, expiresInSec, ...}
+    if (!payload || !payload.token) return;
+    try { localStorage.setItem(LS_TOKEN_KEY, payload.token); } catch {}
+    try { sessionStorage.setItem(SS_AUTH_KEY, JSON.stringify(payload)); } catch {}
+  }
+
+  async function authWithCode(code) {
+    const body = JSON.stringify({ code: String(code || '').trim() });
+    const res = await fetch(AUTH_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    let data = null;
+    try { data = await res.json(); } catch {}
+    if (!res.ok || !data || !data.ok || !data.token) {
+      const msg = (data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP ' + res.status);
+      throw new Error(msg);
     }
-    return recs;
-  }
-  function normalizeName(v){
-    if(!v) return '';
-    let s = String(v).trim().toLowerCase();
-    try{s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}
-    return s.replace(/[_\s]+/g,' ').replace(/\s+/g,' ');
-  }
-  function colorToClass(c){
-    if(!c) return '';
-    const v = String(c).toLowerCase();
-    if(v.includes('blanc')) return 'tile--white';
-    if(v.includes('vert')) return 'tile--green';
-    if(v.includes('orange')) return 'tile--orange';
-    if(v.includes('noir')) return 'tile--dark';
-    if(v.includes('marron clair')) return 'tile--brown-light';
-    if(v.includes('marron fon')) return 'tile--brown-dark';
-    if(v.includes('gris')) return 'tile--gray-light';
-    return '';
-  }
-  function buildTiles(blocsRowsAll, layoutRow){
-    const grid = document.getElementById('tileGrid');
-    grid.innerHTML='';
-    const cols = layoutRow && layoutRow.Nbre_colonne ? Number(layoutRow.Nbre_colonne)||4 : 4;
-    document.documentElement.style.setProperty('--grid-columns', cols);
-
-    blocsRowsAll
-      .slice().sort((a,b)=>(a.num_bloc||0)-(b.num_bloc||0))
-      .forEach(bloc=>{
-        const tile=document.createElement('div'); tile.className='tile';
-        const cc=colorToClass(bloc.Couleur); if(cc) tile.classList.add(cc);
-
-        const icon=document.createElement('div'); icon.className='tile-icon'; icon.textContent=bloc.Initiale_bloc||'';
-        const main=document.createElement('div'); main.className='tile-main';
-        const t=document.createElement('div'); t.className='tile-title'; t.textContent=bloc.Titre_bloc||'(sans titre)';
-        const d=document.createElement('div'); d.className='tile-desc'; d.textContent=bloc.Sous_titre1||'';
-        main.appendChild(t); main.appendChild(d);
-        tile.appendChild(icon); tile.appendChild(main);
-
-        const url = (bloc.Url_bloc||'').trim();
-        if(url){
-          tile.tabIndex=0; tile.setAttribute('role','link');
-          tile.addEventListener('click', ()=>{ try{ window.top.location.href=url; }catch(e){ window.location.href=url; } });
-          tile.addEventListener('keypress', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); try{ window.top.location.href=url; }catch(err){ window.location.href=url; } } });
-        }
-        grid.appendChild(tile);
-      });
+    setAuth(data);
+    return data;
   }
 
-  async function loadFromGrist(){
-    const doc = grist.docApi;
-    const [tAgenc, tBlocs] = await Promise.all([doc.fetchTable('Agencement_portail'), doc.fetchTable('Blocs')]);
-    const agRows = rowsToRecordsCompat(tAgenc);
-    const blocsAll = rowsToRecordsCompat(tBlocs);
-    const layoutRow = agRows.find(r=>normalizeName(r.Page)===normalizeName('Accès DDFPT')) || agRows[0] || null;
-    const blocsRowsAll = blocsAll.filter(b=>normalizeName(b.Page)===normalizeName(PAGE_NAME));
-    buildTiles(blocsRowsAll, layoutRow);
-  }
-
-  function initLock(){
-    const overlay=document.getElementById('ppLockOverlay');
-    const input=document.getElementById('ppLockInput');
-    const err=document.getElementById('ppLockError');
-    const at=document.getElementById('ppLockAttempts');
-    const btnOk=document.getElementById('ppLockSubmit');
-    const btnCancel=document.getElementById('ppLockCancel');
-
-    function updateAttempts(){
-      const rem = MAX_ATTEMPTS - attemptCount;
-      at.textContent = (rem<MAX_ATTEMPTS && rem>0) ? ('Tentatives restantes : '+rem) : '';
+  // rpcFetch: wrapper de fetch avec Authorization automatique si token dispo
+  async function rpcFetch(url, options) {
+    const opt = options ? { ...options } : {};
+    opt.headers = opt.headers ? { ...opt.headers } : {};
+    const token = getToken();
+    if (token && !opt.headers.Authorization && !opt.headers.authorization) {
+      opt.headers.Authorization = 'Bearer ' + token;
     }
-    function freeze(state){
-      btnOk.disabled = state; btnCancel.disabled = state; input.disabled = state;
-      btnOk.style.opacity = state ? .65 : 1;
-      btnCancel.style.opacity = state ? .65 : 1;
-    }
-    async function handle(){
-      if(accessGranted) return;
-      const code = String(input.value||'').trim();
-      if(!code){ err.textContent='Merci de saisir un code.'; return; }
-      err.textContent='';
-      freeze(true);
-      try{
-        // 1) Auth via pp-config
-        let data=null;
-        if(window.PP && PP.auth && typeof PP.auth.authWithCode==='function'){
-          data = await PP.auth.authWithCode(code);
-        }else{
-          // fallback direct
-          const res = await fetch('https://hpiqwvwpxzppxpxhjede.supabase.co/functions/v1/auth-code', {
-            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({code})
-          });
-          data = await res.json();
-          if(!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-          try{ localStorage.setItem('pp_token', data.token);}catch(e){}
-          try{ sessionStorage.setItem('pp_auth', JSON.stringify(data)); }catch(e){}
-        }
-
-        // 2) Role check: ddfpt OU admin
-        const role = (data && data.role) ? String(data.role) : '';
-        if(role !== 'ddfpt' && role !== 'admin'){
-          throw new Error("Rôle non autorisé ("+role+").");
-        }
-
-        // 3) OK => on ouvre
-        accessGranted = true;
-        overlay.style.transition='opacity 200ms ease-out';
-        overlay.style.opacity='0';
-        setTimeout(()=>{ overlay.style.display='none'; }, 220);
-        await loadFromGrist();
-      }catch(e){
-        attemptCount++;
-        updateAttempts();
-        err.textContent = (e && e.message) ? e.message : 'Erreur de connexion.';
-        if(attemptCount>=MAX_ATTEMPTS){
-          err.textContent += '\nAccès refusé. Retour au portail…';
-          setTimeout(()=>goHome(), 900);
-        }else{
-          freeze(false);
-          input.value='';
-          input.focus();
-        }
-      }
-    }
-
-    btnOk.addEventListener('click', handle);
-    input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); handle(); }});
-    btnCancel.addEventListener('click', goHome);
-
-    updateAttempts();
-    setTimeout(()=>input.focus(), 50);
+    return fetch(url, opt);
   }
 
-  document.addEventListener('DOMContentLoaded', ()=>{
-    if(window.grist){
-      grist.ready();
-      initLock();
-    }else{
-      // widget hors Grist: on affiche juste un message
-      document.getElementById('ppLockError').textContent = "Grist API indisponible : ouvre ce widget dans Grist.";
-    }
-  });
-</script>
+  // Expose global
+  window.PP = window.PP || {};
+  window.PP.supabase = { projectUrl: SB_PROJECT_URL, fnBase: SB_FN };
+  window.PP.auth = { authWithCode, getToken, setAuth };
 
-<!-- header commun -->
-<script src="https://preventionpaca.github.io/guide/js/pp-header.js?v=20260128a"></script>
-</body>
-</html>
+  // Compat pour anciens widgets
+  window.rpcFetch = rpcFetch;
+
+  // Petit helper debug (facultatif)
+  window.PP_DEBUG_AUTH = function () {
+    return { token: getToken(), pp_auth: safeJsonParse(sessionStorage.getItem(SS_AUTH_KEY) || 'null') };
+  };
+})();
