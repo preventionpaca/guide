@@ -333,5 +333,54 @@
   route();
   requestIdle(runPreload);
 </script>
+
+<script>
+// --- RPC proxy : permet aux pages Grist (origin docs.getgrist.com) d'appeler Supabase via l'origine GitHub (CORS OK)
+(function(){
+  const SUPABASE_BASE = (window.PP_CONFIG && window.PP_CONFIG.supabaseUrl) || 'https://hpiqwvwpxzppxpxhjede.supabase.co';
+  window.addEventListener('message', async (ev) => {
+    const msg = ev.data;
+    if (!msg || msg.type !== 'pp:rpc' || !msg.id || !msg.req) return;
+    // Sécurité douce : on ne proxifie que Supabase functions
+    try {
+      const { path, method, headers, body, query } = msg.req;
+      const u = new URL(SUPABASE_BASE + (path || '/'));
+      if (query && typeof query === 'object') {
+        for (const [k,v] of Object.entries(query)) {
+          if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
+        }
+      }
+      const resp = await fetch(u.toString(), {
+        method: method || 'GET',
+        headers: headers || {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const ct = resp.headers.get('content-type') || '';
+      let payload;
+      if (ct.includes('application/json')) {
+        payload = await resp.json().catch(() => null);
+      } else {
+        payload = await resp.text().catch(() => '');
+      }
+      ev.source && ev.source.postMessage({
+        type: 'pp:rpc:resp',
+        id: msg.id,
+        ok: resp.ok,
+        status: resp.status,
+        payload
+      }, '*');
+    } catch (e) {
+      ev.source && ev.source.postMessage({
+        type: 'pp:rpc:resp',
+        id: msg.id,
+        ok: false,
+        status: 0,
+        payload: { error: String(e && e.message ? e.message : e) }
+      }, '*');
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
