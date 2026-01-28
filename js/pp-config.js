@@ -96,6 +96,51 @@
   // --- Supabase (Edge Functions) ---
   // Si tu changes de projet Supabase, tu ne modifies que ces 2 lignes.
   window.PP_SUPABASE_URL = window.PP_SUPABASE_URL || "https://hpiqwvwpxzppxpxhjede.supabase.co";
+
+
+  // --- RPC fallback (si le navigateur bloque les appels Supabase depuis une iframe Grist) ---
+  function rpcCall(req) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!window.parent || window.parent === window) {
+          return reject(new Error('No parent for RPC'));
+        }
+        const id = 'rpc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+        const onMsg = (ev) => {
+          const m = ev && ev.data;
+          if (!m || m.type !== 'pp:rpc:resp' || m.id !== id) return;
+          window.removeEventListener('message', onMsg);
+          resolve(m);
+        };
+        window.addEventListener('message', onMsg);
+        window.parent.postMessage({ type:'pp:rpc', id, req }, '*');
+        setTimeout(() => {
+          window.removeEventListener('message', onMsg);
+          reject(new Error('RPC timeout'));
+        }, 12000);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  async function callSupabaseFn(path, method, body, headers) {
+    const url = window.PP_SUPABASE_URL.replace(/\/$/, '') + path;
+    try {
+      const res = await fetch(url, {
+        method: method || 'POST',
+        headers: Object.assign({ 'Content-Type':'application/json' }, headers || {}),
+        body: body !== undefined ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    } catch (e) {
+      // Fallback RPC
+      const rpc = await rpcCall({ path, method: method || 'POST', headers: headers || {}, body });
+      if (!rpc.ok) return { ok:false, status: rpc.status || 0, data: rpc.data || { error: rpc.error || 'RPC error' } };
+      return { ok:true, status: rpc.status || 200, data: rpc.data };
+    }
+  }
   window.PP_SUPABASE_FN_BASE = window.PP_SUPABASE_FN_BASE || (window.PP_SUPABASE_URL + "/functions/v1");
 
   // App par défaut (registre Supabase : app=equipements)
@@ -111,12 +156,18 @@
   window.ppAuth = window.ppAuth || {
     async login(code) {
       if (!code || !String(code).trim()) throw new Error("Code manquant");
-      const r = await fetch(window.PP_SUPABASE_FN_BASE + "/auth-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: String(code).trim() })
-      });
-      const data = await r.json().catch(() => ({}));
+      let data;
+      try {
+        const r = await fetch(window.PP_SUPABASE_FN_BASE + "/auth-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: String(code).trim() })
+        });
+        data = await r.json().catch(() => ({}));
+      } catch (e) {
+        const rpc = await rpcFetch({ path: "/auth-code", method: "POST", body: { code: String(code).trim() } });
+        data = rpc.data || {};
+      }
       if (!data.ok) throw new Error(data.error || "Erreur authentification");
 
       const payload = {
@@ -163,8 +214,14 @@
       for (const [k, v] of Object.entries(params || {})) {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
       }
-      const r = await fetch(url.toString());
-      const data = await r.json().catch(() => ({}));
+      let data;
+      try {
+        const r = await fetch(url.toString());
+        data = await r.json().catch(() => ({}));
+      } catch (e) {
+        const rpc = await rpcFetch({ path: "/read-app", method: "GET", query: Object.fromEntries(url.searchParams.entries()) });
+        data = rpc.data || {};
+      }
       if (!data.ok) throw new Error(data.error || "Erreur lecture");
       return data;
     },
@@ -176,16 +233,28 @@
       const url = new URL(window.PP_SUPABASE_FN_BASE + "/write-app");
       url.searchParams.set("app", app);
 
-      const r = await fetch(url.toString(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify(payload || {})
-      });
+      let data;
 
-      const data = await r.json().catch(() => ({}));
+      try {
+        const r = await fetch(url.toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(payload || {})
+        });
+        data = await r.json().catch(() => ({}));
+      } catch (e) {
+        const rpc = await rpcFetch({
+          path: "/write-app",
+          method: "POST",
+          query: { app },
+          headers: { "Authorization": "Bearer " + token },
+          body: payload || {}
+        });
+        data = rpc.data || {};
+      }
       if (!data.ok) {
         // Si token expiré → message explicite pour déclencher une reconnexion
         const msg = String(data.error || "Erreur écriture");
