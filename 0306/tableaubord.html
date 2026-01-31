@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau de bord — Portail Prévention PACA</title>
+
+  <link rel="stylesheet" href="../css/pp-core.css" />
+  <link rel="stylesheet" href="../css/pp-portail.css" />
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+<script>
+/* ==========================================================
+   PP_DATA_LAYER (GitHub Pages + Grist)
+   - Si la page est dans Grist: utilise grist.docApi.fetchTable/applyUserActions
+   - Sinon: utilise Supabase Edge Functions (read-app/auth-code/write-app)
+   ========================================================== */
+(function(){
+  const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+  const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
+  const SB_ROOT = sbBase + "/functions/v1";
+  window.PP_SB_ROOT = SB_ROOT;
+  window.PP_SB_API_READ  = SB_ROOT + "/read-app";
+  window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
+  window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+  window.PP_APP_NAME = window.PP_APP_NAME || "tableaubord";
+  window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function');
+
+  function rowsToGristTable(rows){
+    if(!Array.isArray(rows) || !rows.length) return {id:[]};
+    const cols = new Set();
+    for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
+    cols.delete('id');
+    const t={id:[]};
+    for(const c of cols) t[c]=[];
+    for(const r of rows){
+      t.id.push(r.id);
+      for(const c of cols) t[c].push(r[c]);
+    }
+    return t;
+  }
+
+  async function sbFetchTable(tableName){
+    const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(window.PP_APP_NAME) + "&table=" + encodeURIComponent(tableName);
+    let r = await fetch(url1, {credentials:'omit'});
+    let j = await r.json().catch(()=>null);
+    if(j && j.ok){
+      if(j.table) return j.table;
+      if(Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+      if(Array.isArray(j.data)) return rowsToGristTable(j.data);
+      if(j.items && Array.isArray(j.items)) return rowsToGristTable(j.items);
+      if(j.tables && j.tables[tableName]) return j.tables[tableName];
+      return j;
+    }
+    const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(window.PP_APP_NAME);
+    r = await fetch(url2, {credentials:'omit'});
+    j = await r.json().catch(()=>null);
+    if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
+    throw new Error(j?.error || "Lecture Supabase impossible");
+  }
+
+  window.PP_fetchTable = async function(tableName){
+    if(window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+    return sbFetchTable(tableName);
+  };
+})();
+</script>
+
+
+  <style>
+    .pp-db{
+      padding:18px 16px; background:#fff; color:#0b2238; border-radius:14px;
+      box-shadow:0 10px 26px rgba(0,0,0,.08); margin:18px auto; max-width:1200px;
+    }
+    .pp-db h1{ margin:0 0 6px 0; font-size:20px; }
+    .pp-db .sub{ margin:0 0 14px 0; opacity:.85; font-size:13px; }
+
+    .pp-topbar{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
+    .pp-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .pp-input{ border:1px solid rgba(11,34,56,.18); border-radius:10px; padding:8px 10px; font-size:12px; min-width:220px; }
+    .pp-select{ border:1px solid rgba(11,34,56,.18); border-radius:10px; padding:8px 10px; font-size:12px; background:#fff; }
+
+    .pp-db-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:980px){ .pp-db-grid{ grid-template-columns:1fr; } }
+
+    .pp-db-card{ border:1px solid rgba(11,34,56,.12); border-radius:14px; padding:14px; background:#fff; }
+    .pp-db-card h2{ margin:0 0 6px 0; font-size:16px; }
+    .pp-db-card .pp-mini{ font-size:11px; opacity:.78; margin:0 0 10px 0; }
+    .pp-db-list{ display:flex; flex-direction:column; gap:8px; }
+
+    /* ===== encarts + zébrage “relevé de banque” ===== */
+    .pp-row{
+      border:1px solid rgba(11,34,56,.10);
+      border-radius:12px;
+      padding:10px 10px;
+      background:#fff;
+    }
+    .pp-row--alt{
+      background: rgba(11,34,56,0.035);
+      border-color: rgba(11,34,56,.12);
+    }
+
+    .pp-row-head{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+    .pp-label{ font-weight:600; font-size:13px; line-height:1.25; }
+    .pp-meta{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+
+    .pp-pill{
+      appearance:none; border:1px solid rgba(11,34,56,.18); background:#fff; color:#0b2238;
+      border-radius:999px; padding:6px 10px; font-weight:700; font-size:12px; cursor:pointer; user-select:none;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .pp-pill:hover{ box-shadow:0 6px 14px rgba(0,0,0,.08); }
+    .pp-pill .k{ font-weight:600; opacity:.78; }
+
+    .pp-toggle{
+      appearance:none; border:1px solid rgba(11,34,56,.18); background:#fff; color:#0b2238;
+      border-radius:999px; padding:6px 10px; font-weight:900; font-size:12px; cursor:pointer; user-select:none;
+      min-width:38px; text-align:center;
+    }
+    .pp-toggle:hover{ box-shadow:0 6px 14px rgba(0,0,0,.08); }
+
+    /* ===== zone dépliée : fond différent pour distinguer du bloc établissement ===== */
+    .pp-details{
+      margin-top:10px;
+      padding:10px 10px;
+      border-top:1px dashed rgba(11,34,56,.18);
+      display:none;
+      font-size:12px;
+      background: rgba(11,34,56,0.03);
+      border-radius:10px;
+    }
+    .pp-details.open{ display:block; }
+
+    /* les sous-encarts “diplôme dans établissement” : un ton au-dessus */
+    .pp-subrow{
+      border:1px solid rgba(11,34,56,.10);
+      border-radius:12px;
+      padding:8px 8px;
+      background: rgba(11,34,56,0.02);
+    }
+    .pp-subrow--alt{
+      background: rgba(11,34,56,0.045);
+    }
+
+    .pp-eq-list{ margin:0; padding-left:16px; columns:1; }
+    @media (min-width:1100px){ .pp-eq-list{ columns:2; } }
+
+    .pp-warn{
+      border:1px solid rgba(160,90,0,.35); background:rgba(255,170,0,.08);
+      border-radius:12px; padding:10px; margin-top:12px; font-size:12px;
+    }
+    .pp-footnote{ margin-top:10px; font-size:11px; opacity:.75; }
+
+    .pp-legend{
+      font-size:11px; opacity:.78; margin:6px 0 10px 0;
+      display:flex; gap:14px; flex-wrap:wrap;
+    }
+    .pp-legend span{ display:inline-flex; gap:6px; align-items:center; }
+    .pp-dot{ width:8px; height:8px; border-radius:99px; background:rgba(11,34,56,.35); display:inline-block; }
+  </style>
+</head>
+
+<body>
+<div class="page-wrap">
+  <div id="header-container"></div>
+
+  <div class="pp-db">
+    <div class="pp-topbar">
+      <div>
+        <h1>Tableau de bord</h1>
+        <p class="sub">Synthèse des équipements/produits saisis — vues par diplôme et par établissement.</p>
+      </div>
+      <div class="pp-tools">
+        <input id="q" class="pp-input" type="search" placeholder="Filtrer (diplôme, établissement, équipement…)" />
+        <select id="sortMode" class="pp-select" title="Mode de tri">
+          <option value="count_desc" selected>Tri : nombre décroissant</option>
+          <option value="alpha_asc">Tri : alphabétique A → Z</option>
+        </select>
+        <button id="refresh" class="pp-pill" type="button" title="Recharger"><span class="k">Actualiser</span> ↻</button>
+      </div>
+    </div>
+
+    <div class="pp-db-grid">
+      <section class="pp-db-card">
+        <h2 id="hDiplomes">Diplômes</h2>
+        <div class="pp-mini" id="missDiplomes"></div>
+        <div id="colDiplomes" class="pp-db-list"></div>
+      </section>
+
+      <section class="pp-db-card">
+        <h2 id="hEtab">Établissements</h2>
+        <div class="pp-legend">
+          <span><i class="pp-dot"></i> <b>Équipements</b> = nb d’équipements/produits uniques</span>
+          <span><i class="pp-dot"></i> <b>Diplômes</b> = nb de diplômes saisis par l’établissement</span>
+          <span><i class="pp-dot"></i> <b>▾</b> = détail par diplôme</span>
+        </div>
+        <div class="pp-mini" id="missEtab"></div>
+        <div id="colEtab" class="pp-db-list"></div>
+      </section>
+    </div>
+
+    <div id="warn" class="pp-warn" style="display:none;"></div>
+    <div id="footnote" class="pp-footnote"></div>
+  </div>
+</div>
+
+<script src="../js/pp-config.js"></script>
+<script src="../js/pp-header.js"></script>
+
+<script>
+const CFG = {
+  diplomeTable: "Diplomes_EN_OK",
+  etabTable: "Etablissements_edi",
+  workTable: "Liste_des_equipements",
+
+  fDiplome: "Tampon_Diplomes",
+  fEtab: "Tampon_Etab",
+  fEquip: "Equipements_ou_produits",
+
+  diplomeStatusField: "statut",
+  etabStatusField: "statut",
+
+  diplomeLabelField: "Concatenation",
+  etabLabelField: "appellation_officielle",
+
+  etabKeyCandidates: ["UAI","uai","code_uai","Code_UAI","code","Code"],
+  dipKeyCandidates: ["Code","code","RNCP","rncp","id","ID"]
+};
+
+function rowsToRecordsCompat(table) {
+  if (window.grist && typeof grist.rowsToRecords === "function") return grist.rowsToRecords(table);
+  const ids = table.id || [];
+  const records = [];
+  let cols = {};
+  if (table.fields && typeof table.fields === "object") cols = table.fields;
+  else {
+    for (const [k, v] of Object.entries(table)) {
+      if (k === "id") continue;
+      if (Array.isArray(v)) cols[k] = v;
+    }
+  }
+  for (let i = 0; i < ids.length; i++) {
+    const r = { id: ids[i] };
+    for (const [c, values] of Object.entries(cols)) r[c] = values[i];
+    records.push(r);
+  }
+  return records;
+}
+
+function safeText(v){ return (v===null || v===undefined) ? "" : String(v); }
+function isIdLike(v){ return (typeof v === "number" && isFinite(v)); }
+function htmlEscape(s){
+  return safeText(s)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function normalizeKey(s){
+  return safeText(s)
+    .trim()
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g," ");
+}
+function normalizeEquipLabel(s){
+  return safeText(s).replace(/\s+/g," ").trim();
+}
+function uniqSorted(arr){
+  return Array.from(new Set(arr))
+    .map(x => safeText(x).trim())
+    .filter(Boolean)
+    .sort((a,b)=>a.localeCompare(b, "fr", { sensitivity:"base" }));
+}
+function isOnValue(v){
+  const s = normalizeKey(v);
+  if (!s) return true;
+  return (s === "on" || s === "oui" || s === "true" || s === "1" || s === "actif");
+}
+function toggleDetails(el){ el.classList.toggle("open"); }
+
+/* ===== clé du bug CAP : parser les champs multi-valeurs séparés par ; ===== */
+function parseMulti(v){
+  if (v === null || v === undefined) return [];
+  if (Array.isArray(v)) {
+    return v.map(x => safeText(x).trim()).filter(Boolean);
+  }
+  const s = safeText(v).trim();
+  if (!s) return [];
+  // découpe sur ';' (ton cas), et on ignore les segments vides
+  if (s.includes(";")) {
+    return s.split(";").map(x => x.trim()).filter(Boolean);
+  }
+  return [s];
+}
+
+function buildFixedIndex(records, opts){
+  const { statusField, labelField, keyCandidates } = opts;
+
+  const idToLabel = new Map();
+  const textToId  = new Map();
+  const onIds     = new Set();
+  const normLabels = [];
+
+  let keyField = null;
+  if (records?.length){
+    const keys = Object.keys(records[0] || {});
+    for (const c of (keyCandidates || [])){
+      if (keys.includes(c)) { keyField = c; break; }
+    }
+  }
+
+  for (const r of (records || [])){
+    const id = r.id;
+    if (!statusField || isOnValue(r[statusField])) onIds.add(id);
+
+    const label = safeText(r[labelField]).trim();
+    idToLabel.set(id, label || `#${id}`);
+
+    if (label){
+      const n = normalizeKey(label);
+      textToId.set(n, id);
+      normLabels.push({ norm: n, id });
+    }
+
+    if (keyField){
+      const keyVal = safeText(r[keyField]).trim();
+      if (keyVal) textToId.set(normalizeKey(keyVal), id);
+    }
+  }
+
+  return { idToLabel, textToId, onIds, keyField, normLabels };
+}
+
+function resolveToId(val, index){
+  if (val === null || val === undefined) return null;
+  if (isIdLike(val)) return val;
+  const s = safeText(val).trim();
+  if (!s) return null;
+
+  const n = normalizeKey(s);
+  const exact = index.textToId.get(n);
+  if (exact !== undefined) return exact;
+
+  // fuzzy inclusion (utile si Tampon_Diplomes contient une version plus courte)
+  let best = null, bestScore = -1;
+  for (const it of index.normLabels){
+    if (it.norm.includes(n) || n.includes(it.norm)){
+      const score = Math.min(it.norm.length, n.length);
+      if (score > bestScore){
+        bestScore = score;
+        best = it.id;
+      }
+    }
+  }
+  return best;
+}
+
+function etabCategory(label){
+  const s = normalizeKey(label);
+  if (s.includes("lycee professionnel") || s.includes("lycee prof") || s.includes("lp ")) return 1;
+  if (s.includes("segpa") || s.includes("section d'enseignement general et professionnel")
+      || s.includes("section d enseignement general et professionnel")
+      || s.includes("sep") || s.includes("enseignement general et professionnel")) return 2;
+  if (s.includes("lycee")) return 3;
+  return 4;
+}
+
+/* ===== UI builders ===== */
+function buildRowSimple({ label, count, list }, idx){
+  const row = document.createElement("div");
+  row.className = "pp-row" + (idx % 2 ? " pp-row--alt" : "");
+
+  const head = document.createElement("div");
+  head.className = "pp-row-head";
+
+  const lab = document.createElement("div");
+  lab.className = "pp-label";
+  lab.textContent = label;
+
+  const meta = document.createElement("div");
+  meta.className = "pp-meta";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "pp-pill";
+  btn.innerHTML = `<span class="k">Équipements</span> ${String(count)}`;
+  btn.title = list.length ? (list.slice(0, 25).join(" • ") + (list.length > 25 ? " …" : "")) : "Aucun équipement";
+
+  const details = document.createElement("div");
+  details.className = "pp-details";
+  details.innerHTML = list.length
+    ? `<ul class="pp-eq-list">${list.map(x => `<li>${htmlEscape(x)}</li>`).join("")}</ul>`
+    : `<div class="pp-mini">Aucun équipement référencé.</div>`;
+
+  btn.addEventListener("click", () => toggleDetails(details));
+
+  meta.appendChild(btn);
+  head.appendChild(lab);
+  head.appendChild(meta);
+  row.appendChild(head);
+  row.appendChild(details);
+  return row;
+}
+
+function buildEtabCard(card, idxEtab){
+  const { etabLabel, totalList, diplomeBlocks, diplomeListForTooltip } = card;
+
+  const row = document.createElement("div");
+  row.className = "pp-row" + (idxEtab % 2 ? " pp-row--alt" : "");
+
+  const head = document.createElement("div");
+  head.className = "pp-row-head";
+
+  const lab = document.createElement("div");
+  lab.className = "pp-label";
+  lab.textContent = etabLabel;
+
+  const meta = document.createElement("div");
+  meta.className = "pp-meta";
+
+  const btnEq = document.createElement("button");
+  btnEq.type = "button";
+  btnEq.className = "pp-pill";
+  btnEq.innerHTML = `<span class="k">Équipements</span> ${String(totalList.length)}`;
+  btnEq.title = totalList.length ? (totalList.slice(0, 25).join(" • ") + (totalList.length > 25 ? " …" : "")) : "Aucun équipement";
+
+  const btnDip = document.createElement("button");
+  btnDip.type = "button";
+  btnDip.className = "pp-pill";
+  btnDip.innerHTML = `<span class="k">Diplômes</span> ${String(diplomeBlocks.length)}`;
+  btnDip.title = diplomeBlocks.length
+    ? (diplomeListForTooltip.slice(0, 25).join(" • ") + (diplomeListForTooltip.length > 25 ? " …" : ""))
+    : "Aucun diplôme saisi";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "pp-toggle";
+  toggle.textContent = "▾";
+  toggle.title = "Afficher/masquer le détail par diplôme";
+
+  const details = document.createElement("div");
+  details.className = "pp-details";
+
+  const inner = document.createElement("div");
+  inner.style.display = "flex";
+  inner.style.flexDirection = "column";
+  inner.style.gap = "8px";
+
+  diplomeBlocks.forEach((d, i) => {
+    const sub = document.createElement("div");
+    sub.className = "pp-subrow" + (i % 2 ? " pp-subrow--alt" : "");
+
+    const subHead = document.createElement("div");
+    subHead.className = "pp-row-head";
+
+    const subLab = document.createElement("div");
+    subLab.className = "pp-label";
+    subLab.textContent = d.diplomeLabel;
+
+    const subMeta = document.createElement("div");
+    subMeta.className = "pp-meta";
+
+    const subBtn = document.createElement("button");
+    subBtn.type = "button";
+    subBtn.className = "pp-pill";
+    subBtn.innerHTML = `<span class="k">Équipements</span> ${String(d.list.length)}`;
+    subBtn.title = d.list.length ? (d.list.slice(0, 25).join(" • ") + (d.list.length > 25 ? " …" : "")) : "Aucun équipement";
+
+    const subDetails = document.createElement("div");
+    subDetails.className = "pp-details";
+    subDetails.innerHTML = d.list.length
+      ? `<ul class="pp-eq-list">${d.list.map(x => `<li>${htmlEscape(x)}</li>`).join("")}</ul>`
+      : `<div class="pp-mini">Aucun équipement.</div>`;
+
+    subBtn.addEventListener("click", () => toggleDetails(subDetails));
+
+    subMeta.appendChild(subBtn);
+    subHead.appendChild(subLab);
+    subHead.appendChild(subMeta);
+
+    sub.appendChild(subHead);
+    sub.appendChild(subDetails);
+    inner.appendChild(sub);
+  });
+
+  details.appendChild(inner);
+
+  function toggleOpen(){
+    const open = !details.classList.contains("open");
+    details.classList.toggle("open", open);
+    toggle.textContent = open ? "▴" : "▾";
+  }
+  toggle.addEventListener("click", toggleOpen);
+  lab.style.cursor = diplomeBlocks.length ? "pointer" : "default";
+  lab.addEventListener("click", () => { if (diplomeBlocks.length) toggleOpen(); });
+
+  meta.appendChild(btnEq);
+  meta.appendChild(btnDip);
+  meta.appendChild(toggle);
+
+  head.appendChild(lab);
+  head.appendChild(meta);
+
+  row.appendChild(head);
+  row.appendChild(details);
+  return row;
+}
+
+/* ===== STATE ===== */
+let state = {
+  diplomeRows: { nonZero: [], zero: [] },
+  etabCards: { nonZero: [], zero: [] },
+  stats: {
+    workRows: 0,
+    diplOnTotal: 0, diplOnUsed: 0,
+    etabOnTotal: 0, etabOnUsed: 0,
+    missingDiplomeRows: 0,
+    missingEtabRows: 0,
+    orphanDiplomeRefs: 0,
+    orphanEtabRefs: 0
+  }
+};
+
+async function loadData(){
+  const warn = document.getElementById("warn");
+  warn.style.display = "none";
+  warn.textContent = "";
+
+  let tDip, tEtab, tWork;
+  try{
+    [tDip, tEtab, tWork] = await Promise.all([
+      grist.docApi.fetchTable(CFG.diplomeTable),
+      grist.docApi.fetchTable(CFG.etabTable),
+      grist.docApi.fetchTable(CFG.workTable)
+    ]);
+  }catch(e){
+    warn.style.display = "block";
+    warn.innerHTML = `<b>Erreur de chargement Grist.</b><br/>${htmlEscape(e?.message || e)}`;
+    return;
+  }
+
+  const dipRecs  = rowsToRecordsCompat(tDip);
+  const etabRecs = rowsToRecordsCompat(tEtab);
+  const workRecs = rowsToRecordsCompat(tWork);
+
+  const dipIndex = buildFixedIndex(dipRecs, {
+    statusField: CFG.diplomeStatusField,
+    labelField: CFG.diplomeLabelField,
+    keyCandidates: CFG.dipKeyCandidates
+  });
+  const etabIndex = buildFixedIndex(etabRecs, {
+    statusField: CFG.etabStatusField,
+    labelField: CFG.etabLabelField,
+    keyCandidates: CFG.etabKeyCandidates
+  });
+
+  const diplOnTotal = dipIndex.onIds.size;
+  const etabOnTotal = etabIndex.onIds.size;
+
+  const byDiplomeId = new Map();
+  const byEtabIdTotal = new Map();
+  const byEtabIdDipId = new Map();
+
+  let missingDiplomeRows = 0;
+  let missingEtabRows = 0;
+  let orphanDiplomeRefs = 0;
+  let orphanEtabRefs = 0;
+
+  function equipItems(v){
+    // Equipements_ou_produits est chez toi un texte simple (souvent), mais on gère au cas où.
+    if (Array.isArray(v)){
+      const items = v.map(x => normalizeEquipLabel(x)).filter(Boolean);
+      return items.length ? items : ["Équipement (non renseigné)"];
+    }
+    const s = normalizeEquipLabel(v);
+    return [s || "Équipement (non renseigné)"];
+  }
+
+  for (const r of workRecs){
+    const eqs = equipItems(r[CFG.fEquip]);
+
+    // ✅ IMPORTANT : split sur ';'
+    const dipTokens  = parseMulti(r[CFG.fDiplome]);
+    const etabTokens = parseMulti(r[CFG.fEtab]);
+
+    let dipIds = dipTokens.map(v => resolveToId(v, dipIndex)).filter(x => x !== null);
+    let etabIds = etabTokens.map(v => resolveToId(v, etabIndex)).filter(x => x !== null);
+
+    if (dipTokens.length && dipIds.length === 0) orphanDiplomeRefs++;
+    if (etabTokens.length && etabIds.length === 0) orphanEtabRefs++;
+
+    dipIds = dipIds.filter(id => dipIndex.onIds.has(id));
+    etabIds = etabIds.filter(id => etabIndex.onIds.has(id));
+
+    if (!dipIds.length)  missingDiplomeRows++;
+    if (!etabIds.length) missingEtabRows++;
+
+    for (const eq of eqs){
+      for (const d of dipIds){
+        if (!byDiplomeId.has(d)) byDiplomeId.set(d, new Set());
+        byDiplomeId.get(d).add(eq);
+      }
+      for (const e of etabIds){
+        if (!byEtabIdTotal.has(e)) byEtabIdTotal.set(e, new Set());
+        byEtabIdTotal.get(e).add(eq);
+      }
+      for (const e of etabIds){
+        for (const d of dipIds){
+          const k = `${e}||${d}`;
+          if (!byEtabIdDipId.has(k)) byEtabIdDipId.set(k, new Set());
+          byEtabIdDipId.get(k).add(eq);
+        }
+      }
+    }
+  }
+
+  const dNonZero = [], dZero = [];
+  let diplOnUsed = 0;
+
+  for (const dipId of dipIndex.onIds){
+    const label = dipIndex.idToLabel.get(dipId) || `#${dipId}`;
+    const list = uniqSorted(Array.from(byDiplomeId.get(dipId) || new Set()));
+    const rec = { label, count: list.length, list, searchBlob: normalizeKey(label + " " + list.join(" ")) };
+    if (list.length) { diplOnUsed++; dNonZero.push(rec); } else dZero.push(rec);
+  }
+
+  const eNonZero = [], eZero = [];
+  let etabOnUsed = 0;
+
+  for (const etabId of etabIndex.onIds){
+    const etabLabel = etabIndex.idToLabel.get(etabId) || `#${etabId}`;
+    const totalList = uniqSorted(Array.from(byEtabIdTotal.get(etabId) || new Set()));
+    const hasAny = totalList.length > 0;
+
+    const diplomeBlocks = [];
+    for (const dipId of dipIndex.onIds){
+      const k = `${etabId}||${dipId}`;
+      const set = byEtabIdDipId.get(k);
+      if (!set || !set.size) continue;
+      diplomeBlocks.push({
+        diplomeLabel: dipIndex.idToLabel.get(dipId) || `#${dipId}`,
+        list: uniqSorted(Array.from(set))
+      });
+    }
+    diplomeBlocks.sort((a,b)=>(b.list.length-a.list.length) || a.diplomeLabel.localeCompare(b.diplomeLabel,"fr",{sensitivity:"base"}));
+    const diplomeListForTooltip = diplomeBlocks.map(d => `${d.diplomeLabel} (${d.list.length})`);
+
+    const card = {
+      etabLabel,
+      totalList,
+      diplomeBlocks,
+      diplomeListForTooltip,
+      countEquip: totalList.length,
+      cat: etabCategory(etabLabel),
+      searchBlob: normalizeKey(etabLabel + " " + totalList.join(" ") + " " + diplomeBlocks.map(x=>x.diplomeLabel).join(" "))
+    };
+
+    if (hasAny) { etabOnUsed++; eNonZero.push(card); } else eZero.push(card);
+  }
+
+  state = {
+    diplomeRows: { nonZero: dNonZero, zero: dZero },
+    etabCards: { nonZero: eNonZero, zero: eZero },
+    stats: {
+      workRows: workRecs.length,
+      diplOnTotal, diplOnUsed,
+      etabOnTotal, etabOnUsed,
+      missingDiplomeRows,
+      missingEtabRows,
+      orphanDiplomeRefs,
+      orphanEtabRefs
+    }
+  };
+}
+
+function render(){
+  const q = normalizeKey(document.getElementById("q").value || "");
+  const sortMode = document.getElementById("sortMode").value;
+
+  document.getElementById("hDiplomes").textContent = `Diplômes (${state.stats.diplOnUsed}/${state.stats.diplOnTotal})`;
+  document.getElementById("hEtab").textContent = `Établissements (${state.stats.etabOnUsed}/${state.stats.etabOnTotal})`;
+
+  const md = [];
+  if (state.stats.missingDiplomeRows) md.push(`Lignes sans diplôme : ${state.stats.missingDiplomeRows}`);
+  if (state.stats.orphanDiplomeRefs)  md.push(`Valeurs diplôme non rattachées : ${state.stats.orphanDiplomeRefs}`);
+  document.getElementById("missDiplomes").textContent = md.join(" • ");
+
+  const me = [];
+  if (state.stats.missingEtabRows) me.push(`Lignes sans établissement : ${state.stats.missingEtabRows}`);
+  if (state.stats.orphanEtabRefs)  me.push(`Valeurs établissement non rattachées : ${state.stats.orphanEtabRefs}`);
+  document.getElementById("missEtab").textContent = me.join(" • ");
+
+  const colDiplomes = document.getElementById("colDiplomes");
+  const colEtab = document.getElementById("colEtab");
+  colDiplomes.innerHTML = "";
+  colEtab.innerHTML = "";
+
+  // Diplômes : non-zéro puis zéros
+  let dNonZero = [...state.diplomeRows.nonZero].filter(x => !q || x.searchBlob.includes(q));
+  let dZero    = [...state.diplomeRows.zero].filter(x => !q || x.searchBlob.includes(q));
+
+  if (sortMode === "alpha_asc"){
+    dNonZero.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+  } else {
+    dNonZero.sort((a,b)=>(b.count-a.count) || a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+  }
+  dZero.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+
+  dNonZero.forEach((d,i)=> colDiplomes.appendChild(buildRowSimple(d,i)));
+  dZero.forEach((d,i)=> colDiplomes.appendChild(buildRowSimple(d, dNonZero.length + i)));
+
+  // Etabs : non-zéro puis zéros + catégories
+  let eNonZero = [...state.etabCards.nonZero].filter(x => !q || x.searchBlob.includes(q));
+  let eZero    = [...state.etabCards.zero].filter(x => !q || x.searchBlob.includes(q));
+
+  if (sortMode === "alpha_asc"){
+    eNonZero.sort((a,b)=>(a.cat-b.cat) || a.etabLabel.localeCompare(b.etabLabel,"fr",{sensitivity:"base"}));
+  } else {
+    eNonZero.sort((a,b)=>(a.cat-b.cat) || (b.countEquip-a.countEquip) || a.etabLabel.localeCompare(b.etabLabel,"fr",{sensitivity:"base"}));
+  }
+  eZero.sort((a,b)=>(a.cat-b.cat) || a.etabLabel.localeCompare(b.etabLabel,"fr",{sensitivity:"base"}));
+
+  eNonZero.forEach((e,i)=> colEtab.appendChild(buildEtabCard(e,i)));
+  eZero.forEach((e,i)=> colEtab.appendChild(buildEtabCard(e, eNonZero.length + i)));
+
+  document.getElementById("footnote").textContent =
+    `Source : « ${CFG.workTable} » — ${state.stats.workRows} lignes analysées.`;
+}
+
+async function init(){
+  await loadData();
+  render();
+}
+
+document.getElementById("q").addEventListener("input", render);
+document.getElementById("sortMode").addEventListener("change", render);
+document.getElementById("refresh").addEventListener("click", async ()=>{ await loadData(); render(); });
+
+init();
+</script>
+
+</body>
+</html>
