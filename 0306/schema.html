@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portail Prévention PACA – Schéma fonctionnel</title>
+
+  <!-- CSS commun -->
+<link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
+<link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
+
+  <!-- CSS spécifique schéma -->
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-schema.css" />
+</head>
+
+<body>
+<div class="page-wrap">
+
+  <div id="header-container"></div>
+
+
+  <!-- ===== CARTOUCHE INTRO (style identique autres pages) ===== -->
+  <section class="panel-orange">
+    <h1 class="panel-orange-title">Schéma fonctionnel du portail Prévention PACA</h1>
+    <p class="panel-orange-sub">
+      Vue synthétique de la page d’accueil, de l’espace DDFPT et de l’espace administrateur,
+      avec les liens vers le guide, la base équipements &amp; produits et les outils réglementaires.
+    </p>
+  </section>
+
+  <!-- ===== CONTENU : SCHÉMA ===== -->
+  <main class="schema-page">
+    <section class="schema-wrapper">
+
+      <!-- Carte Accueil -->
+      <div class="schema-card schema-card--full">
+        <h3>Page d’accueil – Portail Prévention PACA</h3>
+        <p>
+          En-tête avec logos institutionnels et bouton mode clair / mode sombre.
+          Présence des trois accès principaux et d’un cartouche d’accueil.
+        </p>
+        <p>Raccourcis vers&nbsp;:</p>
+        <ul>
+          <li>Guide de prévention (version numérique)</li>
+          <li>Ressources (tutoriels, webinaires, documents)</li>
+          <li>Base équipements &amp; produits</li>
+          <li>Contact et interlocuteurs régionaux / académiques</li>
+        </ul>
+      </div>
+
+      <!-- Flèche globale vers la rangée horizontale -->
+      <div class="arrow-down"></div>
+
+      <!-- Rangée horizontale : 3 espaces principaux -->
+      <div class="schema-row">
+
+        <!-- Colonne Portail -->
+        <div class="schema-col">
+          <div class="arrow-down"></div>
+          <div class="schema-card">
+            <h3>Portail prévention PACA</h3>
+            <ul>
+              <li><strong>Présentation / mode d’emploi</strong> du dispositif</li>
+              <li><strong>Guide de prévention</strong> :
+                <ul>
+                  <li>Document de travail (en ligne)</li>
+                  <li>Exemple d’édition PDF</li>
+                </ul>
+              </li>
+              <li><strong>Ressources</strong> :
+                <ul>
+                  <li>Tutoriels, webinaires, supports de prévention</li>
+                </ul>
+              </li>
+              <li><strong>Base équipements &amp; produits</strong> :
+                <ul>
+                  <li>Vue alphabétique</li>
+                  <li>Travaux réglementés : interdit / dérogation / autorisé</li>
+                  <li>Filtres par diplôme et par établissement</li>
+                </ul>
+              </li>
+              <li><strong>Contact</strong> : référents et appuis régionaux</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Colonne DDFPT -->
+        <div class="schema-col">
+          <div class="arrow-down"></div>
+          <div class="schema-card">
+            <h3>Espace Directeurs Délégués (DDFPT)</h3>
+            <ul>
+              <li>Tableau de bord DDFPT</li>
+              <li><strong>Mise à jour de la base</strong> :
+                <ul>
+                  <li>Ajout / modification de matériels</li>
+                  <li>Ajout / modification de produits</li>
+                </ul>
+              </li>
+              <li><strong>Association</strong> établissements / diplômes / équipements</li>
+              <li><strong>Outils réglementaires</strong> :
+                <ul>
+                  <li>Formulaire de demande de dérogation</li>
+                  <li>Exemples de fiches de poste par matériel</li>
+                  <li>Avis médicaux types par diplôme</li>
+                </ul>
+              </li>
+              <li>Aide / mode d’emploi spécifique DDFPT</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Colonne Admin -->
+        <div class="schema-col">
+          <div class="arrow-down"></div>
+          <div class="schema-card">
+            <h3>Espace administrateur</h3>
+            <ul>
+              <li>Paramétrages généraux du portail</li>
+              <li>Gestion des utilisateurs et des droits</li>
+              <li>Gestion des tables, référentiels et options</li>
+              <li>Maintenance fonctionnelle et technique</li>
+              <li>Éventuel journal / historique des mises à jour</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+<!--       <div class="schema-back">
+        <a href="https://preventionpaca.github.io/guide/" class="schema-back-link">← Retour au portail</a>
+      </div> -->
+
+    </section>
+  </main>
+
+</div>
+
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+ <script>
+  window.PP_PAGE = "schema"; // ou admin, portal, derog, etc.
+</script>
+
+</body>
+</html>

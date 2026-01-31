@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Générateur de QR code (URL ou e-mail)</title>
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
+<link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
+
+
+  <!-- Librairie QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+ body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin: 0;
+  padding: 0;                 /* on laisse le header gérer sa marge */
+  
+
+  display: flex;
+  flex-direction: column;     /* ✅ empile header puis contenu */
+  align-items: center;        /* centre la carte */
+  justify-content: flex-start;
+}
+
+#header-container{
+  width: 100%;                /* ✅ header sur toute la largeur */
+}
+
+.wrapper{
+  margin: 20px;               /* ✅ espace sous le header */
+}
+
+
+    .wrapper {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .wrapper h1 {
+      font-size: 18px;
+      margin: 0 0 12px;
+      color: #111827;
+    }
+
+    .wrapper p.desc {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0 0 16px;
+    }
+
+    .wrapper label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.2);
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .qr-container {
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .qr-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    #qrcode {
+      /* ~3 cm x 3 cm sur la plupart des écrans (≈ 120 px) */
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 6px;
+    }
+
+    .value-preview {
+      font-size: 12px;
+      color: #6b7280;
+      word-break: break-all;
+      font-family: monospace;
+    }
+
+    .error {
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+   <div id="header-container"></div>
+  <div class="wrapper">
+   
+    <h1>Générateur de QR code</h1>
+    <p class="desc">
+      Saisir une <strong>URL</strong> (ex. <code>https://...</code>) ou une <strong>adresse e-mail</strong>.
+      Le script détecte automatiquement le type et construit le bon lien.
+    </p>
+
+    <label for="inputText">URL ou e-mail :</label>
+    <input type="text" id="inputText" placeholder="ex. https://exemple.fr ou prenom.nom@domaine.fr" />
+    <div class="actions">
+      <button id="btnGenerate">Générer le QR code</button>
+      <span class="hint">Entrée ⏎ fonctionne aussi</span>
+    </div>
+    <div id="errorMsg" class="error" style="display:none;"></div>
+
+    <div class="qr-container">
+      <div class="qr-label">QR code (≈ 3 cm x 3 cm) :</div>
+      <div id="qrcode">
+        <span class="hint">Aucun contenu pour l’instant</span>
+      </div>
+      <div id="valuePreview" class="value-preview"></div>
+    </div>
+  </div>
+
+  <script>
+    let qr = null;
+
+    function looksLikeEmail(text) {
+      // Test très simple : contient un '@' et pas d’espace
+      return text.includes("@") && !text.includes(" ");
+    }
+
+    function looksLikeUrl(text) {
+      // Très basique : commence par http(s) ou ressemble à un domaine
+      return /^https?:\/\//i.test(text) || /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(text);
+    }
+
+    function buildPayload(raw) {
+      const value = raw.trim();
+
+      if (!value) {
+        return { ok: false, error: "Veuillez saisir une URL ou une adresse e-mail." };
+      }
+
+      // Cas e-mail
+      if (looksLikeEmail(value) || value.toLowerCase().startsWith("mailto:")) {
+        if (value.toLowerCase().startsWith("mailto:")) {
+          // L’utilisateur a déjà mis le mailto
+          return { ok: true, type: "email", payload: value };
+        } else {
+          // On construit un lien mailto basique
+          const mailto = "mailto:" + value;
+          return { ok: true, type: "email", payload: mailto };
+        }
+      }
+
+      // Cas URL
+      if (looksLikeUrl(value)) {
+        let url = value;
+        if (!/^https?:\/\//i.test(url)) {
+          // Si pas de schéma, on préfixe en https par défaut
+          url = "https://" + url;
+        }
+        return { ok: true, type: "url", payload: url };
+      }
+
+      // Sinon, on considère que la saisie est invalide
+      return { ok: false, error: "Le texte ne ressemble ni à une URL ni à un e-mail valide." };
+    }
+
+    function generateQr() {
+      const input = document.getElementById("inputText");
+      const err = document.getElementById("errorMsg");
+      const preview = document.getElementById("valuePreview");
+      const container = document.getElementById("qrcode");
+
+      const raw = input.value;
+      const result = buildPayload(raw);
+
+      err.style.display = "none";
+      err.textContent = "";
+      preview.textContent = "";
+
+      container.innerHTML = ""; // effacer un éventuel QR ou texte précédent
+
+      if (!result.ok) {
+        container.innerHTML = "<span class='hint'>Aucun QR généré</span>";
+        err.textContent = result.error;
+        err.style.display = "block";
+        return;
+      }
+
+      // Affiche ce qui sera encodé
+      preview.textContent = "Contenu encodé : " + result.payload;
+
+      // Génération du QR code (~120 px => ~3 cm)
+      qr = new QRCode(container, {
+        text: result.payload,
+        width: 120,
+        height: 120,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    document.getElementById("btnGenerate").addEventListener("click", generateQr);
+
+    // Touche Entrée dans le champ
+    document.getElementById("inputText").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        generateQr();
+      }
+    });
+  </script>
+  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+<script>window.PP_PAGE = "contact";</script> <!-- optionnel -->
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
+</body>
+</html>

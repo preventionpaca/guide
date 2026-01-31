@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Association Diplômes ↔ Domaines pro</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  
+
+<script>
+  // ===============================
+  // PPP Data Layer (GitHub + Grist)
+  // - Lecture: PP_fetchTable(table)
+  // - En dehors de Grist: utilise Supabase Edge Function read-app
+  // ===============================
+  (function () {
+    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+    const SB_ROOT = sbBase + "/functions/v1";
+
+    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
+    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+
+    window.PP_SB_ROOT = SB_ROOT;
+    window.PP_SB_API_READ = SB_ROOT + "/read-app";
+    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
+    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+
+    window.PP_IS_GRIST = !!(
+      window.grist &&
+      window.grist.docApi &&
+      typeof window.grist.docApi.fetchTable === "function" &&
+      window.parent !== window
+    );
+
+    function rowsToGristTable(rows) {
+      if (!Array.isArray(rows) || !rows.length) return { id: [] };
+      const cols = new Set();
+      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
+      cols.delete("id");
+      const t = { id: [] };
+      for (const c of cols) t[c] = [];
+      for (const r of rows) {
+        t.id.push(r.id);
+        for (const c of cols) t[c].push(r[c]);
+      }
+      return t;
+    }
+
+    async function sbFetchTable(tableName) {
+      const url = window.PP_SB_API_READ +
+        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
+        "&table=" + encodeURIComponent(tableName);
+
+      const r = await fetch(url, { credentials: "omit" });
+      const j = await r.json().catch(() => null);
+
+      if (!r.ok || !j || !j.ok) {
+        throw new Error(j?.error || "Lecture Supabase impossible");
+      }
+
+      // ✅ Support formats possibles:
+      // 1) { table: {id:[], ...} }
+      if (j.table) return j.table;
+
+      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
+      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
+      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+
+      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
+      if (Array.isArray(j.records)) {
+        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
+        return rowsToGristTable(rows);
+      }
+
+      // 4) { tables: {TableName: {id:[], ...}} }
+      if (j.tables && j.tables[tableName]) return j.tables[tableName];
+
+      return j;
+    }
+
+    window.PP_fetchTable = async function (tableName) {
+      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+      return sbFetchTable(tableName);
+    };
+
+    // ✅ Shim: pour éviter de retoucher 50 scripts existants
+    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
+    // En mode GitHub, on "simule" juste ces fonctions.
+    if (!window.PP_IS_GRIST) {
+      window.grist = window.grist || {};
+      window.grist.docApi = window.grist.docApi || {};
+      window.grist.docApi.fetchTable = window.PP_fetchTable;
+
+      if (typeof window.grist.rowsToRecords !== "function") {
+        window.grist.rowsToRecords = function (table) {
+          const ids = table.id || [];
+          const records = [];
+          let cols = {};
+
+          if (table.fields && typeof table.fields === "object") cols = table.fields;
+          else {
+            for (const [k, v] of Object.entries(table)) {
+              if (k === "id") continue;
+              if (Array.isArray(v)) cols[k] = v;
+            }
+          }
+
+          for (let i = 0; i < ids.length; i++) {
+            const rec = { id: ids[i] };
+            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
+            records.push(rec);
+          }
+          return records;
+        };
+      }
+    }
+  })();
+</script>
+
+<style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #1b396a;
+      --accent-soft: #e0ecff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+    h1 { margin: 0 0 8px; font-size: 1.4rem; color: var(--accent); }
+
+    .panel {
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .counter { font-size: 0.8rem; color: var(--muted); }
+
+    .reload-btn {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .reload-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .reload-btn:hover:not(:disabled) { background: var(--accent-soft); }
+
+    /* Overlay de chargement (caché par défaut, affiché par JS) */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .loading-box {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.3);
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Barre de filtres (familles de diplômes) */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .filter-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .filter-pill.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .diploma-card {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .diploma-card:nth-child(even) { background: #f9fafb; }
+
+    .diploma-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .diploma-title { font-weight: 600; font-size: 0.95rem; }
+
+    .btn-choose {
+      padding: 4px 12px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .btn-choose:hover { filter: brightness(1.05); }
+
+    .domains-text {
+      margin-top: 6px;
+      line-height: 1.4;
+      font-size: 0.85rem;
+      white-space: normal;  /* texte en ligne, retour auto */
+    }
+
+    .status-message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      min-height: 1.2em;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: white;
+      width: 90%; max-width: 550px;
+      max-height: 80vh;
+      overflow: auto;
+      border-radius: 10px;
+      padding: 12px 14px 14px;
+      box-shadow: 0 10px 25px rgba(15,23,42,0.3);
+    }
+
+    .modal h3 { margin: 0 0 6px; color: var(--accent); }
+
+    #modalDiplomaLabel {
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    /* Liste des domaines en colonnes (lightbox) */
+    .domain-list-grid {
+      column-count: 2;
+      column-gap: 18px;
+      font-size: 0.8rem;
+    }
+
+    .domain-item {
+      break-inside: avoid-column;
+      -webkit-column-break-inside: avoid;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .domain-item input[type="checkbox"] {
+      margin-top: 2px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <h1>Association Domaines professionnels ↔ Diplômes</h1>
+
+  <div class="panel">
+    <div class="header-row">
+      <div>
+        <div class="counter" id="counterDiplomes"></div>
+        <div class="counter" id="counterDomaines"></div>
+      </div>
+      <button id="btnReload" class="reload-btn">Recharger</button>
+    </div>
+    <!-- 1ère ligne de filtres : type de diplôme (CAP, BAC PRO, BTS…) -->
+    <div id="filterBar" class="filter-bar"></div>
+    <!-- 2ème ligne de filtres : statut des domaines -->
+    <div id="domainFilterBar" class="filter-bar"></div>
+  </div>
+
+  <div id="diplomaList"></div>
+
+  <div class="status-message" id="status"></div>
+</div>
+
+<!-- Overlay de chargement -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <span>Chargement des données…</span>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3>Choisir les domaines</h3>
+    <div id="modalDiplomaLabel"></div>
+
+    <div id="modalDomainList" class="domain-list-grid"></div>
+
+    <div class="modal-footer">
+      <button id="modalCancel" class="btn-secondary">Annuler</button>
+      <button id="modalSave" class="btn-primary">Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DIP_TABLE = "Diplomes_EN_OK";
+const DOM_TABLE = "Domaine_professionnel";
+
+const DOM_LABEL       = "Domaines";     // libellé du domaine
+const DOMAINE_PRO_COL = "Domaine_pro";  // colonne TEXTE dans Diplomes_EN_OK
+
+let allDomains = [];
+let diplomas   = [];   // {id,label,diplomeName,category,domainList:[]}
+let currentDiploma = null;
+
+let currentFamilyFilter = "TOUS";   // CAP / BAC PRO / etc.
+let currentDomainFilter = "ALL";    // ALL / EMPTY / FILLED
+let categories = [];
+let initialLoadLaunched = false;
+
+/* Déterminer la "famille" du diplôme à partir de la colonne Diplome */
+function inferCategory(diplomeName) {
+  if (!diplomeName) return "Autre";
+  const s = diplomeName.trim().toUpperCase();
+
+  // On traite d'abord les cas classiques
+  if (s.startsWith("CAP ")) return "CAP";
+  if (s.startsWith("CAPA ")) return "CAPA";
+  if (s.startsWith("BEP ")) return "BEP";
+  if (s.startsWith("BAC PRO")) return "BAC PRO";
+  if (s.startsWith("BACCALAURÉAT PROFESSIONNEL") || s.startsWith("BACCALAUREAT PROFESSIONNEL"))
+    return "BAC PRO";
+  if (s.startsWith("BP ")) return "BP";
+  if (s.startsWith("BTS ")) return "BTS";
+  if (s.startsWith("MC ") || s.startsWith("MENTION COMPLÉMENTAIRE")) return "MC";
+  if (s.startsWith("LICENCE PRO") || s.startsWith("LICENCE PROFESSIONNELLE") || s.startsWith("LP "))
+    return "LICENCE PRO";
+
+  // Sinon : on prend le premier mot comme "famille"
+  const firstWord = s.split(/\s+/)[0];
+  return firstWord || "Autre";
+}
+
+const CATEGORY_ORDER = {
+  "CAP": 1,
+  "CAPA": 2,
+  "BEP": 3,
+  "BAC PRO": 4,
+  "BP": 5,
+  "BTS": 6,
+  "MC": 7,
+  "LICENCE PRO": 8,
+  "Autre": 99
+};
+
+function setStatus(msg, ok = true){
+  const s = document.getElementById("status");
+  s.style.color = ok ? "green" : "red";
+  s.textContent = msg || "";
+}
+
+function showLoading(on){
+  const overlay = document.getElementById("loadingOverlay");
+  const btn = document.getElementById("btnReload");
+  overlay.style.display = on ? "flex" : "none";
+  btn.disabled = on;
+}
+
+function parseDomainString(str){
+  if (!str) return [];
+  return String(str)
+    .split(/[;,]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function buildDomainString(arr){
+  return arr.join(" ; ");
+}
+
+/* ----------------------------
+   DOMAINES
+---------------------------- */
+async function loadDomains(){
+  const t = await grist.docApi.fetchTable(DOM_TABLE);
+  const col = t[DOM_LABEL] || [];
+  const seen = new Set();
+  allDomains = [];
+  for (let i = 0; i < col.length; i++){
+    const val = col[i];
+    if (val && !seen.has(val)){
+      seen.add(val);
+      allDomains.push(val);
+    }
+  }
+  allDomains.sort((a,b) => a.localeCompare(b, "fr"));
+  document.getElementById("counterDomaines").textContent =
+    allDomains.length + " domaines professionnels";
+}
+
+/* ----------------------------
+   DIPLÔMES
+   - label = Concatenation
+   - tri par Diplome
+---------------------------- */
+async function loadDiplomas(){
+  const t = await grist.docApi.fetchTable(DIP_TABLE);
+
+  const ids        = t.id || [];
+  const concats    = t.Concatenation || [];
+  const diplomeCol = t.Diplome || t["Diplôme"] || [];
+  const domaines   = t[DOMAINE_PRO_COL] || [];
+
+  diplomas = [];
+  const catSet = new Set();
+
+  for (let i = 0; i < ids.length; i++){
+    const id = ids[i];
+    if (id == null) continue;
+
+    const diplomeName = (diplomeCol[i] && String(diplomeCol[i]).trim()) || "";
+    const labelConcat = (concats[i] && String(concats[i]).trim()) || "";
+
+    const label = labelConcat || diplomeName || "(Diplôme sans nom)";
+    const category = inferCategory(diplomeName);
+
+    catSet.add(category);
+
+    diplomas.push({
+      id,
+      label,
+      diplomeName,
+      category,
+      domainList: parseDomainString(domaines[i])
+    });
+  }
+
+  // Tri alphabétique sur Diplome
+  diplomas.sort((a,b) => a.diplomeName.localeCompare(b.diplomeName, "fr"));
+
+  document.getElementById("counterDiplomes").textContent =
+    diplomas.length + " diplômes chargés";
+
+  // Catégories présentes dans la base
+  categories = Array.from(catSet);
+  categories.sort((a,b) => {
+    const r1 = CATEGORY_ORDER[a] ?? 50;
+    const r2 = CATEGORY_ORDER[b] ?? 50;
+    if (r1 !== r2) return r1 - r2;
+    return a.localeCompare(b, "fr");
+  });
+}
+
+/* ----------------------------
+   BARRE DE FILTRES 1 : familles de diplômes
+---------------------------- */
+function renderFamilyFilters(){
+  const bar = document.getElementById("filterBar");
+  bar.innerHTML = "";
+
+  // "Tous"
+  const pillAll = document.createElement("div");
+  pillAll.className = "filter-pill" + (currentFamilyFilter === "TOUS" ? " active" : "");
+  pillAll.textContent = "Tous";
+  pillAll.addEventListener("click", () => {
+    currentFamilyFilter = "TOUS";
+    renderFamilyFilters();
+    renderDiplomas();
+  });
+  bar.appendChild(pillAll);
+
+  // Catégories issues de Diplome
+  categories.forEach(cat => {
+    const pill = document.createElement("div");
+    pill.className = "filter-pill" + (currentFamilyFilter === cat ? " active" : "");
+    pill.textContent = cat;
+    pill.addEventListener("click", () => {
+      currentFamilyFilter = cat;
+      renderFamilyFilters();
+      renderDiplomas();
+    });
+    bar.appendChild(pill);
+  });
+}
+
+/* ----------------------------
+   BARRE DE FILTRES 2 : statut des domaines
+---------------------------- */
+function renderDomainFilters(){
+  const bar = document.getElementById("domainFilterBar");
+  bar.innerHTML = "";
+
+  const defs = [
+    { id: "ALL",    label: "Tous (domaines)" },
+    { id: "EMPTY",  label: "Domaines vides" },
+    { id: "FILLED", label: "Domaines remplis" },
+  ];
+
+  defs.forEach(def => {
+    const pill = document.createElement("div");
+    pill.className = "filter-pill" + (currentDomainFilter === def.id ? " active" : "");
+    pill.textContent = def.label;
+    pill.addEventListener("click", () => {
+      currentDomainFilter = def.id;
+      renderDomainFilters();
+      renderDiplomas();
+    });
+    bar.appendChild(pill);
+  });
+}
+
+/* ----------------------------
+   AFFICHAGE DIPLÔMES
+---------------------------- */
+function renderDiplomas(){
+  const container = document.getElementById("diplomaList");
+  container.innerHTML = "";
+
+  let list = diplomas.slice();
+
+  // Filtre 1 : famille (CAP / BAC PRO / BTS…)
+  if (currentFamilyFilter !== "TOUS") {
+    list = list.filter(d => d.category === currentFamilyFilter);
+  }
+
+  // Filtre 2 : statut des domaines
+  if (currentDomainFilter === "EMPTY") {
+    list = list.filter(d => d.domainList.length === 0);
+  } else if (currentDomainFilter === "FILLED") {
+    list = list.filter(d => d.domainList.length > 0);
+  }
+
+  list.forEach(dip => {
+    const div = document.createElement("div");
+    div.className = "diploma-card";
+
+    const header = document.createElement("div");
+    header.className = "diploma-header-row";
+
+    const left = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "diploma-title";
+    title.textContent = dip.label;   // Concatenation
+    left.appendChild(title);
+
+    const btn = document.createElement("button");
+    btn.className = "btn-choose";
+    btn.textContent = "Choisir les domaines";
+    btn.addEventListener("click", () => openModal(dip));
+
+    header.appendChild(left);
+    header.appendChild(btn);
+
+    const domainsDiv = document.createElement("div");
+    domainsDiv.className = "domains-text";
+
+    if (!dip.domainList.length){
+      domainsDiv.innerHTML = "<b>Domaines :</b> Aucun";
+    } else {
+      const html = "<b>Domaines :</b> " + dip.domainList.join(" ; ");
+      domainsDiv.innerHTML = html;
+    }
+
+    div.appendChild(header);
+    div.appendChild(domainsDiv);
+    container.appendChild(div);
+  });
+}
+
+/* ----------------------------
+   MODAL
+---------------------------- */
+function openModal(dip){
+  currentDiploma = dip;
+  document.getElementById("modalDiplomaLabel").textContent = dip.label;
+
+  const list = document.getElementById("modalDomainList");
+  list.innerHTML = "";
+
+  allDomains.forEach(dom => {
+    const label = document.createElement("label");
+    label.className = "domain-item";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = dom;
+    if (dip.domainList.includes(dom)) cb.checked = true;
+
+    const span = document.createElement("span");
+    span.textContent = dom;
+
+    label.appendChild(cb);
+    label.appendChild(span);
+    list.appendChild(label);
+  });
+
+  document.getElementById("modalOverlay").classList.add("visible");
+}
+
+function closeModal(){
+  document.getElementById("modalOverlay").classList.remove("visible");
+  currentDiploma = null;
+}
+
+/* ----------------------------
+   SAUVEGARDE TEXTE DANS Domaine_pro
+---------------------------- */
+async function saveDomains(dip){
+  const checkboxes = document.querySelectorAll("#modalDomainList input[type='checkbox']");
+  const selected = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) selected.push(cb.value);
+  });
+
+  dip.domainList = selected;
+  const value = buildDomainString(selected);
+
+  await grist.docApi.applyUserActions([
+    ["UpdateRecord", DIP_TABLE, dip.id, { [DOMAINE_PRO_COL]: value }]
+  ]);
+
+  setStatus("Enregistré ✔️", true);
+}
+
+/* ----------------------------
+   INIT / RELOAD
+---------------------------- */
+async function reloadAll(){
+  showLoading(true);
+  setStatus("Chargement…", true);
+  try {
+    await loadDomains();
+    await loadDiplomas();
+    renderFamilyFilters();
+    renderDomainFilters();
+    renderDiplomas();
+    setStatus("Données chargées.", true);
+  } catch (e){
+    console.error(e);
+    setStatus("Erreur de chargement : " + (e.message || e), false);
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* Lance le 1er chargement une seule fois, dès que possible */
+function triggerInitialLoad(){
+  if (initialLoadLaunched) return;
+  initialLoadLaunched = true;
+  reloadAll();
+}
+
+/* Boutons et callbacks */
+document.getElementById("btnReload").addEventListener("click", reloadAll);
+document.getElementById("modalCancel").addEventListener("click", closeModal);
+document.getElementById("modalSave").addEventListener("click", async () => {
+  if (currentDiploma){
+    try {
+      await saveDomains(currentDiploma);
+    } catch (e){
+      console.error(e);
+      setStatus("Erreur lors de l'enregistrement : " + (e.message || e), false);
+    }
+    renderDiplomas();
+  }
+  closeModal();
+});
+
+/* GRIST – init + spin au démarrage */
+grist.ready({ requiredAccess: "full" });
+
+/* On affiche le spin immédiatement à l'ouverture du widget */
+showLoading(true);
+
+/* On attend que grist.docApi soit prêt, puis on lance une seule fois le premier reload */
+function waitForDocApiReady() {
+  try {
+    if (grist.docApi && typeof grist.docApi.fetchTable === "function") {
+      triggerInitialLoad();   // appelle reloadAll()
+    } else {
+      setTimeout(waitForDocApiReady, 300);
+    }
+  } catch (e) {
+    console.error(e);
+    setTimeout(waitForDocApiReady, 300);
+  }
+}
+
+waitForDocApiReady();
+
+
+
+</script>
+
+</body>
+</html>

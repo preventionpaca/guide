@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Répartition des travaux réglementés par diplôme</title>
+
+  <!-- API Grist -->
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+  
+
+<script>
+  // ===============================
+  // PPP Data Layer (GitHub + Grist)
+  // - Lecture: PP_fetchTable(table)
+  // - En dehors de Grist: utilise Supabase Edge Function read-app
+  // ===============================
+  (function () {
+    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+    const SB_ROOT = sbBase + "/functions/v1";
+
+    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
+    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+
+    window.PP_SB_ROOT = SB_ROOT;
+    window.PP_SB_API_READ = SB_ROOT + "/read-app";
+    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
+    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+
+    window.PP_IS_GRIST = !!(
+      window.grist &&
+      window.grist.docApi &&
+      typeof window.grist.docApi.fetchTable === "function" &&
+      window.parent !== window
+    );
+
+    function rowsToGristTable(rows) {
+      if (!Array.isArray(rows) || !rows.length) return { id: [] };
+      const cols = new Set();
+      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
+      cols.delete("id");
+      const t = { id: [] };
+      for (const c of cols) t[c] = [];
+      for (const r of rows) {
+        t.id.push(r.id);
+        for (const c of cols) t[c].push(r[c]);
+      }
+      return t;
+    }
+
+    async function sbFetchTable(tableName) {
+      const url = window.PP_SB_API_READ +
+        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
+        "&table=" + encodeURIComponent(tableName);
+
+      const r = await fetch(url, { credentials: "omit" });
+      const j = await r.json().catch(() => null);
+
+      if (!r.ok || !j || !j.ok) {
+        throw new Error(j?.error || "Lecture Supabase impossible");
+      }
+
+      // ✅ Support formats possibles:
+      // 1) { table: {id:[], ...} }
+      if (j.table) return j.table;
+
+      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
+      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
+      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+
+      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
+      if (Array.isArray(j.records)) {
+        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
+        return rowsToGristTable(rows);
+      }
+
+      // 4) { tables: {TableName: {id:[], ...}} }
+      if (j.tables && j.tables[tableName]) return j.tables[tableName];
+
+      return j;
+    }
+
+    window.PP_fetchTable = async function (tableName) {
+      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+      return sbFetchTable(tableName);
+    };
+
+    // ✅ Shim: pour éviter de retoucher 50 scripts existants
+    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
+    // En mode GitHub, on "simule" juste ces fonctions.
+    if (!window.PP_IS_GRIST) {
+      window.grist = window.grist || {};
+      window.grist.docApi = window.grist.docApi || {};
+      window.grist.docApi.fetchTable = window.PP_fetchTable;
+
+      if (typeof window.grist.rowsToRecords !== "function") {
+        window.grist.rowsToRecords = function (table) {
+          const ids = table.id || [];
+          const records = [];
+          let cols = {};
+
+          if (table.fields && typeof table.fields === "object") cols = table.fields;
+          else {
+            for (const [k, v] of Object.entries(table)) {
+              if (k === "id") continue;
+              if (Array.isArray(v)) cols[k] = v;
+            }
+          }
+
+          for (let i = 0; i < ids.length; i++) {
+            const rec = { id: ids[i] };
+            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
+            records.push(rec);
+          }
+          return records;
+        };
+      }
+    }
+  })();
+</script>
+
+<!-- Chart.js + plugin datalabels -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+  <!-- Export (capture + PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f3f4f6; --card:#ffffff; --border:#d1d5db; --text:#111827;
+      --muted:#6b7280; --accent:#1b396a;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0; padding:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .app{max-width:1100px; margin:0 auto; padding:16px;}
+    .card{
+      background:var(--card); border-radius:8px; border:1px solid var(--border);
+      padding:16px 20px; box-shadow:0 1px 2px rgba(15,23,42,.06);
+    }
+    .title{font-size:1.05rem; font-weight:600; margin-bottom:12px; color:var(--accent);}
+    .field-label{font-size:.85rem; color:var(--muted); margin-bottom:4px;}
+    .search-row{display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+    .search-row input[type="text"]{
+      flex:1 1 260px; padding:8px 10px; border-radius:6px;
+      border:1px solid var(--border); font-size:.95rem;
+    }
+    .hint{font-size:.8rem; color:var(--muted);}
+    #emptyMessage{margin-top:12px; font-size:.9rem; color:var(--muted);}
+    .chart-section{margin-top:20px; display:none;}
+    .chart-header{font-size:.95rem; font-weight:600; margin-bottom:8px;}
+    .chart-wrapper{max-width:100%;margin:0 auto; margin-top:40px; margin-bottom:40px;}
+    #pieCanvas{width:100%;height:420px;}
+    #legend{margin-top:16px;}
+    .error{color:#b91c1c; font-size:.9rem; margin-top:8px;}
+
+    .legend-columns{
+      display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;
+    }
+    @media (max-width:900px){
+      .legend-columns{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+    }
+    .legend-column{
+      border:1px solid var(--border); border-radius:6px;
+      padding:8px 10px; background:#f9fafb; font-size:.9rem;
+    }
+    .legend-column-title{font-weight:600; font-size:.85rem; margin-bottom:6px;}
+    .legend-list{display:grid; gap:4px;}
+    .legend-item{display:flex; align-items:center; gap:8px;}
+    .legend-color{
+      width:14px; height:14px; border-radius:3px;
+      border:1px solid rgba(0,0,0,.1); flex-shrink:0;
+    }
+    .legend-link{text-decoration:none; color:var(--accent); word-break:break-word;}
+    .legend-link:hover{text-decoration:underline;}
+    .legend-link.no-link{color:var(--muted); cursor:default; text-decoration:none;}
+
+    /* Équipements / produits */
+    .equipment-section{margin-top:24px; font-size:.9rem;}
+    .equipment-title{font-weight:600; margin-bottom:6px;}
+    .equip-columns{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+    @media (max-width:1100px){
+      .equip-columns{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+    }
+    .equip-column{
+      border:1px solid var(--border); border-radius:6px;
+      padding:8px 10px; background:#f9fafb;
+    }
+    .equip-column-title{
+      font-weight:600; font-size:.85rem; margin-bottom:6px; color:var(--accent);
+    }
+    .equip-list{display:grid; grid-template-columns:1fr; gap:4px;}
+    .equip-item{display:flex; align-items:center; gap:8px; font-size:.88rem;}
+    .equip-color{
+      width:14px; height:14px; border-radius:3px;
+      border:1px solid rgba(0,0,0,.1); flex-shrink:0;
+    }
+    .equip-link{text-decoration:none; color:var(--text);}
+    .equip-link:hover{text-decoration:underline;}
+    .equip-empty{font-size:.8rem; color:var(--muted);}
+    datalist{display:none;}
+
+    /* Export buttons */
+    .export-bar{
+      display:flex; gap:10px; justify-content:flex-end; align-items:center;
+      margin: 8px 0 10px;
+    }
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff; color:var(--accent);
+      border-radius:8px; padding:8px 10px; font-weight:600; font-size:.9rem;
+      cursor:pointer;
+    }
+    .btn:hover{filter:brightness(0.98);}
+    .btn:active{transform:translateY(1px);}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; transform:none;}
+
+    /* Mode export : on garde uniquement chartHeader + camembert + blocs */
+    body.exporting .title,
+    body.exporting .field-label,
+    body.exporting .search-row,
+    body.exporting .hint,
+    body.exporting #emptyMessage,
+    body.exporting #errorMessage,
+    body.exporting .export-bar{
+      display:none !important;
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <div class="card">
+    <div class="title">Répartition des travaux réglementés par diplôme</div>
+
+    <div class="field-label">Choix du diplôme (autocomplétion)</div>
+    <div class="search-row">
+      <input id="diplomaInput" type="text" list="diplomaList" placeholder="Commencez à taper le libellé du diplôme…" />
+      <datalist id="diplomaList"></datalist>
+    </div>
+    <div class="hint">Saisissez quelques lettres puis choisissez un diplôme dans la liste proposée.</div>
+    <div id="emptyMessage">Aucun diplôme sélectionné pour l’instant.</div>
+    <div id="errorMessage" class="error" style="display:none;"></div>
+
+    <div id="chartSection" class="chart-section">
+      <div class="export-bar">
+        <button id="btnPng" class="btn">Exporter PNG</button>
+        <button id="btnPdf" class="btn">Exporter PDF</button>
+      </div>
+
+      <!-- Zone à capturer -->
+      <div id="exportArea">
+        <div id="chartHeader" class="chart-header" style="margin-bottom:24px;"></div>
+        <div class="chart-wrapper">
+          <canvas id="pieCanvas"></canvas>
+        </div>
+        <div id="legend" style="margin-top:40px;"></div>
+        <div id="equipmentSection" class="equipment-section"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  Chart.register(ChartDataLabels);
+
+  // ============ CONSTANTES =============
+  const DIPLOME_TABLE     = "Diplomes_EN_OK";
+  const DIPLOME_LABEL_COL = "Concatenation";
+
+  const EQUIPEMENTS_TABLE      = "Liste_des_equipements";
+  const COL_EQ_TAMPON_DIPLOMES = "Tampon_Diplomes";
+  const COL_EQ_TAMPON_TRAVAUX  = "Tampon_Travaux";
+  const COL_EQ_TAMPON_INTIT    = "Tampon_intitule_travaux";  // ex: "22|red;31|orange"
+  const COL_EQ_EQUIPEMENT      = "Equipements_ou_produits";
+  const COL_EQ_COULEUR         = "Couleur";
+
+  const TRAVAUX_TABLE    = "Liste_travaux";
+  const COL_TRAV_LABEL   = "Travaux";
+  const COL_TRAV_URL     = "Url_fiche";
+
+  const GRIST_EQUIP_VIEW_URL =
+    "https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119";
+  // ====================================
+
+  let diplomasByLabel = new Map();
+
+  // { diplomaKeyNorm: Map(normTravail -> {label, regime}) }
+  let travauxRegimeByDiplome = {};
+
+  // { diplomaKeyNorm: Map(normTravail -> Set(equip labels)) }
+  let travailEquipByDiplome = {};
+
+  // { diplomaKeyNorm: {derog:[], interdit:[], autorise:[], non_classe:[]} }
+  let equipmentsByDiplomeAndRegime = {};
+
+  // URLs travaux
+  let travailToUrl = new Map();           // libellé exact -> url
+  let travailToUrlByNorm = new Map();     // libellé normalisé -> url
+
+  let pieChart = null;
+
+  grist.ready({ requiredAccess: "read table" });
+
+  // ---------- utilitaires ----------
+  function normalizeText(str) {
+    if (str == null) return "";
+    return String(str).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  }
+
+  function splitItems(str) {
+    if (str == null) return [];
+    return String(str).split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  function showError(msg) {
+    const err = document.getElementById("errorMessage");
+    err.textContent = msg;
+    err.style.display = "block";
+  }
+
+  function clearError() {
+    const err = document.getElementById("errorMessage");
+    err.style.display = "none";
+  }
+
+  function resetView(message) {
+    const emptyMsg = document.getElementById("emptyMessage");
+    const chartSection = document.getElementById("chartSection");
+    emptyMsg.textContent = message || "Aucun diplôme sélectionné pour l’instant.";
+    chartSection.style.display = "none";
+    if (pieChart) {
+      pieChart.destroy();
+      pieChart = null;
+    }
+    document.getElementById("legend").innerHTML = "";
+    document.getElementById("equipmentSection").innerHTML = "";
+  }
+
+  // ---------- régimes ----------
+  function regimeFromColorCode(code) {
+    if (!code) return "non_classe";
+    const parts = String(code).split("|");
+    const colorPart = parts[1] ? parts[1].trim() : "";
+    const n = normalizeText(colorPart);
+    if (n.includes("red") || n.includes("rouge"))   return "interdit";
+    if (n.includes("orange"))                       return "derog";
+    if (n.includes("green") || n.includes("vert"))  return "autorise";
+    return "non_classe";
+  }
+
+  function regimeRank(reg) {
+    if (reg === "interdit") return 3;
+    if (reg === "derog") return 2;
+    if (reg === "autorise") return 1;
+    return 0;
+  }
+
+  function mergeRegime(existing, incoming) {
+    if (!existing) return incoming;
+    return (regimeRank(incoming) > regimeRank(existing)) ? incoming : existing;
+  }
+
+  function getUrlForTravail(label) {
+    if (!label) return "";
+    const direct = travailToUrl.get(String(label));
+    if (direct) return direct;
+    const n = normalizeText(label);
+    return travailToUrlByNorm.get(n) || "";
+  }
+
+  // Palettes (13 oranges pour la dérogation)
+  const ORANGE_SHADES_13 = [
+    "#ffedd5","#fed7aa","#fdba74","#fb923c","#f97316","#ea580c","#c2410c",
+    "#ffb366","#ffa24d","#ff8f33","#ff7b1a","#f26800","#d45500"
+  ];
+  const RED_SHADES_6    = ["#fecaca","#fca5a5","#f87171","#ef4444","#dc2626","#b91c1c"];
+  const GREEN_SHADES_6  = ["#bbf7d0","#86efac","#4ade80","#22c55e","#16a34a","#15803d"];
+
+  function regimeColor(regime, idxInRegime) {
+    if (regime === "interdit") return RED_SHADES_6[idxInRegime % RED_SHADES_6.length];
+    if (regime === "autorise") return GREEN_SHADES_6[idxInRegime % GREEN_SHADES_6.length];
+    if (regime === "derog")    return ORANGE_SHADES_13[idxInRegime % ORANGE_SHADES_13.length];
+    return "#9ca3af";
+  }
+
+  function regimeLabel(regime) {
+    if (regime === "interdit") return "interdit absolument";
+    if (regime === "derog") return "soumis à dérogation";
+    if (regime === "autorise") return "autorisé";
+    return "non encore classé";
+  }
+
+  // ---------- Labels : 2 lignes (compatibles datalabels) ----------
+  function splitLabelTwoLines(label) {
+    const s = String(label || "").trim().replace(/\s+/g, " ");
+    if (!s) return ["", ""];
+    const words = s.split(" ");
+    if (words.length <= 3) return [s, ""];
+    const mid = Math.ceil(words.length / 2);
+    return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
+  }
+
+  function wrapText(s, maxLen) {
+    const str = String(s || "").trim().replace(/\s+/g, " ");
+    if (str.length <= maxLen) return str;
+    return str.slice(0, Math.max(0, maxLen - 1)) + "…";
+  }
+
+  function labelOutsideLines(travailLabel) {
+    const [l1, l2] = splitLabelTwoLines(travailLabel);
+    return [wrapText(l1, 46), wrapText(l2, 46)].filter(Boolean);
+  }
+
+  // ---------- chargement initial ----------
+  async function init() {
+    try {
+      const api = grist.docApi;
+      if (!api) {
+        showError("API Grist non disponible.");
+        return;
+      }
+
+      const [diplomeTable, equipTable, travauxTable] = await Promise.all([
+        api.fetchTable(DIPLOME_TABLE),
+        api.fetchTable(EQUIPEMENTS_TABLE),
+        api.fetchTable(TRAVAUX_TABLE)
+      ]);
+
+      buildDiplomas(diplomeTable);
+      buildTravailUrls(travauxTable);
+      buildTravauxAndEquipByDiplome(equipTable);
+      populateDiplomaDatalist();
+      wireExportButtons();
+    } catch (e) {
+      console.error(e);
+      showError("Erreur lors du chargement des données : " + e.message);
+    }
+  }
+
+  function buildDiplomas(table) {
+    diplomasByLabel.clear();
+    if (!table || !table.id) return;
+
+    const labels = table[DIPLOME_LABEL_COL] || [];
+    (table.id || []).forEach((id, idx) => {
+      const label = labels[idx];
+      if (label) diplomasByLabel.set(String(label), id);
+    });
+  }
+
+  function buildTravailUrls(table) {
+    travailToUrl.clear();
+    travailToUrlByNorm.clear();
+    if (!table || !table.id) return;
+
+    const labels = table[COL_TRAV_LABEL] || [];
+    const urls = table[COL_TRAV_URL] || [];
+    const n = table.id.length;
+
+    for (let i = 0; i < n; i++) {
+      const label = labels[i];
+      if (!label) continue;
+      const url = urls[i] || "";
+      const key = String(label);
+
+      travailToUrl.set(key, url);
+      const norm = normalizeText(key);
+      if (!travailToUrlByNorm.has(norm)) travailToUrlByNorm.set(norm, url);
+    }
+  }
+
+  function ensureDiplomaStores(dKey) {
+    if (!travauxRegimeByDiplome[dKey]) travauxRegimeByDiplome[dKey] = new Map();
+    if (!travailEquipByDiplome[dKey]) travailEquipByDiplome[dKey] = new Map();
+    if (!equipmentsByDiplomeAndRegime[dKey]) {
+      equipmentsByDiplomeAndRegime[dKey] = { derog: [], interdit: [], autorise: [], non_classe: [] };
+    }
+  }
+
+  function buildTravauxAndEquipByDiplome(table) {
+    travauxRegimeByDiplome = {};
+    travailEquipByDiplome = {};
+    equipmentsByDiplomeAndRegime = {};
+    if (!table || !table.id) return;
+
+    const diplTextCol   = table[COL_EQ_TAMPON_DIPLOMES] || [];
+    const travNamesCol  = table[COL_EQ_TAMPON_TRAVAUX]  || [];
+    const travCodesCol  = table[COL_EQ_TAMPON_INTIT]    || [];
+    const equipCol      = table[COL_EQ_EQUIPEMENT]      || [];
+    const colorCol      = table[COL_EQ_COULEUR]         || [];
+    const ids           = table.id || [];
+    const n = ids.length;
+
+    for (let i = 0; i < n; i++) {
+      const diplStr      = diplTextCol[i];
+      const travNamesStr = travNamesCol[i];
+      const travCodesStr = travCodesCol[i];
+      if (!diplStr || !travNamesStr) continue;
+
+      const diplomes  = splitItems(diplStr);
+      const travaux   = splitItems(travNamesStr);
+      const travCodes = splitItems(travCodesStr);
+
+      if (!diplomes.length || !travaux.length) continue;
+
+      const equipLabel  = String(equipCol[i] || "").trim();
+      const equipColor  = colorCol[i];
+      const rowId       = ids[i];
+
+      diplomes.forEach(d => {
+        const dKey = normalizeText(d);
+        if (!dKey) return;
+        ensureDiplomaStores(dKey);
+
+        const maxLen = Math.max(travaux.length, travCodes.length);
+        for (let idx = 0; idx < maxLen; idx++) {
+          const travailLabel = travaux[idx] || travaux[travaux.length - 1];
+          if (!travailLabel) continue;
+
+          const tNorm = normalizeText(travailLabel);
+
+          let regime = "non_classe";
+          const code = travCodes[idx];
+          if (code) regime = regimeFromColorCode(code);
+
+          const existing = travauxRegimeByDiplome[dKey].get(tNorm);
+          const merged = existing
+            ? { label: existing.label || travailLabel, regime: mergeRegime(existing.regime, regime) }
+            : { label: travailLabel, regime: regime };
+          travauxRegimeByDiplome[dKey].set(tNorm, merged);
+
+          if (!travailEquipByDiplome[dKey].has(tNorm)) {
+            travailEquipByDiplome[dKey].set(tNorm, new Set());
+          }
+          if (equipLabel) travailEquipByDiplome[dKey].get(tNorm).add(equipLabel);
+
+          const bucket = equipmentsByDiplomeAndRegime[dKey][regime] || equipmentsByDiplomeAndRegime[dKey].non_classe;
+          bucket.push({ label: equipLabel, color: equipColor, rowId });
+        }
+      });
+    }
+  }
+
+  function populateDiplomaDatalist() {
+    const datalist = document.getElementById("diplomaList");
+    datalist.innerHTML = "";
+    const labels = Array.from(diplomasByLabel.keys()).filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+    labels.forEach(label => {
+      const opt = document.createElement("option");
+      opt.value = label;
+      datalist.appendChild(opt);
+    });
+  }
+
+  const diplomaInput = document.getElementById("diplomaInput");
+  diplomaInput.addEventListener("change", () => {
+    clearError();
+    const label = diplomaInput.value.trim();
+    if (!label) {
+      resetView("Aucun diplôme sélectionné pour l’instant.");
+      return;
+    }
+    updateForDiploma(label);
+  });
+
+  function getBestKeyMatch(targetKeyNorm, sourceObj) {
+    if (sourceObj[targetKeyNorm]) return targetKeyNorm;
+    const keys = Object.keys(sourceObj);
+    for (const k of keys) {
+      if (k && (k.includes(targetKeyNorm) || targetKeyNorm.includes(k))) return k;
+    }
+    return null;
+  }
+
+  function updateForDiploma(diplomaLabel) {
+    const keyNorm = normalizeText(diplomaLabel);
+    const emptyMsg     = document.getElementById("emptyMessage");
+    const chartSection = document.getElementById("chartSection");
+
+    if (!keyNorm) {
+      resetView("Aucun diplôme sélectionné pour l’instant.");
+      return;
+    }
+
+    const mapKeyTrav  = getBestKeyMatch(keyNorm, travauxRegimeByDiplome);
+    const mapKeyEquip = getBestKeyMatch(keyNorm, travailEquipByDiplome);
+
+    const travailMap = mapKeyTrav ? travauxRegimeByDiplome[mapKeyTrav] : null;
+    const equipMap   = mapKeyEquip ? travailEquipByDiplome[mapKeyEquip] : null;
+
+    if (!travailMap || !equipMap || travailMap.size === 0) {
+      resetView("Aucun travail réglementé trouvé pour ce diplôme.");
+      return;
+    }
+
+    const pieItems = [];
+    for (const [tNorm, meta] of travailMap.entries()) {
+      const regime = (meta && meta.regime) ? meta.regime : "non_classe";
+      if (regime === "non_classe") continue;
+
+      const label = (meta && meta.label) ? meta.label : tNorm;
+      const set = equipMap.get(tNorm);
+      const equips = set ? Array.from(set).sort((a,b) => a.localeCompare(b, "fr")) : [];
+      if (!equips.length) continue;
+
+      pieItems.push({ norm:tNorm, label, regime, equipments: equips, value: equips.length });
+    }
+
+    if (!pieItems.length) {
+      resetView("Aucun travail classé (dérogation / interdit / autorisé) avec équipements associés. Les éléments non classés ne sont pas affichés dans le camembert.");
+      return;
+    }
+
+    const regimeOrder = { interdit: 0, derog: 1, autorise: 2 };
+    pieItems.sort((a, b) => {
+      const ra = regimeOrder[a.regime] ?? 9;
+      const rb = regimeOrder[b.regime] ?? 9;
+      if (ra !== rb) return ra - rb;
+      return a.label.localeCompare(b.label, "fr");
+    });
+
+    const counters = { interdit: 0, derog: 0, autorise: 0 };
+    pieItems.forEach(it => {
+      const idx = counters[it.regime] || 0;
+      it.color = regimeColor(it.regime, idx);
+      counters[it.regime] = idx + 1;
+    });
+
+    emptyMsg.textContent = "";
+    chartSection.style.display = "block";
+
+    document.getElementById("chartHeader").textContent =
+      "Répartition par travaux (éléments non classés exclus) pour : " + diplomaLabel;
+
+    const values = pieItems.map(x => x.value);
+    const total = values.reduce((a, b) => a + b, 0);
+    const labels = pieItems.map(x => x.label);
+    const colors = pieItems.map(x => x.color);
+
+    const ctx = document.getElementById("pieCanvas").getContext("2d");
+    if (pieChart) { pieChart.destroy(); pieChart = null; }
+
+    pieChart = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: "#ffffff",
+          borderWidth: 1,
+          radius: 170
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 60, right: 90, bottom: 60, left: 90 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                const it = pieItems[idx];
+                return `${it.label} (${regimeLabel(it.regime)})`;
+              },
+              label: (context) => {
+                const idx = context.dataIndex;
+                const it = pieItems[idx];
+                const pct = total ? (it.value / total * 100) : 0;
+
+                const lines = [];
+                lines.push(`${it.value} équipement(s)/produit(s) — ${pct.toFixed(1)}%`);
+                lines.push("Liste :");
+                it.equipments.forEach(e => lines.push("• " + e));
+                return lines;
+              }
+            }
+          },
+          datalabels: {
+            labels: {
+              outside: {
+                color: "#111827",
+                font: { size: 15, weight: "600" },
+                anchor: "end",
+                align: "end",
+                offset: 18,
+                lineHeight: 1.35,
+                clamp: true,
+                formatter: (value, context) => {
+                  const idx = context.dataIndex;
+                  const it = pieItems[idx];
+                  return labelOutsideLines(it.label);
+                }
+              },
+              inside: {
+                color: "#000000",
+                font: { size: 13, weight: "700" },
+                anchor: "center",
+                align: "center",
+                formatter: (value) => {
+                  const pct = total ? (value / total * 100) : 0;
+                  return pct ? (pct.toFixed(1) + "%") : "";
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    buildLegendByRegimeFromMap(mapKeyTrav);
+    buildEquipmentList(getBestKeyMatch(keyNorm, equipmentsByDiplomeAndRegime) || keyNorm);
+  }
+
+  function buildLegendByRegimeFromMap(mapKey) {
+    const legendDiv = document.getElementById("legend");
+    legendDiv.innerHTML = "";
+
+    const groups = { interdit: [], derog: [], autorise: [], non_classe: [] };
+    const travailMap = mapKey ? travauxRegimeByDiplome[mapKey] : null;
+
+    if (travailMap && travailMap.size) {
+      const mergedByNorm = new Map();
+      for (const [tNorm, obj] of travailMap.entries()) {
+        const label = obj.label;
+        const regime = obj.regime || "non_classe";
+        const prev = mergedByNorm.get(tNorm);
+        if (!prev) mergedByNorm.set(tNorm, { label, regime });
+        else mergedByNorm.set(tNorm, { label: prev.label || label, regime: mergeRegime(prev.regime, regime) });
+      }
+
+      const items = Array.from(mergedByNorm.values())
+        .filter(x => x.label)
+        .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+
+      items.forEach(x => {
+        groups[x.regime || "non_classe"].push({
+          label: x.label,
+          regime: x.regime || "non_classe",
+          url: getUrlForTravail(x.label)
+        });
+      });
+    }
+
+    const columnsContainer = document.createElement("div");
+    columnsContainer.className = "legend-columns";
+
+    function buildColumn(title, items, colorSample) {
+      const col = document.createElement("div");
+      col.className = "legend-column";
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "legend-column-title";
+      titleEl.textContent = title;
+      if (colorSample) titleEl.style.color = colorSample;
+      col.appendChild(titleEl);
+
+      const list = document.createElement("div");
+      list.className = "legend-list";
+
+      const visibleItems = items.filter(x => x.regime !== "non_classe");
+
+      if (!visibleItems.length) {
+        const empty = document.createElement("div");
+        empty.style.fontSize = "0.8rem";
+        empty.style.color = "#9ca3af";
+        empty.textContent = "— Aucun travail —";
+        list.appendChild(empty);
+      } else {
+        visibleItems.forEach(w => {
+          const item = document.createElement("div");
+          item.className = "legend-item";
+
+          const colorBox = document.createElement("span");
+          colorBox.className = "legend-color";
+          colorBox.style.backgroundColor = (w.regime === "derog") ? "#f97316" : (w.regime === "interdit") ? "#dc2626" : "#16a34a";
+
+          const link = document.createElement("a");
+          link.className = "legend-link";
+          link.textContent = w.label;
+
+          if (w.url) {
+            link.href = w.url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+          } else {
+            link.classList.add("no-link");
+            link.title = "Aucun lien de fiche disponible";
+          }
+
+          item.appendChild(colorBox);
+          item.appendChild(link);
+          list.appendChild(item);
+        });
+      }
+
+      col.appendChild(list);
+      return col;
+    }
+
+    columnsContainer.appendChild(buildColumn("Travaux interdits absolument", groups.interdit, "#dc2626"));
+    columnsContainer.appendChild(buildColumn("Travaux soumis à dérogation", groups.derog, "#f97316"));
+    columnsContainer.appendChild(buildColumn("Travaux autorisés", groups.autorise, "#16a34a"));
+
+    legendDiv.appendChild(columnsContainer);
+  }
+
+  function colorForRegimeBox(regime) {
+    if (regime === "interdit") return "#dc2626";
+    if (regime === "derog")    return "#f97316";
+    if (regime === "autorise") return "#16a34a";
+    return "#9ca3af";
+  }
+
+  function buildEquipmentList(diplomaKeyNorm) {
+    const section = document.getElementById("equipmentSection");
+    section.innerHTML = "";
+
+    const agg = { derog: [], interdit: [], autorise: [], non_classe: [] };
+
+    function addFromKey(k) {
+      const cats = equipmentsByDiplomeAndRegime[k];
+      if (!cats) return;
+      ["derog","interdit","autorise","non_classe"].forEach(cat => {
+        if (!cats[cat]) return;
+        agg[cat] = agg[cat].concat(cats[cat]);
+      });
+    }
+
+    addFromKey(diplomaKeyNorm);
+
+    if (!agg.derog.length && !agg.interdit.length && !agg.autorise.length && !agg.non_classe.length) {
+      Object.keys(equipmentsByDiplomeAndRegime).forEach(k => {
+        if (k.includes(diplomaKeyNorm) || diplomaKeyNorm.includes(k)) addFromKey(k);
+      });
+    }
+
+    if (!agg.derog.length && !agg.interdit.length && !agg.autorise.length && !agg.non_classe.length) {
+      section.textContent = "Aucun équipement ou produit associé trouvé dans la table des équipements.";
+      return;
+    }
+
+    function dedup(list) {
+      const map = new Map();
+      list.forEach(e => {
+        const label = e.label || "";
+        const rowId = e.rowId || "";
+        if (!label) return;
+        const key = label + "|" + rowId;
+        if (!map.has(key)) map.set(key, e);
+      });
+      return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "fr"));
+    }
+
+    const derogList    = dedup(agg.derog);
+    const interditList = dedup(agg.interdit);
+    const autorList    = dedup(agg.autorise);
+    const nonClassList = dedup(agg.non_classe);
+
+    const title = document.createElement("div");
+    title.className = "equipment-title";
+    title.textContent = "Équipements ou produits associés au diplôme (classés selon le régime d’interdiction) :";
+    section.appendChild(title);
+
+    const columnsDiv = document.createElement("div");
+    columnsDiv.className = "equip-columns";
+
+    function buildEquipColumn(titleText, list, regimeKey) {
+      const col = document.createElement("div");
+      col.className = "equip-column";
+
+      const h = document.createElement("div");
+      h.className = "equip-column-title";
+      h.textContent = titleText;
+      h.style.color = colorForRegimeBox(regimeKey);
+      col.appendChild(h);
+
+      const listDiv = document.createElement("div");
+      listDiv.className = "equip-list";
+
+      if (!list.length) {
+        const msg = document.createElement("div");
+        msg.className = "equip-empty";
+        msg.textContent = "— Aucun équipement —";
+        listDiv.appendChild(msg);
+      } else {
+        list.forEach(e => {
+          const item = document.createElement("div");
+          item.className = "equip-item";
+
+          const box = document.createElement("span");
+          box.className = "equip-color";
+          box.style.backgroundColor = colorForRegimeBox(regimeKey);
+
+          const link = document.createElement("a");
+          link.className = "equip-link";
+          link.textContent = e.label;
+          if (e.rowId != null) {
+            link.href = GRIST_EQUIP_VIEW_URL + "?rowId=" + encodeURIComponent(e.rowId);
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+          }
+
+          item.appendChild(box);
+          item.appendChild(link);
+          listDiv.appendChild(item);
+        });
+      }
+
+      col.appendChild(listDiv);
+      return col;
+    }
+
+    columnsDiv.appendChild(buildEquipColumn("soumis à dérogation", derogList, "derog"));
+    columnsDiv.appendChild(buildEquipColumn("interdit absolument", interditList, "interdit"));
+    columnsDiv.appendChild(buildEquipColumn("autorisé", autorList, "autorise"));
+    columnsDiv.appendChild(buildEquipColumn("non encore classé", nonClassList, "non_classe"));
+
+    section.appendChild(columnsDiv);
+  }
+
+  function wireExportButtons() {
+    const btnPng = document.getElementById("btnPng");
+    const btnPdf = document.getElementById("btnPdf");
+    if (!btnPng || !btnPdf) return;
+
+    btnPng.addEventListener("click", () => exportImage("png"));
+    btnPdf.addEventListener("click", () => exportImage("pdf"));
+  }
+
+  async function exportImage(mode) {
+    const btnPng = document.getElementById("btnPng");
+    const btnPdf = document.getElementById("btnPdf");
+    const exportArea = document.getElementById("exportArea");
+    if (!exportArea) return;
+
+    btnPng.disabled = true;
+    btnPdf.disabled = true;
+
+    document.body.classList.add("exporting");
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const canvas = await html2canvas(exportArea, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true
+    });
+
+    const dataUrl = canvas.toDataURL("image/png");
+
+    if (mode === "png") {
+      downloadDataUrl(dataUrl, "repartition_travaux.png");
+    } else {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const imgW = pageW - 60;
+      const imgH = canvas.height * (imgW / canvas.width);
+
+      if (imgH <= pageH - 60) {
+        pdf.addImage(dataUrl, "PNG", 30, 30, imgW, imgH);
+      } else {
+        const scaledH = pageH - 60;
+        const scaledW = canvas.width * (scaledH / canvas.height);
+        const x = (pageW - scaledW) / 2;
+        pdf.addImage(dataUrl, "PNG", x, 30, scaledW, scaledH);
+      }
+
+      pdf.save("repartition_travaux.pdf");
+    }
+
+    document.body.classList.remove("exporting");
+    btnPng.disabled = false;
+    btnPdf.disabled = false;
+  }
+
+  function downloadDataUrl(dataUrl, filename) {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  init();
+</script>
+</body>
+</html>

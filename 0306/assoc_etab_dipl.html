@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Association Établissements ↔ Diplômes</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+
+<script>
+  // ===============================
+  // PPP Data Layer (GitHub + Grist)
+  // - Lecture: PP_fetchTable(table)
+  // - En dehors de Grist: utilise Supabase Edge Function read-app
+  // ===============================
+  (function () {
+    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+    const SB_ROOT = sbBase + "/functions/v1";
+
+    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
+    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+
+    window.PP_SB_ROOT = SB_ROOT;
+    window.PP_SB_API_READ = SB_ROOT + "/read-app";
+    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
+    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+
+    window.PP_IS_GRIST = !!(
+      window.grist &&
+      window.grist.docApi &&
+      typeof window.grist.docApi.fetchTable === "function" &&
+      window.parent !== window
+    );
+
+    function rowsToGristTable(rows) {
+      if (!Array.isArray(rows) || !rows.length) return { id: [] };
+      const cols = new Set();
+      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
+      cols.delete("id");
+      const t = { id: [] };
+      for (const c of cols) t[c] = [];
+      for (const r of rows) {
+        t.id.push(r.id);
+        for (const c of cols) t[c].push(r[c]);
+      }
+      return t;
+    }
+
+    async function sbFetchTable(tableName) {
+      const url = window.PP_SB_API_READ +
+        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
+        "&table=" + encodeURIComponent(tableName);
+
+      const r = await fetch(url, { credentials: "omit" });
+      const j = await r.json().catch(() => null);
+
+      if (!r.ok || !j || !j.ok) {
+        throw new Error(j?.error || "Lecture Supabase impossible");
+      }
+
+      // ✅ Support formats possibles:
+      // 1) { table: {id:[], ...} }
+      if (j.table) return j.table;
+
+      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
+      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
+      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+
+      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
+      if (Array.isArray(j.records)) {
+        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
+        return rowsToGristTable(rows);
+      }
+
+      // 4) { tables: {TableName: {id:[], ...}} }
+      if (j.tables && j.tables[tableName]) return j.tables[tableName];
+
+      return j;
+    }
+
+    window.PP_fetchTable = async function (tableName) {
+      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+      return sbFetchTable(tableName);
+    };
+
+    // ✅ Shim: pour éviter de retoucher 50 scripts existants
+    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
+    // En mode GitHub, on "simule" juste ces fonctions.
+    if (!window.PP_IS_GRIST) {
+      window.grist = window.grist || {};
+      window.grist.docApi = window.grist.docApi || {};
+      window.grist.docApi.fetchTable = window.PP_fetchTable;
+
+      if (typeof window.grist.rowsToRecords !== "function") {
+        window.grist.rowsToRecords = function (table) {
+          const ids = table.id || [];
+          const records = [];
+          let cols = {};
+
+          if (table.fields && typeof table.fields === "object") cols = table.fields;
+          else {
+            for (const [k, v] of Object.entries(table)) {
+              if (k === "id") continue;
+              if (Array.isArray(v)) cols[k] = v;
+            }
+          }
+
+          for (let i = 0; i < ids.length; i++) {
+            const rec = { id: ids[i] };
+            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
+            records.push(rec);
+          }
+          return records;
+        };
+      }
+    }
+  })();
+</script>
+
+<link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
+
+  <style>
+    
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      
+    }
+
+    .app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+    h1 { margin: 0 0 8px; font-size: 1.4rem; color: var(--accent); }
+
+    .panel {
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .counter { font-size: 0.8rem; color: var(--muted); }
+
+    .search-row { margin-top: 8px; }
+    .search-input {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+
+    /* Overlay de chargement */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .loading-box {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.3);
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .etab-card {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .etab-card:nth-child(even) { background: #f9fafb; }
+
+    .etab-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .etab-title { font-weight: 600; font-size: 0.95rem; }
+
+    .btn-choose {
+      padding: 4px 12px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .btn-choose:hover { filter: brightness(1.05); }
+
+    .diplomas-text {
+      margin-top: 6px;
+      line-height: 1.4;
+      font-size: 0.85rem;
+      white-space: normal;
+    }
+
+    .status-message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      min-height: 1.2em;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: white;
+      width: 95%;
+      max-width: 880px;
+      max-height: 80vh;
+      overflow: auto;
+      border-radius: 10px;
+      padding: 12px 14px 14px;
+      box-shadow: 0 10px 25px rgba(15,23,42,0.3);
+    }
+
+    .modal h3 { margin: 0 0 6px; color: var(--accent); }
+
+    #modalEtabLabel {
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .filter-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .filter-pill.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .diploma-list-grid {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 12px;
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+
+    .diploma-column {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .diploma-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .diploma-item input[type="checkbox"] {
+      margin-top: 2px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    /* Lightbox LOGIN */
+    .login-modal {
+      max-width: 420px;
+      text-align: left;
+    }
+    .login-modal h3 { margin-bottom: 8px; }
+    .login-modal p {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .login-input {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    .login-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+    .login-message {
+      min-height: 1.2em;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+    /* === MODAL : contraste texte / fond === */
+#modalOverlay .modal{
+  background: var(--dark-card);
+  color: var(--dark-text);
+  border: 1px solid var(--dark-border);
+}
+
+/* Libellés des diplômes */
+#modalDiplomaList,
+#modalDiplomaList .diploma-item,
+#modalDiplomaList .diploma-item span{
+  color: var(--dark-text) !important;
+}
+
+/* Petits éléments secondaires */
+#modalEtabLabel{
+  color: var(--dark-muted) !important;
+}
+
+/* (optionnel) améliore la lisibilité des filtres */
+.filter-pill{
+  background: rgba(255,255,255,0.05);
+  color: var(--dark-text);
+  border-color: var(--dark-border);
+}
+
+
+/* =========================================================
+   1) LIGHTBOX (modal diplômes) : overlay opaque + carte blanche
+   ========================================================= */
+
+/* L’overlay doit assombrir le fond (sinon on voit tout dessous) */
+#modalOverlay.modal-overlay,
+#loginOverlay.modal-overlay{
+  background: rgba(2, 6, 23, 0.72) !important; /* bleu nuit, opaque */
+  backdrop-filter: blur(2px);
+}
+
+/* La boîte de dialogue : fond blanc, texte noir */
+#modalOverlay .modal,
+#loginOverlay .modal{
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Titres & libellés (contraste assuré) */
+#modalOverlay .modal h3,
+#loginOverlay .modal h3,
+#modalEtabLabel,
+#loginOverlay p,
+#loginMessage{
+  color: #111827 !important;
+}
+
+/* Liste des diplômes : forcer le texte en noir */
+#modalDiplomaList,
+#modalDiplomaList .diploma-item,
+#modalDiplomaList .diploma-item span{
+  color: #111827 !important;
+}
+
+/* Les “pills” de filtre : lisibles en fond blanc */
+.filter-pill{
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+.filter-pill.active{
+  background: #f59e0b !important; /* orange */
+  color: #111827 !important;       /* très lisible sur orange */
+  border-color: #f59e0b !important;
+}
+
+/* =========================================================
+   2) Bouton "Valider" de la lightbox en orange
+   ========================================================= */
+#modalSaveTop.btn-primary,
+#modalSaveBottom.btn-primary{
+  background: #f59e0b !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  font-weight: 800;
+}
+#modalSaveTop.btn-primary:hover,
+#modalSaveBottom.btn-primary:hover{
+  filter: brightness(1.05);
+}
+
+/* (optionnel) Annuler un peu plus neutre */
+#modalCancelTop.btn-secondary,
+#modalCancelBottom.btn-secondary{
+  background: #e5e7eb !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+/* =========================================================
+   3) Bouton "Choisir les diplômes" (liste établissement) en token orange
+   ========================================================= */
+.btn-choose{
+  background: #f59e0b !important;      /* token orange */
+  color: #111827 !important;           /* contraste */
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  border-radius: 999px !important;     /* effet “token/chip” */
+  padding: 6px 14px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+.btn-choose:hover{ filter: brightness(1.05); }
+
+/* =========================================================
+   4) Login : "Accès réservé" blanc sur blanc → on force le contraste
+   ========================================================= */
+#loginOverlay .login-modal h3{
+  color: #111827 !important;
+}
+#loginOverlay .login-input{
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+}
+/* =========================================================
+   Recherche établissement : masquée et inactive
+   ========================================================= */
+.search-row{
+  display: none !important;     /* invisible */
+}
+
+#etabSearch{
+  pointer-events: none !important; /* aucun clic possible */
+  opacity: 0 !important;
+}
+
+
+  </style>
+  
+</head>
+<body>
+<div id="header-container"></div>
+<div class="app">
+  <h1>Association Établissements ↔ Diplômes</h1>
+
+  <div class="panel">
+    <div class="header-row">
+      <div>
+        <div class="counter" id="currentUserBanner"></div>
+        <div class="counter" id="counterEtab"></div>
+        <div class="counter" id="counterDiplomes"></div>
+      </div>
+      <!-- Boutons retirés de l’interface -->
+    </div>
+
+    <div class="search-row">
+      <input
+        id="etabSearch"
+        class="search-input"
+        type="text"
+        placeholder="Rechercher un établissement…"
+      />
+    </div>
+  </div>
+
+  <div id="etabList"></div>
+
+  <div class="status-message" id="status"></div>
+</div>
+
+<!-- Overlay de chargement -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <span>Chargement des données…</span>
+  </div>
+</div>
+
+<!-- MODAL DIPLÔMES -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3>Choisir les diplômes</h3>
+    <div id="modalEtabLabel"></div>
+
+    <div id="modalFilterBar" class="filter-bar"></div>
+
+    <div class="modal-footer">
+      <button id="modalCancelTop" class="btn-secondary">Annuler</button>
+      <button id="modalSaveTop" class="btn-primary">Valider</button>
+    </div>
+
+    <div id="modalDiplomaList" class="diploma-list-grid"></div>
+
+    <div class="modal-footer">
+      <button id="modalCancelBottom" class="btn-secondary">Annuler</button>
+      <button id="modalSaveBottom" class="btn-primary">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LOGIN -->
+<div id="loginOverlay" class="modal-overlay visible">
+  <div class="modal login-modal">
+    <h3>Accès réservé</h3>
+    <p>
+      Merci de saisir votre code utilisateur (code lié à votre établissement).
+      Une fois validé, vous pourrez modifier les diplômes.
+    </p>
+    <input
+      id="loginCodeInput"
+      class="login-input"
+      type="text"
+      autocomplete="off"
+      placeholder="Code utilisateur…"
+    />
+    <div id="loginMessage" class="login-message"></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button id="loginCancelBtn" class="btn-secondary">Annuler</button>
+      <button id="loginSubmitBtn" class="btn-primary">Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === Tables / colonnes === */
+const ETAB_TABLE       = "Etablissements_edi";
+const ETAB_LABEL_COL   = "$appellation_officielle";
+const ETAB_DIP_COL     = "$Diplomes";
+const ETAB_STATUS_COL  = "Statut";
+
+/* TABLE HISTORIQUE : nom affiché dans Grist */
+const HISTO_TABLE_LABEL = "HISTORIQUE_EQUIPEMENTS";
+let histoTableId = null;
+
+const HISTO_DATE_COL           = "Date_heure";
+const HISTO_CODE_ETAB_COL      = "Code_etab";
+const HISTO_ACTION_COL         = "Action";
+const HISTO_EQUIPEMENT_COL     = "Equipement";
+const HISTO_DETAILS_COL        = "Details";
+const HISTO_ADMIN_NOM_COL      = "Admin_Nom";
+const HISTO_ADMIN_PRENOM_COL   = "Admin_Prenom";
+const HISTO_ADMIN_ETAB_COL     = "Admin_Etab";
+const HISTO_ROWID_COL          = "RowId";
+const HISTO_DIP_REF_COL        = "Diplomes_EN_OK";
+const HISTO_CONCAT_COL         = "Concatenation";
+const HISTO_DIPLOME_COL        = "Diplome";
+
+/* Colonnes possibles pour le code utilisateur dans la table établissements */
+const USER_CODE_CANDIDATE_COLS = [
+  "Code_utilisateur",
+  "Code_Utilisateur",
+  "Code_user",
+  "Codepaca",
+  "Code_etab"
+];
+
+const DIP_TABLE      = "Diplomes_EN_OK";
+const DIP_CONCAT_COL = "Concatenation";
+const DIP_NAME_COL   = "Diplome";
+
+/* Contexte global */
+let etablissements = [];
+let diplomas       = [];
+let currentEtab    = null;
+
+let modalFamilyFilter   = "TOUS";
+let diplomaCategories   = [];
+let initialLoadLaunched = false;
+let etabSearchTerm      = "";
+
+let currentUser   = null;
+let docApiReady   = false;
+
+/* Login : tentatives + URL d'accueil */
+const MAX_LOGIN_ATTEMPTS = 3;
+const HOME_URL           = "https://preventionpaca.github.io/guide/";
+let loginAttempts        = 0;
+
+/* ------- helpers ------- */
+function stripDollar(name) {
+  if (!name) return name;
+  return name[0] === "$" ? name.slice(1) : name;
+}
+
+function normalizeText(str) {
+  return String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function inferDiplomaCategory(diplomeName) {
+  if (!diplomeName) return "Autre";
+  const s = diplomeName.trim().toUpperCase();
+
+  if (s.startsWith("CAP ")) return "CAP";
+  if (s.startsWith("CAPA ")) return "CAPA";
+  if (s.startsWith("BEP ")) return "BEP";
+  if (s.startsWith("BAC PRO")) return "BAC PRO";
+  if (s.startsWith("BACCALAURÉAT PROFESSIONNEL") || s.startsWith("BACCALAUREAT PROFESSIONNEL"))
+    return "BAC PRO";
+  if (s.startsWith("BP ")) return "BP";
+  if (s.startsWith("BMA ")) return "BMA";
+  if (s.startsWith("BTS ")) return "BTS";
+  if (s.startsWith("CERTIFICAT ")) return "CERTIFICAT";
+  if (s.startsWith("CS3")) return "CS3";
+  if (s.startsWith("CS4")) return "CS4";
+  if (s.startsWith("DIPLÔME") || s.startsWith("DIPLOME")) return "DIPLÔME";
+
+  const firstWord = s.split(/\s+/)[0];
+  return firstWord || "Autre";
+}
+
+const CATEGORY_ORDER = {
+  "CAP": 1,
+  "CAPA": 2,
+  "BEP": 3,
+  "BAC PRO": 4,
+  "BP": 5,
+  "BMA": 6,
+  "BTS": 7,
+  "CERTIFICAT": 8,
+  "CS3": 9,
+  "CS4": 10,
+  "DIPLÔME": 11,
+  "Autre": 99
+};
+
+function setStatus(msg, ok = true){
+  const s = document.getElementById("status");
+  s.style.color = ok ? "green" : "red";
+  s.textContent = msg || "";
+}
+
+/* Version silencieuse : debug en console seulement */
+function debugStatus(msg, ok = true){
+  console.log("DEBUG:", msg);
+}
+
+function showLoading(on){
+  const overlay = document.getElementById("loadingOverlay");
+  overlay.style.display = on ? "flex" : "none";
+}
+
+function parseListString(str){
+  if (!str) return [];
+  return String(str)
+    .split(";")
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function buildListString(arr){
+  return arr.join(" ; ");
+}
+
+function navigateTop(url) {
+  if (!url) return;
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (e) {
+    window.location.href = url;
+  }
+}
+
+/* ====== RÉCUPÉRER L'ID INTERNE DE LA TABLE HISTORIQUE ====== */
+async function getHistoTableId() {
+  if (histoTableId) return histoTableId;
+  if (!grist.docApi) return null;
+
+  try {
+    const meta = await grist.docApi.fetchTable("_grist_Tables");
+
+    const candidateSet = new Set();
+    candidateSet.add(HISTO_TABLE_LABEL);
+
+    ["tableId", "id", "tableRef"].forEach(col => {
+      const arr = meta[col];
+      if (arr && arr.length) {
+        for (let v of arr) {
+          if (v != null) {
+            candidateSet.add(String(v));
+          }
+        }
+      }
+    });
+
+    const candidates = Array.from(candidateSet);
+    debugStatus("getHistoTableId : candidats = " + candidates.join(", "), true);
+
+    for (const cand of candidates) {
+      try {
+        const t = await grist.docApi.fetchTable(cand);
+        const cols = Object.keys(t).filter(k => k !== "id");
+
+        const hasDate   = cols.includes(HISTO_DATE_COL);
+        const hasAction = cols.includes(HISTO_ACTION_COL);
+        const hasDet    = cols.includes(HISTO_DETAILS_COL);
+
+        if (hasDate && hasAction && hasDet) {
+          histoTableId = cand;
+          debugStatus(
+            "Table historique détectée : " + cand +
+            " (colonnes : " + cols.join(", ") + ")",
+            true
+          );
+          return histoTableId;
+        }
+      } catch (e) {
+        // candidat non pertinent, on ignore
+      }
+    }
+
+    debugStatus(
+      "getHistoTableId : aucune table avec colonnes " +
+      HISTO_DATE_COL + "/" + HISTO_ACTION_COL + "/" + HISTO_DETAILS_COL,
+      false
+    );
+    return null;
+
+  } catch (e) {
+    console.error("Erreur getHistoTableId :", e);
+    debugStatus("Erreur getHistoTableId : " + (e.message || e), false);
+    return null;
+  }
+}
+
+/* ------- DIPLÔMES ------- */
+async function loadDiplomas(){
+  const t = await grist.docApi.fetchTable(DIP_TABLE);
+
+  const ids      = t.id || [];
+  const concat   = t[DIP_CONCAT_COL] || [];
+  const diplName = t[DIP_NAME_COL] || t["Diplôme"] || [];
+
+  diplomas = [];
+  const catSet = new Set();
+
+  for (let i = 0; i < ids.length; i++){
+    const id = ids[i];
+    if (id == null) continue;
+
+    const diplomeName = (diplName[i] && String(diplName[i]).trim()) || "";
+    const labelConcat = (concat[i] && String(concat[i]).trim()) || "";
+    const fullLabel   = labelConcat || diplomeName || "(Diplôme sans nom)";
+
+    const category = inferDiplomaCategory(diplomeName || fullLabel);
+    catSet.add(category);
+
+    diplomas.push({
+      id,
+      fullLabel,
+      diplomeName: diplomeName || fullLabel,
+      category
+    });
+  }
+
+  document.getElementById("counterDiplomes").textContent =
+    diplomas.length + " diplômes disponibles";
+
+  diplomaCategories = Array.from(catSet);
+  diplomaCategories.sort((a,b) => {
+    const r1 = CATEGORY_ORDER[a] ?? 50;
+    const r2 = CATEGORY_ORDER[b] ?? 50;
+    if (r1 !== r2) return r1 - r2;
+    return a.localeCompare(b, "fr");
+  });
+}
+
+/* ------- ÉTABLISSEMENTS ------- */
+async function loadEtablissements(){
+  const t = await grist.docApi.fetchTable(ETAB_TABLE);
+
+  const idCol      = t.id || [];
+  const labelCol   = t[stripDollar(ETAB_LABEL_COL)]  || t[ETAB_LABEL_COL]  || [];
+  const dipCol     = t[stripDollar(ETAB_DIP_COL)]    || t[ETAB_DIP_COL]    || [];
+  const statusCol  = t[stripDollar(ETAB_STATUS_COL)] || t[ETAB_STATUS_COL] || [];
+
+  etablissements = [];
+
+  for (let i = 0; i < idCol.length; i++){
+    const id = idCol[i];
+    if (id == null) continue;
+
+    const rawStatus = statusCol[i] != null ? String(statusCol[i]).trim().toLowerCase() : "";
+    if (rawStatus !== "on") continue;
+
+    const label = (labelCol[i] && String(labelCol[i]).trim()) || "(Établissement sans nom)";
+    const dipList = parseListString(dipCol[i]);
+    const normList = dipList.map(normalizeText);
+
+    etablissements.push({
+      id,
+      label,
+      diplomaLabels: dipList,
+      normalizedDiplomaLabels: normList
+    });
+  }
+
+  /* 👉 Pré-filtre : si un utilisateur est connecté, on ne garde
+     que son établissement dans la liste */
+  if (currentUser && currentUser.etabRowId != null) {
+    etablissements = etablissements.filter(e => e.id === currentUser.etabRowId);
+  }
+
+  etablissements.sort((a,b) => a.label.localeCompare(b.label, "fr"));
+
+  document.getElementById("counterEtab").textContent =
+    etablissements.length + " établissement" + (etablissements.length > 1 ? "s" : "");
+}
+
+/* ------- AFFICHAGE ÉTABLISSEMENTS ------- */
+function renderEtablissements(){
+  const container = document.getElementById("etabList");
+  container.innerHTML = "";
+
+  let list = etablissements.slice();
+  const term = normalizeText(etabSearchTerm);
+
+  if (term) {
+    list = list.filter(e =>
+      normalizeText(e.label).includes(term)
+    );
+  }
+
+  list.forEach(etab => {
+    const div = document.createElement("div");
+    div.className = "etab-card";
+
+    const header = document.createElement("div");
+    header.className = "etab-header-row";
+
+    const left = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "etab-title";
+    title.textContent = etab.label;
+    left.appendChild(title);
+
+    const btn = document.createElement("button");
+    btn.className = "btn-choose";
+    btn.textContent = "Choisir les diplômes";
+    btn.addEventListener("click", () => openModal(etab));
+
+    header.appendChild(left);
+    header.appendChild(btn);
+
+    const dipsDiv = document.createElement("div");
+    dipsDiv.className = "diplomas-text";
+
+    if (!etab.diplomaLabels.length){
+      dipsDiv.innerHTML = "<b>Diplômes :</b> Aucun";
+    } else {
+      const html = "<b>Diplômes :</b> " + etab.diplomaLabels.join(" ; ");
+      dipsDiv.innerHTML = html;
+    }
+
+    div.appendChild(header);
+    div.appendChild(dipsDiv);
+    container.appendChild(div);
+  });
+}
+
+/* ------- MODAL FILTRES ------- */
+function renderModalFilters(){
+  const bar = document.getElementById("modalFilterBar");
+  bar.innerHTML = "";
+
+  const pillAll = document.createElement("div");
+  pillAll.className = "filter-pill" + (modalFamilyFilter === "TOUS" ? " active" : "");
+  pillAll.textContent = "Tous";
+  pillAll.addEventListener("click", () => {
+    modalFamilyFilter = "TOUS";
+    renderModalFilters();
+    renderModalDiplomaList();
+  });
+  bar.appendChild(pillAll);
+
+  diplomaCategories.forEach(cat => {
+    const pill = document.createElement("div");
+    pill.className = "filter-pill" + (modalFamilyFilter === cat ? " active" : "");
+    pill.textContent = cat;
+    pill.addEventListener("click", () => {
+      modalFamilyFilter = cat;
+      renderModalFilters();
+      renderModalDiplomaList();
+    });
+    bar.appendChild(pill);
+  });
+}
+
+/* ------- MODAL DIPLÔMES ------- */
+function renderModalDiplomaList(){
+  const container = document.getElementById("modalDiplomaList");
+  container.innerHTML = "";
+  if (!currentEtab) return;
+
+  let list = diplomas.slice();
+
+  if (modalFamilyFilter !== "TOUS") {
+    list = list.filter(d => d.category === modalFamilyFilter);
+  }
+
+  if (modalFamilyFilter === "TOUS") {
+    list.sort((a,b) => {
+      const r1 = CATEGORY_ORDER[a.category] ?? 50;
+      const r2 = CATEGORY_ORDER[b.category] ?? 50;
+      if (r1 !== r2) return r1 - r2;
+      return a.fullLabel.localeCompare(b.fullLabel, "fr");
+    });
+  } else {
+    list.sort((a,b) => a.fullLabel.localeCompare(b.fullLabel, "fr"));
+  }
+
+  const total = list.length;
+  if (total === 0) {
+    container.style.gridTemplateColumns = "repeat(1, 1fr)";
+    return;
+  }
+
+  const maxCols = 4;
+  const approxPerCol = 22;
+  let numCols = Math.min(maxCols, Math.max(1, Math.ceil(total / approxPerCol)));
+  container.style.gridTemplateColumns = `repeat(${numCols}, 1fr)`;
+
+  const columns = [];
+  for (let c = 0; c < numCols; c++) {
+    const colDiv = document.createElement("div");
+    colDiv.className = "diploma-column";
+    container.appendChild(colDiv);
+    columns.push(colDiv);
+  }
+
+  const perCol = Math.ceil(total / numCols);
+
+  const normSelected = currentEtab.normalizedDiplomaLabels && currentEtab.normalizedDiplomaLabels.length
+    ? currentEtab.normalizedDiplomaLabels
+    : (currentEtab.diplomaLabels || []).map(normalizeText);
+
+  list.forEach((dip, index) => {
+    const label = document.createElement("label");
+    label.className = "diploma-item";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = dip.fullLabel;
+
+    const normLabel = normalizeText(dip.fullLabel);
+    if (normSelected.includes(normLabel)) {
+      cb.checked = true;
+    }
+
+    const span = document.createElement("span");
+
+    let display = dip.fullLabel;
+    if (modalFamilyFilter !== "TOUS") {
+      const cat = modalFamilyFilter.toUpperCase();
+      const upperFull = dip.fullLabel.toUpperCase();
+      if (upperFull.startsWith(cat + " ")) {
+        display = dip.fullLabel.slice(cat.length + 1);
+      }
+    }
+    span.textContent = display;
+
+    label.appendChild(cb);
+    label.appendChild(span);
+
+    const colIndex = Math.min(columns.length - 1, Math.floor(index / perCol));
+    columns[colIndex].appendChild(label);
+  });
+}
+
+/* ------- OUVERTURE / FERMETURE MODAL ------- */
+function openModal(etab){
+  currentEtab = etab;
+  modalFamilyFilter = "TOUS";
+
+  document.getElementById("modalEtabLabel").textContent = etab.label;
+
+  renderModalFilters();
+  renderModalDiplomaList();
+
+  document.getElementById("modalOverlay").classList.add("visible");
+}
+
+function closeModal(){
+  document.getElementById("modalOverlay").classList.remove("visible");
+  currentEtab = null;
+}
+
+/* ===== HISTORIQUE ===== */
+function findDiplomaByFullLabel(fullLabel) {
+  const norm = normalizeText(fullLabel);
+  return diplomas.find(d => normalizeText(d.fullLabel) === norm) || null;
+}
+
+async function addHistoryEntry(action, etab, detailsText, diploma) {
+  if (!grist.docApi || !docApiReady) {
+    debugStatus("addHistoryEntry ignoré (docApiReady=" + docApiReady + ")", false);
+    return;
+  }
+
+  const tableId = await getHistoTableId();
+  if (!tableId) {
+    debugStatus("addHistoryEntry : table historique introuvable", false);
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const fields = {};
+  fields[HISTO_DATE_COL]       = nowIso;
+  fields[HISTO_CODE_ETAB_COL]  = currentUser && currentUser.codeEtab != null
+    ? currentUser.codeEtab
+    : (etab && etab.id != null ? etab.id : null);
+  fields[HISTO_ACTION_COL]     = action;
+  fields[HISTO_EQUIPEMENT_COL] = etab && etab.id != null ? etab.id : null;
+  fields[HISTO_DETAILS_COL]    = detailsText || "";
+
+  if (currentUser) {
+    fields[HISTO_ADMIN_NOM_COL]    = currentUser.adminNom || "";
+    fields[HISTO_ADMIN_PRENOM_COL] = currentUser.adminPrenom || "";
+    fields[HISTO_ADMIN_ETAB_COL]   = currentUser.adminEtab || "";
+  }
+
+  fields[HISTO_ROWID_COL] = 0;
+
+  if (diploma) {
+    fields[HISTO_DIP_REF_COL] = diploma.id;
+    fields[HISTO_CONCAT_COL]  = diploma.fullLabel;
+    fields[HISTO_DIPLOME_COL] = diploma.diplomeName;
+  }
+
+  debugStatus("addHistoryEntry → action='" + action + "' pour etab=" + (etab ? etab.id : "?") +
+              " sur tableId='" + tableId + "'");
+
+  try {
+    await grist.docApi.applyUserActions([["AddRecord", tableId, null, fields]]);
+    debugStatus("Ligne d'historique ajoutée (" + action + ")", true);
+  } catch (e) {
+    console.error("Erreur lors de l'ajout dans l'historique :", e);
+    setStatus("Erreur d'écriture dans l'historique : " + (e.message || e), false);
+  }
+}
+
+/* ------- SAUVEGARDE DIPLÔMES + HISTORIQUE ------- */
+async function saveDiplomasForEtab(etab){
+  const checkboxes = document.querySelectorAll("#modalDiplomaList input[type='checkbox']");
+
+  const visibleMap = {};
+  checkboxes.forEach(cb => {
+    const full = cb.value;
+    const norm = normalizeText(full);
+    visibleMap[norm] = { full, checked: cb.checked };
+  });
+
+  const prevFull = etab.diplomaLabels || [];
+  const prevNormSet = new Set(prevFull.map(normalizeText));
+
+  const newList = [];
+
+  prevFull.forEach(full => {
+    const norm = normalizeText(full);
+    const info = visibleMap[norm];
+    if (info) {
+      if (info.checked) {
+        newList.push(full);
+      }
+    } else {
+      newList.push(full);
+    }
+  });
+
+  Object.values(visibleMap).forEach(info => {
+    const norm = normalizeText(info.full);
+    if (info.checked && !prevNormSet.has(norm)) {
+      newList.push(info.full);
+    }
+  });
+
+  etab.diplomaLabels = newList;
+  etab.normalizedDiplomaLabels = newList.map(normalizeText);
+
+  const value = buildListString(newList);
+  const colName = stripDollar(ETAB_DIP_COL);
+
+  debugStatus("saveDiplomasForEtab pour etab=" + etab.id + " – ancien=" + prevFull.length + " / nouveau=" + newList.length);
+
+  await grist.docApi.applyUserActions([
+    ["UpdateRecord", ETAB_TABLE, etab.id, { [colName]: value }]
+  ]);
+
+  const newNormSet = new Set(newList.map(normalizeText));
+
+  const added = [];
+  const removed = [];
+
+  newList.forEach(full => {
+    const norm = normalizeText(full);
+    if (!prevNormSet.has(norm)) {
+      added.push(full);
+    }
+  });
+
+  prevFull.forEach(full => {
+    const norm = normalizeText(full);
+    if (!newNormSet.has(norm)) {
+      removed.push(full);
+    }
+  });
+
+  const globalDetails = "Diplômes sélectionnés pour " + etab.label + " : " + (value || "Aucun");
+  await addHistoryEntry("Mise à jour diplômes", etab, globalDetails, null);
+
+  for (const label of added) {
+    const dipl = findDiplomaByFullLabel(label);
+    const d = "Ajout du diplôme '" + label + "' pour " + etab.label;
+    await addHistoryEntry("Ajout diplôme établissement", etab, d, dipl);
+  }
+
+  for (const label of removed) {
+    const dipl = findDiplomaByFullLabel(label);
+    const d = "Suppression du diplôme '" + label + "' pour " + etab.label;
+    await addHistoryEntry("Suppression diplôme établissement", etab, d, dipl);
+  }
+
+  setStatus("Enregistré ✔️", true);
+}
+
+/* ------- INIT / RELOAD ------- */
+async function reloadAll(){
+  if (!currentUser) return;
+  showLoading(true);
+  setStatus("Chargement…", true);
+  try {
+    await loadDiplomas();
+    await loadEtablissements();
+    renderEtablissements();
+
+    const banner = document.getElementById("currentUserBanner");
+    if (currentUser) {
+      const nomAff = ((currentUser.adminPrenom || "") + " " + (currentUser.adminNom || "")).trim();
+      const etabAff = currentUser.adminEtab || "";
+      banner.textContent = "Modification en cours par " + (nomAff || currentUser.code) +
+        (etabAff ? " — " + etabAff : "");
+    } else {
+      banner.textContent = "";
+    }
+
+    setStatus("Données chargées.", true);
+  } catch (e){
+    console.error(e);
+    setStatus("Erreur de chargement : " + (e.message || e), false);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function triggerInitialLoad(){
+  if (initialLoadLaunched) return;
+  initialLoadLaunched = true;
+}
+
+/* ------- VALIDATION MODAL ------- */
+function handleModalSave() {
+  (async () => {
+    if (currentEtab){
+      try {
+        await saveDiplomasForEtab(currentEtab);
+      } catch (e){
+        console.error(e);
+        setStatus("Erreur lors de l'enregistrement : " + (e.message || e), false);
+      }
+      renderEtablissements();
+    }
+    closeModal();
+  })();
+}
+
+/* ===== LOGIN PAR CODE UTILISATEUR ===== */
+async function handleLoginSubmit() {
+  const input = document.getElementById("loginCodeInput");
+  const msg   = document.getElementById("loginMessage");
+  const code  = (input.value || "").trim();
+
+  if (!code) {
+    msg.textContent = "Merci de saisir un code.";
+    msg.style.color = "red";
+    return;
+  }
+  if (!docApiReady) {
+    msg.textContent = "Initialisation en cours, veuillez patienter…";
+    msg.style.color = "red";
+    return;
+  }
+
+  showLoading(true);
+  msg.textContent = "";
+  msg.style.color = "inherit";
+
+  try {
+    const t = await grist.docApi.fetchTable(ETAB_TABLE);
+
+    const idCol    = t.id || [];
+    const labelCol = t[stripDollar(ETAB_LABEL_COL)] || t[ETAB_LABEL_COL] || [];
+
+    let codeColData = null;
+    for (const col of USER_CODE_CANDIDATE_COLS) {
+      const data = t[stripDollar(col)] || t[col];
+      if (data) {
+        codeColData = data;
+        break;
+      }
+    }
+
+    if (!codeColData) {
+      throw new Error("Aucune colonne de code utilisateur trouvée dans la table des établissements.");
+    }
+
+    const adminNomCol    = t["Admin_Nom"]    || [];
+    const adminPrenomCol = t["Admin_Prenom"] || [];
+
+    let foundIndex = -1;
+    for (let i = 0; i < idCol.length; i++) {
+      const raw = codeColData[i];
+      if (raw != null && String(raw).trim() === code) {
+        foundIndex = i;
+        break;
+      }
+    }
+
+    if (foundIndex === -1) {
+      loginAttempts++;
+      const reste = MAX_LOGIN_ATTEMPTS - loginAttempts;
+      if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        msg.textContent = "Accès refusé. Redirection vers l’accueil…";
+        msg.style.color = "red";
+        showLoading(true);
+        setTimeout(() => {
+          navigateTop(HOME_URL);
+        }, 800);
+      } else {
+        msg.textContent = "Code invalide ou non trouvé. Tentatives restantes : " + reste;
+        msg.style.color = "red";
+      }
+      return;
+    }
+
+    currentUser = {
+      code,
+      etabRowId: idCol[foundIndex],
+      codeEtab: codeColData[foundIndex],
+      adminNom: adminNomCol[foundIndex]    || "",
+      adminPrenom: adminPrenomCol[foundIndex] || "",
+      adminEtab: labelCol[foundIndex] || ""
+    };
+
+    document.getElementById("loginOverlay").classList.remove("visible");
+    await reloadAll();
+  } catch (e) {
+    console.error(e);
+    msg.textContent = "Erreur lors de la vérification du code : " + (e.message || e);
+    msg.style.color = "red";
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* ------- ÉCOUTEURS ------- */
+document.getElementById("modalCancelTop").addEventListener("click", closeModal);
+document.getElementById("modalSaveTop").addEventListener("click", handleModalSave);
+document.getElementById("modalCancelBottom").addEventListener("click", closeModal);
+document.getElementById("modalSaveBottom").addEventListener("click", handleModalSave);
+
+document.getElementById("loginSubmitBtn").addEventListener("click", handleLoginSubmit);
+document.getElementById("loginCodeInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handleLoginSubmit();
+  }
+});
+
+/* Annuler login = retour immédiat à l’accueil */
+document.getElementById("loginCancelBtn").addEventListener("click", () => {
+  navigateTop(HOME_URL);
+});
+
+document.getElementById("etabSearch").addEventListener("input", (e) => {
+  etabSearchTerm = e.target.value || "";
+  renderEtablissements();
+});
+
+/* ------- GRIST READY ------- */
+grist.ready({ requiredAccess: "full" });
+showLoading(true);
+
+function waitForDocApiReady() {
+  try {
+    if (grist.docApi && typeof grist.docApi.fetchTable === "function") {
+      docApiReady = true;
+      showLoading(false);
+      triggerInitialLoad();
+    } else {
+      setTimeout(waitForDocApiReady, 300);
+    }
+  } catch (e) {
+    console.error(e);
+    setTimeout(waitForDocApiReady, 300);
+  }
+}
+
+waitForDocApiReady();
+</script>
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+</body>
+</html>
