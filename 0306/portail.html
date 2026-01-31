@@ -5,85 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portail prévention PACA</title>
 
-  <!-- CSS commun + CSS portail -->
-  <link rel="stylesheet" href="../css/pp-core.css" />
-  <link rel="stylesheet" href="../css/pp-portail.css" />
-<script type="module">
-import { isInGristWidget } from "../js/pp-runtime.js";
-</script>
-  <!-- Script Grist -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  
+  <script>
+    // App logique pour Supabase (docId résolu via resolve-app)
+    window.PP_APP_NAME = "site";
+  </script>
+<!-- CSS commun + CSS portail -->
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
+  <!-- Script Grist (chargé uniquement si la page est ouverte dans Grist) -->
+  <script>
+  (function () {
+    const inGrist =
+      (window.parent !== window) &&
+      /getgrist\.com|docs\.getgrist\.com/i.test(document.referrer || "");
+    if (!inGrist) return;
 
-<script>
-  // ✅ Forcer l'app Supabase (même docId Grist : 4eHMq8g5jsqb)
-  window.PP_APP_NAME = "equipements";
-</script>
+    const s = document.createElement("script");
+    s.src = "https://docs.getgrist.com/grist-plugin-api.js";
+    s.onload = () => { try { window.grist?.ready?.(); } catch (e) {} };
+    document.head.appendChild(s);
+  })();
+  </script>
 
-<script>
-/* ==========================================================
-   PP_DATA_LAYER (GitHub Pages + Grist)
-   - Si la page est dans Grist: utilise grist.docApi.fetchTable/applyUserActions
-   - Sinon: utilise Supabase Edge Functions (read-app/auth-code/write-app)
-   ========================================================== */
-(function(){
-  const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-  const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
-  const SB_ROOT = sbBase + "/functions/v1";
-  window.PP_SB_ROOT = SB_ROOT;
-  window.PP_SB_API_READ  = SB_ROOT + "/read-app";
-  window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
-  window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
-  window.PP_APP_NAME = window.PP_APP_NAME || "portail";
-window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function' && window.parent !== window);
-
-
-  function rowsToGristTable(rows){
-    if(!Array.isArray(rows) || !rows.length) return {id:[]};
-    const cols = new Set();
-    for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
-    cols.delete('id');
-    const t={id:[]};
-    for(const c of cols) t[c]=[];
-    for(const r of rows){
-      t.id.push(r.id);
-      for(const c of cols) t[c].push(r[c]);
-    }
-    return t;
-  }
-
-  async function sbFetchTable(tableName){
-    const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(window.PP_APP_NAME) + "&table=" + encodeURIComponent(tableName);
-    let r = await fetch(url1, {credentials:'omit'});
-    let j = await r.json().catch(()=>null);
-    if(j && j.ok){
-      // ✅ Support du format {records:[{id, fields:{...}}]}
-      if (Array.isArray(j.records)) {
-        const rows = j.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
-        return rowsToGristTable(rows);
-      }
-      if(j.table) return j.table;
-      if(Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-      if(Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if(j.items && Array.isArray(j.items)) return rowsToGristTable(j.items);
-      if(j.tables && j.tables[tableName]) return j.tables[tableName];
-      return j;
-    }
-    const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(window.PP_APP_NAME);
-    r = await fetch(url2, {credentials:'omit'});
-    j = await r.json().catch(()=>null);
-    if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
-    throw new Error(j?.error || "Lecture Supabase impossible");
-  }
-
-  window.PP_fetchTable = async function(tableName){
-    if(window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-    return sbFetchTable(tableName);
-  };
-})();
-</script>
-
-
-  <style>
+<style>
     /* Ajout : bouton Tableau de bord poussé à gauche dans le footer de la card */
     .ppaca-card-footer {
       display: flex;
@@ -133,20 +78,18 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
 
           <!-- ✅ NOUVEAU : Tableau de bord (aligné à gauche) -->
           <a
-        href="https://preventionpaca.github.io/guide/0306/tableaubord.html"
-            class="ppaca-btn-secondary ppaca-btn-secondary--ghost"
+            href="https://preventionpaca.github.io/guide/#dashboard"
+            class="ppaca-btn-secondary ppaca-btn-dashboard"
             target="_top" rel="noopener"
           >
             Tableau de bord
-            
           </a>
 
           <!-- Boutons existants -->
           <a
-           href="https://preventionpaca.github.io/guide/0306/savoirplus.html"
-            class="ppaca-btn-secondary ppaca-btn-secondary--ghost"
+            href="https://preventionpaca.github.io/guide/guide_iframe.html?src=https%3A%2F%2Fdocs.getgrist.com%2FgvPEJV3qAHS9%2FEquipements-de-travail-et-produits%2Fp%2F104%3Fembed%3Dtrue%26style%3DsinglePage%26exclude-headers%3Dtrue"
+            class="ppaca-btn-secondary"
             target="_top" rel="noopener"
-
           >
             En savoir plus
           </a>
@@ -604,18 +547,18 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
   }
 
   async function loadFromGrist() {
-    const doc = (window.PP_IS_GRIST ? grist.docApi : null);
+    const doc = grist.docApi;
 
     // On récupère ce qui sert aux tuiles + l'historique
     const [tAgenc, tBlocs, tFil] = await Promise.all([
-      PP_fetchTable('Agencement_portail'),
-      PP_fetchTable('Blocs'),
-      PP_fetchTable('Fil_info')
+      doc.fetchTable('Agencement_portail'),
+      doc.fetchTable('Blocs'),
+      doc.fetchTable('Fil_info')
     ]);
 
     let tHist = null;
     try {
-      tHist = await PP_fetchTable('Historique_equipements');
+      tHist = await doc.fetchTable('Historique_equipements');
     } catch (e) {
       console.warn('Historique_equipements non accessible', e);
     }
@@ -649,25 +592,17 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
     buildTiles(blocsRowsAll, filInfo, histLast10, layoutRow);
   }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const inGrist = !!window.PP_IS_GRIST;
-
-  if (inGrist) {
-    // On est vraiment dans un widget Grist (iframe)
-    grist.ready();
-  } else {
-    // On est sur GitHub Pages : surtout PAS de grist.ready()
-    console.log("Mode GitHub : chargement via Supabase (PP_fetchTable)");
-  }
-
-  // IMPORTANT : on charge les tuiles dans tous les cas
-  // car PP_fetchTable choisit Grist ou Supabase selon PP_IS_GRIST
-  loadFromGrist().catch(err => console.error('Erreur chargement tuiles', err));
-});
-
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.grist) {
+      grist.ready();
+      loadFromGrist().catch(err => console.error('Erreur chargement Grist', err));
+    } else {
+      console.warn('Grist API non disponible');
+    }
+  });
 </script>
-<script src="../js/pp-config.js"></script>
-<script src="../js/pp-header.js"></script>
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
 </html>
