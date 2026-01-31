@@ -5,48 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portail prévention PACA</title>
 
-  
-  <script>
-    // App logique pour Supabase (docId résolu via resolve-app)
-    window.PP_APP_NAME = "equipements";
-  </script>
-<!-- CSS commun + CSS portail -->
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
-  <!-- Script Grist (chargé uniquement si la page est ouverte dans Grist) -->
-  <script>
-  (function () {
-    const inGrist =
-      (window.parent !== window) &&
-      /getgrist\.com|docs\.getgrist\.com/i.test(document.referrer || "");
-    if (!inGrist) return;
+  <!-- CSS commun + CSS portail -->
+  <link rel="stylesheet" href="../css/pp-core.css" />
+  <link rel="stylesheet" href="../css/pp-portail.css" />
 
-    const s = document.createElement("script");
-    s.src = "https://docs.getgrist.com/grist-plugin-api.js";
-    s.onload = () => { try { window.grist?.ready?.(); } catch (e) {} };
-    document.head.appendChild(s);
+  <!-- Config (routes + Supabase) -->
+  <script src="../js/pp-config.js"></script>
+
+  <style>
+    /* Ajout : bouton Tableau de bord poussé à gauche dans le footer de la card */
+    .ppaca-card-footer { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .ppaca-btn-dashboard { margin-right:auto; }
+  </style>
+
+  <script>
+  // Détection fiable : on est dans un widget Grist (iframe) ?
+  function isInGristWidget() {
+    try {
+      return !!(window.grist && window.grist.docApi && window.parent !== window);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /* ==========================================================
+     PP_DATA_LAYER (GitHub Pages + Grist)
+     - Dans Grist : grist.docApi.fetchTable
+     - Sur GitHub : Supabase Edge Function read-app (via ppAPI.read)
+     ========================================================== */
+  (function(){
+    // APP Grist/Supabase à utiliser (registre -> Apps)
+    // 👉 Par défaut on suit le pp-config : "equipements"
+    const APP = (window.PP_APP_DEFAULT || "equipements");
+
+    function rowsToGristTableFromRecords(records){
+      // records = [{id, fields:{...}}, ...] (format Grist REST)
+      const ids = [];
+      const cols = new Set();
+      for (const r of (records||[])) {
+        ids.push(r.id);
+        const f = (r && r.fields) ? r.fields : {};
+        Object.keys(f).forEach(k => cols.add(k));
+      }
+      const table = { id: ids };
+      for (const c of cols) table[c] = [];
+      for (const r of (records||[])) {
+        const f = (r && r.fields) ? r.fields : {};
+        for (const c of cols) table[c].push(f[c]);
+      }
+      return table;
+    }
+
+    async function sbFetchTable(tableName){
+      // read-app?app=...&table=...
+      const data = await window.ppAPI.read(APP, { table: tableName });
+
+      // Cas 1 : déjà un tableau "table" au format {id:[...], Col:[...]}
+      if (data.table && data.table.id) return data.table;
+
+      // Cas 2 : records Grist REST
+      if (Array.isArray(data.records)) return rowsToGristTableFromRecords(data.records);
+
+      // Cas 3 : items simplifiés (Liste_des_equipements) => on reconstruit
+      if (Array.isArray(data.items)) {
+        const ids = data.items.map(x => x.id);
+        return { id: ids, label: data.items.map(x=>x.label), Type: data.items.map(x=>x.Type) };
+      }
+
+      throw new Error(data.error || "Réponse read-app inattendue");
+    }
+
+    window.PP_IS_GRIST = isInGristWidget() && (window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === "function");
+
+    window.PP_fetchTable = async function(tableName){
+      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+      return sbFetchTable(tableName);
+    };
   })();
   </script>
-
-<style>
-    /* Ajout : bouton Tableau de bord poussé à gauche dans le footer de la card */
-    .ppaca-card-footer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .ppaca-btn-dashboard {
-      margin-right: auto; /* pousse les autres boutons à droite */
-    }
-  </style>
 </head>
 
 <body>
 <div class="page-wrap">
-
- <div id="header-container"></div>
-
+  <div id="header-container"></div>
 
   <!-- ===== CARTOUCHE PPP (texte d’intro) ===== -->
   <section class="ppaca-section">
@@ -75,32 +116,17 @@
         </p>
 
         <div class="ppaca-card-footer">
+          <a href="../0306/tableaubord.html"
+             class="ppaca-btn-secondary ppaca-btn-dashboard"
+             target="_top" rel="noopener">Tableau de bord</a>
 
-          <!-- ✅ NOUVEAU : Tableau de bord (aligné à gauche) -->
-          <a
-            href="https://preventionpaca.github.io/guide/#dashboard"
-            class="ppaca-btn-secondary ppaca-btn-dashboard"
-            target="_top" rel="noopener"
-          >
-            Tableau de bord
-          </a>
+          <a href="../0306/savoirplus.html"
+             class="ppaca-btn-secondary"
+             target="_top" rel="noopener">En savoir plus</a>
 
-          <!-- Boutons existants -->
-          <a
-            href="https://preventionpaca.github.io/guide/guide_iframe.html?src=https%3A%2F%2Fdocs.getgrist.com%2FgvPEJV3qAHS9%2FEquipements-de-travail-et-produits%2Fp%2F104%3Fembed%3Dtrue%26style%3DsinglePage%26exclude-headers%3Dtrue"
-            class="ppaca-btn-secondary"
-            target="_top" rel="noopener"
-          >
-            En savoir plus
-          </a>
-
-          <a
-            href="https://preventionpaca.github.io/guide/guide_iframe.html?src=https%3A%2F%2Fdocs.getgrist.com%2FgvPEJV3qAHS9%2FEquipements-de-travail-et-produits%2Fp%2F102%3Fembed%3Dtrue%26style%3DsinglePage%26exclude-headers%3Dtrue"
-            class="ppaca-btn-secondary ppaca-btn-secondary--ghost"
-            target="_top" rel="noopener"
-          >
-            Schéma fonctionnel
-          </a>
+          <a href="../guide_iframe.html?src=https%3A%2F%2Fdocs.getgrist.com%2FgvPEJV3qAHS9%2FEquipements-de-travail-et-produits%2Fp%2F102%3Fembed%3Dtrue%26style%3DsinglePage%26exclude-headers%3Dtrue"
+             class="ppaca-btn-secondary ppaca-btn-secondary--ghost"
+             target="_top" rel="noopener">Schéma fonctionnel</a>
         </div>
       </div>
     </div>
@@ -110,102 +136,85 @@
   <section class="tile-frame">
     <main id="tileGrid" class="tile-grid"></main>
   </section>
-
 </div>
 
+<script src="../js/pp-header.js"></script>
 
-<!-- ===== JS GRIST : UNIQUEMENT POUR LES TUILES ===== -->
 <script>
-  // Nom de la page dans la table Blocs
-  const PAGE_NAME = 'Portail';
+  const PAGE_NAME = "Portail";
 
+  const PORTAL_ROOT = (window.PP_SITE_BASE || "https://preventionpaca.github.io/guide/");
 
-  // Racine du portail (index.html)
-  const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
-  const ROUTES = {
-    home: PORTAL_ROOT + '#home',
-    base: PORTAL_ROOT + '#base',
-    medicalStd: PORTAL_ROOT + '#medical',
-    medicalCustom: PORTAL_ROOT + '#medical-custom'
-  };
+  const WRAPPER_BASE   = PORTAL_ROOT + "guide_iframe.html?src=";
+  const WRAPPER_MARKER = "guide_iframe.html";
 
-  // wrapper QR / deep-link (on conserve)
-  const WRAPPER_BASE   = 'https://preventionpaca.github.io/guide/guide_iframe.html?src=';
-  const WRAPPER_MARKER = 'guide_iframe.html';
-
-  // mapping Grist -> route interne (pages cles)
+  // mapping Grist -> route interne (pages clés)
   const GRIST_KEY_ROUTES = [
-    { match: '/p/59',  to: ROUTES.home },
-    { match: '/p/119', to: ROUTES.base },
-    { match: '/p/67',  to: ROUTES.medicalStd },
-    { match: '/p/141', to: ROUTES.medicalCustom }
+    { match: "/p/59",  to: (window.PP_LINKS && window.PP_LINKS.home) ? window.PP_LINKS.home : (PORTAL_ROOT + "#home") },
+    { match: "/p/119", to: (window.PP_LINKS && window.PP_LINKS.base) ? window.PP_LINKS.base : (PORTAL_ROOT + "#base") },
+    { match: "/p/67",  to: (window.PP_LINKS && window.PP_LINKS.avism) ? window.PP_LINKS.avism : (PORTAL_ROOT + "#avism") },
+    { match: "/p/141", to: (window.PP_LINKS && window.PP_LINKS.avisp) ? window.PP_LINKS.avisp : (PORTAL_ROOT + "#avisp") }
   ];
 
   function rowsToRecordsCompat(table) {
-    if (window.grist && typeof grist.rowsToRecords === 'function') {
-      return grist.rowsToRecords(table);
-    }
+    // Accepte {id:[...], Col:[...]} ou {id:[...], fields:{Col:[...]}}
     const ids = table.id || [];
     const records = [];
-    let columnArrays = {};
 
-    if (table.fields && typeof table.fields === 'object') {
+    let columnArrays = {};
+    if (table.fields && typeof table.fields === "object") {
       columnArrays = table.fields;
     } else {
       for (const [key, value] of Object.entries(table)) {
-        if (key === 'id') continue;
+        if (key === "id") continue;
         if (Array.isArray(value)) columnArrays[key] = value;
       }
     }
 
     for (let i = 0; i < ids.length; i++) {
       const rec = { id: ids[i] };
-      for (const [col, values] of Object.entries(columnArrays)) {
-        rec[col] = values[i];
-      }
+      for (const [col, values] of Object.entries(columnArrays)) rec[col] = values[i];
       records.push(rec);
     }
     return records;
   }
 
   function normalizeName(v) {
-    if (!v) return '';
+    if (!v) return "";
     let s = String(v).trim().toLowerCase();
-    try {
-      s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    } catch (e) {}
-    s = s.replace(/[_\s]+/g, ' ');
-    s = s.replace(/\s+/g, ' ');
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) {}
+    s = s.replace(/[_\s]+/g, " ").replace(/\s+/g, " ");
     return s;
   }
 
   function colorToClass(c) {
-    if (!c) return '';
+    if (!c) return "";
     const v = String(c).toLowerCase();
-    if (v.includes('blanc'))        return 'tile--white';
-    if (v.includes('vert'))         return 'tile--green';
-    if (v.includes('orange'))       return 'tile--orange';
-    if (v.includes('noir'))         return 'tile--dark';
-    if (v.includes('marron clair')) return 'tile--brown-light';
-    if (v.includes('marron fon'))   return 'tile--brown-dark';
-    if (v.includes('gris'))         return 'tile--gray-light';
-    return '';
+    if (v.includes("blanc"))        return "tile--white";
+    if (v.includes("vert"))         return "tile--green";
+    if (v.includes("orange"))       return "tile--orange";
+    if (v.includes("noir"))         return "tile--dark";
+    if (v.includes("marron clair")) return "tile--brown-light";
+    if (v.includes("marron fon"))   return "tile--brown-dark";
+    if (v.includes("gris"))         return "tile--gray-light";
+    return "";
   }
 
   function truncate(str, n) {
-    const s = String(str || '');
-    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+    const s = String(str || "");
+    return s.length > n ? s.slice(0, n - 1) + "…" : s;
   }
 
   function normalizeUrl(url) {
-    if (!url) return '';
+    if (!url) return "";
     const u = String(url).trim();
-    if (!u) return '';
+    if (!u) return "";
     if (/^https?:\/\//i.test(u)) return u;
-    return 'https://' + u;
+    return "https://" + u;
   }
+
   function decodeMany(s, max) {
-    let out = String(s || '');
+    let out = String(s || "");
     for (let i = 0; i < (max || 6); i++) {
       try {
         const d = decodeURIComponent(out);
@@ -217,21 +226,26 @@
   }
 
   function makeWrapperUrl(url) {
-    const raw = String(url || '').trim();
-    if (!raw) return '';
+    const raw = String(url || "").trim();
+    if (!raw) return "";
 
-    // Routes deja propres
-    if (raw.startsWith(PORTAL_ROOT + '#')) return raw;
+    // ✅ IMPORTANT : si on a des liens du type /guide/0306/#avisp -> on les renvoie vers /guide/#avisp (routeur index)
+    if (raw.includes("/guide/0306/#")) {
+      return raw.replace("/guide/0306/#", "/guide/#");
+    }
 
-    // 1) Normalisation
+    // Si déjà un hash route du site
+    if (raw.startsWith(PORTAL_ROOT + "#")) return raw;
+
+    // Normalisation
     let u = normalizeUrl(raw);
-    if (!u) return '';
+    if (!u) return "";
 
-    // 2) Si deja wrapper (ancien #... ou nouveau ?src=...), on extrait la cible pour pouvoir router
+    // Si wrapper, on extrait la cible
     if (u.includes(WRAPPER_MARKER)) {
       try {
         const uu = new URL(u);
-        const src = uu.searchParams.get('src');
+        const src = uu.searchParams.get("src");
         if (src) {
           const decoded = decodeMany(src, 10);
           if (/^https?:\/\//i.test(decoded)) u = decoded;
@@ -239,305 +253,200 @@
           const decoded = decodeMany(uu.hash.slice(1), 8);
           if (/^https?:\/\//i.test(decoded)) u = decoded;
         }
-      } catch (e) {
-        const idx = u.indexOf('#');
-        if (idx > -1 && idx < u.length - 1) {
-          const decoded = decodeMany(u.slice(idx + 1), 8);
-          if (/^https?:\/\//i.test(decoded)) u = decoded;
-        }
-      }
+      } catch (e) {}
     }
 
-    // 3) Externe (non Grist) : on laisse tel quel
-    if (!u.includes('docs.getgrist.com')) return u;
+    // Externe non Grist : tel quel
+    if (!u.includes("docs.getgrist.com")) return u;
 
-    // 4) Pages "cles" : routes internes
+    // Pages clés : routes internes
     for (const r of GRIST_KEY_ROUTES) {
       if (u.includes(r.match)) return r.to;
     }
 
-    // 5) Sinon : wrapper ?src= (deep-link/QR)
+    // Sinon : wrapper ?src=
     return WRAPPER_BASE + encodeURIComponent(u);
   }
+
   function navigateTop(url) {
     if (!url) return;
-
-    // Important : dans Grist (iframe sandbox), modifier top.location.hash peut être bloqué.
-    // La stratégie la plus fiable est de naviguer l'onglet "top" vers l'URL complète (avec #...).
-    try {
-      if (window.top && window.top !== window) {
-        window.top.location.href = url;
-        return;
-      }
-    } catch (e) {
-      // ignore et on tente autre chose
-    }
-
-    // Fallback : certains contextes sandbox autorisent window.open(..., '_top') même si top est bloqué.
-    try {
-      window.open(url, '_top');
-      return;
-    } catch (e) {
-      // ignore
-    }
-
-    // Dernier recours
+    try { window.top.location.href = url; return; } catch(e) {}
+    try { window.open(url, "_top"); return; } catch(e) {}
     window.location.href = url;
   }
 
-  // Tri Historique : Date_heure décroissante, sinon id décroissant
   function sortHistoriqueRows(rows) {
     return rows.slice().sort((a, b) => {
       const da = a.Date_heure ? new Date(a.Date_heure).getTime() : NaN;
       const db = b.Date_heure ? new Date(b.Date_heure).getTime() : NaN;
-
-      if (!isNaN(da) && !isNaN(db)) {
-        return db - da; // plus récents d'abord
-      }
-      const ia = typeof a.id === 'number' ? a.id : 0;
-      const ib = typeof b.id === 'number' ? b.id : 0;
+      if (!isNaN(da) && !isNaN(db)) return db - da;
+      const ia = typeof a.id === "number" ? a.id : 0;
+      const ib = typeof b.id === "number" ? b.id : 0;
       return ib - ia;
     });
   }
 
   function buildTiles(blocsRowsAll, filInfoRows, histRows, layoutRow) {
-    const grid = document.getElementById('tileGrid');
-    grid.innerHTML = '';
+    const grid = document.getElementById("tileGrid");
+    grid.innerHTML = "";
 
-    const layoutCols = layoutRow && layoutRow.Nbre_colonne
-      ? Number(layoutRow.Nbre_colonne) || 4
-      : 4;
-
-    const maxBlocks = layoutRow && layoutRow.Nbre_Bloc
-      ? Number(layoutRow.Nbre_Bloc) || blocsRowsAll.length
-      : blocsRowsAll.length;
+    const layoutCols = layoutRow && layoutRow.Nbre_colonne ? (Number(layoutRow.Nbre_colonne) || 4) : 4;
+    const maxBlocks  = layoutRow && layoutRow.Nbre_Bloc    ? (Number(layoutRow.Nbre_Bloc) || blocsRowsAll.length) : blocsRowsAll.length;
 
     if (!blocsRowsAll.length) {
-      const msg = document.createElement('div');
-      msg.style.gridColumn = '1 / -1';
-      msg.style.padding = '12px 16px';
-      msg.style.borderRadius = '12px';
-      msg.style.background = 'rgba(220, 38, 38, 0.12)';
-      msg.style.border = '1px solid rgba(248, 113, 113, 0.4)';
-      msg.style.fontSize = '0.8rem';
-      msg.textContent =
-        `Aucun bloc trouvé pour la page "${PAGE_NAME}". ` +
-        `Vérifie la colonne "Page" dans la table "Blocs".`;
+      const msg = document.createElement("div");
+      msg.style.gridColumn = "1 / -1";
+      msg.style.padding = "12px 16px";
+      msg.style.borderRadius = "12px";
+      msg.style.background = "rgba(220, 38, 38, 0.12)";
+      msg.style.border = "1px solid rgba(248, 113, 113, 0.4)";
+      msg.style.fontSize = "0.8rem";
+      msg.textContent = `Aucun bloc trouvé pour la page "${PAGE_NAME}". Vérifie la colonne "Page" dans la table "Blocs".`;
       grid.appendChild(msg);
       return;
     }
 
-    const blocsRows = blocsRowsAll
-      .slice()
+    const blocsRows = blocsRowsAll.slice()
       .sort((a, b) => (a.num_bloc || 0) - (b.num_bloc || 0))
       .slice(0, maxBlocks);
 
-    const nbBlocs = blocsRows.length;
-    const cssCols = Math.min(layoutCols, nbBlocs || layoutCols);
-    document.documentElement.style.setProperty('--grid-columns', cssCols);
+    document.documentElement.style.setProperty("--grid-columns", Math.min(layoutCols, blocsRows.length || layoutCols));
 
     const cols = layoutCols;
-
     const counts = {};
-    blocsRows.forEach(b => {
-      const t = b.Titre_bloc || '';
-      counts[t] = (counts[t] || 0) + 1;
-    });
+    blocsRows.forEach(b => { const t = b.Titre_bloc || ""; counts[t] = (counts[t] || 0) + 1; });
     const duplicates = new Set(Object.keys(counts).filter(t => counts[t] > 1));
     const already = new Set();
+    const newsNorm = normalizeName("Fil info");
 
-    const newsNorm = normalizeName('Fil info');
     const byTitle = {};
-    blocsRows.forEach(b => {
-      const t = b.Titre_bloc || '';
-      if (!byTitle[t]) byTitle[t] = [];
-      byTitle[t].push(b);
-    });
+    blocsRows.forEach(b => { const t = b.Titre_bloc || ""; (byTitle[t] ||= []).push(b); });
 
     blocsRows.forEach(bloc => {
-      const title = bloc.Titre_bloc || '';
+      const title = bloc.Titre_bloc || "";
       const dup = duplicates.has(title);
-      if (dup) {
-        if (already.has(title)) return;
-        already.add(title);
-      }
+      if (dup) { if (already.has(title)) return; already.add(title); }
 
-      const tile = document.createElement('div');
-      tile.className = 'tile';
-
+      const tile = document.createElement("div");
+      tile.className = "tile";
       const colorClass = colorToClass(bloc.Couleur);
       if (colorClass) tile.classList.add(colorClass);
 
       if (dup && byTitle[title].length === 2) {
         const [b1, b2] = byTitle[title].sort((x, y) => x.num_bloc - y.num_bloc);
-        const pos1 = (b1.num_bloc || 1) - 1;
-        const pos2 = (b2.num_bloc || 1) - 1;
+        const pos1 = (b1.num_bloc || 1) - 1, pos2 = (b2.num_bloc || 1) - 1;
         const r1 = Math.floor(pos1 / cols), c1 = pos1 % cols;
         const r2 = Math.floor(pos2 / cols), c2 = pos2 % cols;
-
-        if (normalizeName(title) === newsNorm) {
-          tile.classList.add('tile--tall');
-        } else if (r1 === r2 && Math.abs(c1 - c2) === 1) {
-          tile.classList.add('tile--wide');
-        } else if (c1 === c2 && Math.abs(r1 - r2) === 1) {
-          tile.classList.add('tile--tall');
-        }
+        if (normalizeName(title) === newsNorm) tile.classList.add("tile--tall");
+        else if (r1 === r2 && Math.abs(c1 - c2) === 1) tile.classList.add("tile--wide");
+        else if (c1 === c2 && Math.abs(r1 - r2) === 1) tile.classList.add("tile--tall");
       }
 
-      const icon = document.createElement('div');
-      icon.className = 'tile-icon';
-      icon.textContent = bloc.Initiale_bloc || '';
+      const icon = document.createElement("div");
+      icon.className = "tile-icon";
+      icon.textContent = bloc.Initiale_bloc || "";
       tile.appendChild(icon);
 
-      const main = document.createElement('div');
-      main.className = 'tile-main';
+      const main = document.createElement("div");
+      main.className = "tile-main";
       tile.appendChild(main);
 
-      const titleEl = document.createElement('div');
-      titleEl.className = 'tile-title';
-      titleEl.textContent = title || '(sans titre)';
+      const titleEl = document.createElement("div");
+      titleEl.className = "tile-title";
+      titleEl.textContent = title || "(sans titre)";
       main.appendChild(titleEl);
 
-      const descEl = document.createElement('div');
-      descEl.className = 'tile-desc';
-      descEl.textContent = bloc.Sous_titre1 || '';
+      const descEl = document.createElement("div");
+      descEl.className = "tile-desc";
+      descEl.textContent = bloc.Sous_titre1 || "";
       main.appendChild(descEl);
 
       const isNews = normalizeName(title) === newsNorm;
 
       if (isNews) {
         const hasAny = (filInfoRows && filInfoRows.length) || (histRows && histRows.length);
-
         if (!hasAny) {
-          // Rien à afficher : petit message neutre
-          const msg = document.createElement('div');
-          msg.style.fontSize = '0.8rem';
-          msg.style.opacity = '0.7';
-          msg.textContent = 'Aucune information à afficher pour le moment.';
+          const msg = document.createElement("div");
+          msg.style.fontSize = "0.8rem";
+          msg.style.opacity = "0.7";
+          msg.textContent = "Aucune information à afficher pour le moment.";
           main.appendChild(msg);
         } else {
-          tile.style.cursor = 'default';
-
-          const viewport = document.createElement('div');
-          viewport.className = 'news-viewport';
-          const track = document.createElement('div');
-          track.className = 'news-track';
+          tile.style.cursor = "default";
+          const viewport = document.createElement("div");
+          viewport.className = "news-viewport";
+          const track = document.createElement("div");
+          track.className = "news-track";
           viewport.appendChild(track);
 
-          // --- Fil info (inchangé : avec lien) ---
           const makeItemFilInfo = row => {
-            const a = document.createElement('a');
-            a.className = 'news-item';
-
-            const t  = row.Titre || '';
-            const st = row.Sous_titre || '';
-            const c  = truncate(row.Contenu || '', 20);
+            const a = document.createElement("a");
+            a.className = "news-item";
+            const t  = row.Titre || "";
+            const st = row.Sous_titre || "";
+            const c  = truncate(row.Contenu || "", 20);
             a.textContent = `${t} — ${st} : ${c}`;
-
             const url = makeWrapperUrl(row.Lien);
-            if (url) {
-              a.href   = url;
-              a.target = '_top';
-            } else {
-              a.href = '#';
-            }
+            a.href = url || "#";
+            a.target = "_top";
             return a;
           };
 
           const filItems = (filInfoRows || []).map(makeItemFilInfo);
-
-          // --- Historique_equipements : 10 dernières lignes, texte seul (Details), pas de lien ---
           const histItems = (histRows || []).map(row => {
-            const div = document.createElement('div');
-            div.className = 'news-item';
-            const txt = row.Details || row.DETAILS || '';
-            div.textContent = truncate(txt, 80);
+            const div = document.createElement("div");
+            div.className = "news-item";
+            div.textContent = truncate((row.Details || row.DETAILS || ""), 80);
             return div;
           });
 
-          // On prépare une base d’items (Fil info + Historique)
           const baseItems = [...filItems, ...histItems];
+          const effectiveBase = baseItems.length ? baseItems : [(() => {
+            const d = document.createElement("div");
+            d.className = "news-item";
+            d.textContent = "Aucune information à afficher pour le moment.";
+            return d;
+          })()];
 
-          // Sécurité : si, pour une raison X, on n’a rien, on met un placeholder
-          const effectiveBase = baseItems.length ? baseItems : ([
-            (() => {
-              const d = document.createElement('div');
-              d.className = 'news-item';
-              d.textContent = 'Aucune information à afficher pour le moment.';
-              return d;
-            })()
-          ]);
-
-          // On force un nombre FIXE d’éléments dans la piste pour découpler du nombre de lignes
-          const TARGET_COUNT = 20; // par ex. 20 items dans le track
-          for (let i = 0; i < TARGET_COUNT; i++) {
-            const src = effectiveBase[i % effectiveBase.length];
-            track.appendChild(src.cloneNode(true));
-          }
-
+          const TARGET_COUNT = 20;
+          for (let i = 0; i < TARGET_COUNT; i++) track.appendChild(effectiveBase[i % effectiveBase.length].cloneNode(true));
           main.appendChild(viewport);
         }
-
       } else {
         const sousG = bloc.Sous_titre_G;
         const sousD = bloc.Sous_titre_D;
 
         if (sousG || sousD) {
-          const bottom = document.createElement('div');
-          bottom.className = 'tile-bottom-links';
+          const bottom = document.createElement("div");
+          bottom.className = "tile-bottom-links";
 
           if (sousG) {
-            const aG = document.createElement('a');
-            aG.className = 'tile-link';
+            const aG = document.createElement("a");
+            aG.className = "tile-link";
             aG.textContent = sousG;
-            if (bloc.Url_G) {
-              const urlG = makeWrapperUrl(bloc.Url_G);
-              if (urlG) {
-                aG.href   = urlG;
-                aG.target = '_top';
-              } else {
-                aG.href = '#';
-              }
-            } else {
-              aG.href = '#';
-            }
+            const urlG = makeWrapperUrl(bloc.Url_G);
+            aG.href = urlG || "#";
+            aG.target = "_top";
             bottom.appendChild(aG);
           }
 
           if (sousD) {
-            const aD = document.createElement('a');
-            aD.className = 'tile-link';
+            const aD = document.createElement("a");
+            aD.className = "tile-link";
             aD.textContent = sousD;
-            if (bloc.Url_D) {
-              const urlD = makeWrapperUrl(bloc.Url_D);
-              if (urlD) {
-                aD.href   = urlD;
-                aD.target = '_top';
-              } else {
-                aD.href = '#';
-              }
-            } else {
-              aD.href = '#';
-            }
+            const urlD = makeWrapperUrl(bloc.Url_D);
+            aD.href = urlD || "#";
+            aD.target = "_top";
             bottom.appendChild(aD);
           }
-
           main.appendChild(bottom);
-
         } else if (bloc.Url_bloc) {
           const urlBloc = makeWrapperUrl(bloc.Url_bloc);
-
-          tile.addEventListener('click', () => {
-            if (!urlBloc) return;
-            navigateTop(urlBloc);
-          });
+          tile.addEventListener("click", () => urlBloc && navigateTop(urlBloc));
           tile.tabIndex = 0;
-          tile.setAttribute('role', 'link');
-          tile.addEventListener('keypress', e => {
-            if ((e.key === 'Enter' || e.key === ' ') && urlBloc) {
-              e.preventDefault();
-              navigateTop(urlBloc);
-            }
+          tile.setAttribute("role", "link");
+          tile.addEventListener("keypress", e => {
+            if ((e.key === "Enter" || e.key === " ") && urlBloc) { e.preventDefault(); navigateTop(urlBloc); }
           });
         }
       }
@@ -546,63 +455,43 @@
     });
   }
 
-  async function loadFromGrist() {
-    const doc = grist.docApi;
-
-    // On récupère ce qui sert aux tuiles + l'historique
+  async function loadTiles() {
     const [tAgenc, tBlocs, tFil] = await Promise.all([
-      doc.fetchTable('Agencement_portail'),
-      doc.fetchTable('Blocs'),
-      doc.fetchTable('Fil_info')
+      PP_fetchTable("Agencement_portail"),
+      PP_fetchTable("Blocs"),
+      PP_fetchTable("Fil_info")
     ]);
 
     let tHist = null;
-    try {
-      tHist = await doc.fetchTable('Historique_equipements');
-    } catch (e) {
-      console.warn('Historique_equipements non accessible', e);
-    }
+    try { tHist = await PP_fetchTable("Historique_equipements"); } catch(e) {}
 
-    const agRows    = rowsToRecordsCompat(tAgenc);
-    const blocsAll  = rowsToRecordsCompat(tBlocs);
-    const filInfo   = rowsToRecordsCompat(tFil);
-    const histAll   = tHist ? rowsToRecordsCompat(tHist) : [];
-    const histSorted = sortHistoriqueRows(histAll);
-    const histLast10 = histSorted.slice(0, 10); // toujours les 10 derniers au moment du chargement
+    const agRows = rowsToRecordsCompat(tAgenc);
+    const blocsAll = rowsToRecordsCompat(tBlocs);
+    const filInfo = rowsToRecordsCompat(tFil);
+    const histAll = tHist ? rowsToRecordsCompat(tHist) : [];
+    const histLast10 = sortHistoriqueRows(histAll).slice(0,10);
 
     const currentNorm = normalizeName(PAGE_NAME);
-
     let agencementName = PAGE_NAME;
-    if (currentNorm === normalizeName('Portail')) {
-      agencementName = 'Accueil';
-    } else if (currentNorm === normalizeName('Acces_Admin')) {
-      agencementName = 'Accès Admin';
-    } else if (currentNorm === normalizeName('Acces_DDFPT')) {
-      agencementName = 'Accès DDFPT';
-    }
+    if (currentNorm === normalizeName("Portail")) agencementName = "Accueil";
+    else if (currentNorm === normalizeName("Acces_Admin")) agencementName = "Accès Admin";
+    else if (currentNorm === normalizeName("Acces_DDFPT")) agencementName = "Accès DDFPT";
 
-    const layoutRow =
-      agRows.find(r => normalizeName(r.Page) === normalizeName(agencementName)) ||
-      agRows[0] || null;
-
-    const blocsRowsAll = blocsAll.filter(
-      b => normalizeName(b.Page) === normalizeName(PAGE_NAME)
-    );
+    const layoutRow = agRows.find(r => normalizeName(r.Page) === normalizeName(agencementName)) || agRows[0] || null;
+    const blocsRowsAll = blocsAll.filter(b => normalizeName(b.Page) === normalizeName(PAGE_NAME));
 
     buildTiles(blocsRowsAll, filInfo, histLast10, layoutRow);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.grist) {
-      grist.ready();
-      loadFromGrist().catch(err => console.error('Erreur chargement Grist', err));
-    } else {
-      console.warn('Grist API non disponible');
+  document.addEventListener("DOMContentLoaded", () => {
+    // En GitHub Pages : pas de grist.ready()
+    // En widget Grist : ok, mais optionnel pour fetchTable
+    if (window.PP_IS_GRIST && window.grist && window.grist.ready) {
+      try { window.grist.ready(); } catch(e) {}
     }
+    loadTiles().catch(err => console.error("Erreur chargement tuiles", err));
   });
 </script>
-<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
-<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
 </html>
