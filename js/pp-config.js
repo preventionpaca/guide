@@ -5,6 +5,10 @@
 (function () {
   // --- Site ---
   window.PP_SITE_BASE  = "https://preventionpaca.github.io/guide/";
+
+  // --- APP VERSION (pages HTML) ---
+  window.PP_APP_DIR  = "0306/";
+  window.PP_APP_BASE = window.PP_SITE_BASE + window.PP_APP_DIR;
   window.PP_HEADER_URL = "https://preventionpaca.github.io/guide/partials/pp-header.html";
   window.PP_THEME_KEY  = "ppp-theme";
   window.PP_PAGE       = window.PP_PAGE || "";
@@ -28,7 +32,18 @@
   };
 
   window.PP_ROUTE = function (key) {
-    return window.PP_SITE_BASE + "#" + (key || "home");
+    const k = key || "home";
+    const map = {
+      home:      window.PP_APP_BASE + "portail.html#home",
+      portal:    window.PP_APP_BASE + "portail.html#home",
+      dashboard: window.PP_APP_BASE + "tableaubord.html",
+      base:      window.PP_APP_BASE + "base.html#base",
+      admin:     window.PP_APP_BASE + "ddfpt.html",
+      ddfpt:     window.PP_APP_BASE + "ddfpt.html",
+      avisp:     window.PP_APP_BASE + "avismedical_P.html",
+      avism:     window.PP_APP_BASE + "avismedical_P.html"
+    };
+    return map[k] || (window.PP_SITE_BASE + "#" + k);
   };
 
   window.PP_WRAP_SRC = function (gristUrl) {
