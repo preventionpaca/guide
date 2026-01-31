@@ -29,7 +29,8 @@ import { isInGristWidget } from "../js/pp-runtime.js";
   window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
   window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
   window.PP_APP_NAME = window.PP_APP_NAME || "portail";
-  window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function');
+window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function' && window.parent !== window);
+
 
   function rowsToGristTable(rows){
     if(!Array.isArray(rows) || !rows.length) return {id:[]};
@@ -636,14 +637,22 @@ import { isInGristWidget } from "../js/pp-runtime.js";
     buildTiles(blocsRowsAll, filInfo, histLast10, layoutRow);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.grist) {
-      grist.ready();
-      loadFromGrist().catch(err => console.error('Erreur chargement Grist', err));
-    } else {
-      console.warn('Grist API non disponible');
-    }
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  const inGrist = (window.isInGristWidget && window.isInGristWidget());
+
+  if (inGrist) {
+    // On est vraiment dans un widget Grist (iframe)
+    grist.ready();
+  } else {
+    // On est sur GitHub Pages : surtout PAS de grist.ready()
+    console.log("Mode GitHub : chargement via Supabase (PP_fetchTable)");
+  }
+
+  // IMPORTANT : on charge les tuiles dans tous les cas
+  // car PP_fetchTable choisit Grist ou Supabase selon PP_IS_GRIST
+  loadFromGrist().catch(err => console.error('Erreur chargement tuiles', err));
+});
+
 </script>
 <script src="../js/pp-config.js"></script>
 <script src="../js/pp-header.js"></script>
