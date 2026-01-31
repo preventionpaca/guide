@@ -7,4 +7,6 @@
 
   window.PP_SUPABASE_URL="https://hpiqwvwpxzppxpxhjede.supabase.co";
   window.PP_SUPABASE_FN_BASE=window.PP_SUPABASE_URL+"/functions/v1";
+  window.PP_HEADER_URL = "https://preventionpaca.github.io/guide/partials/pp-header.html";
+
 })();
