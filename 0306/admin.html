@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Portail prévention PACA – Accès administrateur</title>
+  <link rel="icon" href="data:," />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
@@ -329,10 +330,16 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
       msg.style.borderRadius = '12px';
       msg.style.background = 'rgba(220, 38, 38, 0.12)';
       msg.style.border = '1px solid rgba(248, 113, 113, 0.4)';
-      msg.style.fontSize = '0.8rem';
-      msg.textContent =
-        `Aucun bloc trouvé pour la page "${TILE_PAGE_NAME}". ` +
-        `Vérifie la valeur exacte dans la colonne "Page" (table "Blocs") : par ex. Acces_ADMIN / Acces_Admin / Accès Admin.`;
+      msg.style.fontSize = '0.82rem';
+
+      const pages = (window.__PP_ADMIN_PAGES__ && Array.isArray(window.__PP_ADMIN_PAGES__)) ? window.__PP_ADMIN_PAGES__ : [];
+      const pagesTxt = pages.length ? pages.join(', ') : '(aucune)';
+
+      msg.innerHTML =
+        '<div style="font-weight:700;margin-bottom:6px;">Aucune tuile pour la page "' + TILE_PAGE_NAME + '"</div>'
+        + '<div style="opacity:.9;margin-bottom:6px;">Valeurs "Page" détectées dans <code>Blocs</code> : <code>' + pagesTxt + '</code></div>'
+        + '<div style="opacity:.85">Attendu pour l’admin : <code>Acces_ADMIN</code> (comme dans ta base). '
+        + 'Si les lignes admin existent mais ne remontent pas, on ajustera les noms de colonnes (Titre_bloc, Sous_titre1, Url_bloc…).</div>';
       grid.appendChild(msg);
       return;
     }
@@ -507,22 +514,6 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
     });
   }
 
-    try{
-      console.info('[ADMIN] Tuiles rendues:', grid.children.length);
-      if(grid.children.length===0){
-        const msg=document.createElement('div');
-        msg.style.gridColumn='1 / -1';
-        msg.style.padding='12px 16px';
-        msg.style.borderRadius='12px';
-        msg.style.background='rgba(220, 38, 38, 0.12)';
-        msg.style.border='1px solid rgba(248, 113, 113, 0.4)';
-        msg.style.fontSize='0.8rem';
-        msg.textContent='Aucune tuile rendue (données présentes). Vérifie les champs Titre_bloc / Sous_titre1 / Url_bloc dans Blocs.';
-        grid.appendChild(msg);
-      }
-    }catch(e){}
-  })
-
   async function loadFromGrist() {
 
     const [tAgenc, tBlocs, tFil] = await Promise.all([
@@ -560,10 +551,10 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
       b => normalizeName(b.Page) === normalizeName(TILE_PAGE_NAME)
     );
 
-    buildTiles;
-    try{
-      console.info('[ADMIN] Blocs page "'+TILE_PAGE_NAME+'":', blocsRowsAll.length, blocsRowsAll.slice(0,3));
-    }catch(e){}
+    // --- Diagnostic visible (si aucune tuile admin n'apparaît) ---
+    const allPages = Array.from(new Set(blocsAll.map(b => String(b.Page||'').trim()).filter(Boolean)));
+    window.__PP_ADMIN_PAGES__ = allPages;
+
 
     buildTiles(blocsRowsAll, filInfo, layoutRow);
   }
