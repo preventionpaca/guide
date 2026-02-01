@@ -840,6 +840,15 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
+
+try {
+    await PP_AUTH.requireDdfpt();
+    // ✅ seulement après : ton code actuel
+    // loadFromGrist() / buildTiles() / etc.
+  } catch (e) {
+    // AUTH_REQUIRED => la modal est ouverte, on ne fait rien.
+  }
+    
     if (window.PP_IS_GRIST && window.grist && window.grist.ready) { if (window.PP_IS_GRIST && window.grist && window.grist.ready) { grist.ready(); }
       const doc = grist.docApi;
 
