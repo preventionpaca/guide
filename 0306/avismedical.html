@@ -1096,6 +1096,21 @@
     window.location.href = 'https://preventionpaca.github.io/guide/#home';
   }
 
+  // --- Persistance du code établissement (comme PDFT) ---
+  const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
+  function getStoredEtabCode() {
+    try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; }
+  }
+  function setStoredEtabCode(code) {
+    try {
+      const v = (code || '').toString().trim().toUpperCase();
+      if (v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
+    } catch {}
+  }
+  function clearStoredEtabCode() {
+    try { localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); } catch {}
+  }
+
   function lockEtablissement(e) {
     if (!e) return;
     selectedEtabCodeNorm = normalize(e.code || "");
@@ -1115,16 +1130,19 @@
     travauxListEl.innerHTML = "";
   }
 
-  function validateCode() {
+  function validateCode(opts = {}) {
+    const silent = !!opts.silent;
+    const remember = opts.remember !== false;
+
     if (!etabsLoaded) {
-      codeError.textContent = "Chargement des établissements, veuillez réessayer dans un instant.";
-      return;
+      if (!silent) codeError.textContent = "Chargement des établissements, veuillez réessayer dans un instant.";
+      return false;
     }
 
     const raw = (codeInput.value || "").trim();
     if (!raw) {
-      codeError.textContent = "Merci de saisir un code établissement.";
-      return;
+      if (!silent) codeError.textContent = "Merci de saisir un code établissement.";
+      return false;
     }
 
     const codeNorm = normalize(raw);
@@ -1132,18 +1150,24 @@
 
     if (match) {
       lockEtablissement(match);
+      if (remember) setStoredEtabCode(raw);
       codeError.textContent = "";
       if (codeModal) codeModal.style.display = "none";
-      return;
+      return true;
     }
 
     codeAttempts++;
     if (codeAttempts >= 3) {
       redirectHome();
-      return;
+      return false;
+    }
+    if (silent) {
+      clearStoredEtabCode();
+      return false;
     }
     codeError.textContent = "Code inconnu. Tentative " + codeAttempts + " / 3.";
     codeInput.focus();
+    return false;
   }
 
   if (codeValidateBtn) codeValidateBtn.addEventListener("click", validateCode);
@@ -1163,6 +1187,34 @@
 
   window.addEventListener("load", () => {
     if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
+
+    const stored = getStoredEtabCode();
+    if (stored) {
+      // tentative d’auto-connexion silencieuse
+      if (codeInput) codeInput.value = stored;
+      if (codeModal) codeModal.style.display = "none";
+
+      const t0 = Date.now();
+      const timer = setInterval(() => {
+        if (etabsLoaded) {
+          clearInterval(timer);
+          const ok = validateCode({ silent: true, remember: true });
+          if (!ok) {
+            // code mémorisé invalide → on redemande
+            if (codeModal) codeModal.style.display = "flex";
+            setTimeout(() => codeInput && codeInput.focus(), 50);
+          }
+        } else if (Date.now() - t0 > 9000) {
+          clearInterval(timer);
+          // Grist/Supabase trop lent → on affiche la lightbox
+          if (codeModal) codeModal.style.display = "flex";
+          setTimeout(() => codeInput && codeInput.focus(), 50);
+        }
+      }, 150);
+      return;
+    }
+
+    // première connexion
     if (codeModal && codeInput) {
       codeModal.style.display = "flex";
       setTimeout(() => codeInput.focus(), 50);
