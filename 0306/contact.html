@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <script>
-    window.PP_APP_NAME = "site";
+    window.PP_APP_NAME = "equipements";
   </script>
   <meta charset="UTF-8" />
   <title>Questions / Contact – Portail prévention PACA</title>
@@ -30,8 +30,7 @@
       const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
       const SB_ROOT = sbBase + "/functions/v1";
 
-      // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
-      window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+      // IMPORTANT: app déjà défini en amont (ex: "equipements")
 
       window.PP_SB_ROOT = SB_ROOT;
       window.PP_SB_API_READ = SB_ROOT + "/read-app";
@@ -540,6 +539,7 @@
     }
 
     async function loadTeamFromBlocs() {
+      console.log("[CONTACT] PP_APP_NAME=", window.PP_APP_NAME, "table=Blocs");
       const tBlocs = await PP_fetchTable('Blocs');   // ✅ comme DDFPT : via PP_fetchTable
       const rows = rowsToRecordsCompat(tBlocs);
       buildTeamBlock(rows);
