@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <script>
-    window.PP_APP_NAME = "equipements";
+    window.PP_APP_NAME = "site";
   </script>
   <meta charset="UTF-8" />
   <title>Questions / Contact – Portail prévention PACA</title>
@@ -516,8 +516,8 @@
         .filter(b => normalizeName(b.Page) === pageNorm)
         .sort((a,b) => (a.num_bloc || 0) - (b.num_bloc || 0))
         .forEach(b => {
-          // On prend ce qui existe : Titre_bloc (souvent utilisé comme texte multi-lignes)
-          const raw = (b.Titre_bloc || b.Sous_titre1 || '').toString();
+          // ✅ Colonne attendue : Titre_bloc (texte multi-lignes)
+          const raw = (b.Titre_bloc || '').toString();
           raw.split(/\r?\n/).forEach(part => {
             const t = part.trim();
             if (t) lines.push(t);
@@ -533,7 +533,7 @@
         });
       } else {
         const li = document.createElement('li');
-        li.textContent = 'Configuration à compléter dans la table « Blocs » (Page = Contact_sondage).';
+        li.textContent = 'Configuration à compléter dans la table « Blocs » (Page = Contact_sondage, colonne Titre_bloc).';
         li.className = 'ppc-team-placeholder';
         listEl.appendChild(li);
       }
