@@ -4971,29 +4971,43 @@ function _hashBaseId(){
   }catch(e){ return null; }
 }
 
-async function sbFetchList(){
+async function sbFetchTable(table){
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(SB_TABLE_MAIN);
+            + '&table=' + encodeURIComponent(String(table||''));
   const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Lecture liste impossible (Supabase)');
+  if(!j || !j.ok) throw new Error(j?.error || ('Lecture table impossible: ' + table));
+
   // Compat: anciennes réponses {items:[...]} ou nouvelles {records:[{id,fields}...]}
   if(Array.isArray(j.items)) return j.items;
   if(Array.isArray(j.records)) return j.records.map(rec=>({ id: rec.id, ...(rec.fields||{}) }));
   return [];
 }
 
-async function sbFetchOne(id){
+async function sbFetchRow(table, id){
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(SB_TABLE_MAIN)
+            + '&table=' + encodeURIComponent(String(table||''))
             + '&id=' + encodeURIComponent(String(id));
   const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Lecture fiche impossible (Supabase)');
-  if(j.record) return j.record; // ancien format {record:{id,fields}}
-  if(Array.isArray(j.records) && j.records[0]) return j.records[0]; // nouveau format
+  if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + table));
+
+  if(j.item) return j.item; // ancien format possible
+  if(j.record) return { id: j.record.id, ...(j.record.fields||{}) };
+  // parfois la function renvoie {items:[...]} même pour un id
+  if(Array.isArray(j.items) && j.items[0]) return j.items[0];
+  if(Array.isArray(j.records) && j.records[0]) return { id: j.records[0].id, ...(j.records[0].fields||{}) };
   return null;
 }
+
+async function sbFetchList(){
+  return sbFetchTable(SB_TABLE_MAIN);
+}
+
+async function sbFetchOne(id){
+  return sbFetchRow(SB_TABLE_MAIN, id);
+}
+
 
 function sbRecToRow(rec){
   try{
@@ -5040,25 +5054,20 @@ async function fetchTable(tbl){
   if(IS_GRIST && window.grist?.docApi?.fetchTable) return toRows(await window.grist.docApi.fetchTable(tbl));
   if(IS_GRIST && window.grist?.docApi?.getTable)   return toRows(await window.grist.docApi.getTable(tbl));
 
-  // Mode public : on ne charge que la table principale via Supabase (liste)
+  // Mode public : via Supabase Edge Function (read-app)
   try{
-    const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-    if(String(tbl) !== String(mainTbl)) return [];
-    const items = await sbFetchList();
-    // Normaliser en "row" compatible (id + libellé + Type)
-    return items.map(it=>{
-      const r = { id: Number(it.id) };
-      try{ r[COL_LIB] = (it.label ?? '').toString(); }catch(e){ r[COL_LIB] = (it.label ?? '').toString(); }
-      // Type si disponible
-      try{ r[ (typeof KIND_COL!=='undefined' ? KIND_COL : 'Type') ] = it.Type ?? it.type ?? ''; }catch(e){}
-      try{ r['Type'] = it.Type ?? it.type ?? r['Type'] ?? ''; }catch(e){}
+    const rows = await sbFetchTable(tbl);
+    // Normaliser : s'assurer d'un champ id numérique si possible
+    return rows.map(r=>{
+      if(r && typeof r === 'object' && 'id' in r) return { ...r, id: Number(r.id) };
       return r;
     });
   }catch(e){
-    console.error('[SB] fetchTable failed', e);
+    console.error('[SB] fetchTable failed', tbl, e);
     return [];
   }
 }
+
 
 async function loadFull(){
   const rows=await fetchTable(TBL_MAIN);
