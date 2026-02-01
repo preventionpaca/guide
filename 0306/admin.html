@@ -192,7 +192,7 @@
       // Blocs: filter by PAGE_NAME; if empty, try common labels; if still empty, show all blocs (better than rien)
       let blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(PAGE_NAME));
       if(!blocsRowsAll.length){
-        const fallbacks = ['Accès Admin','Acces Admin','Admin','Administrateur','Accès administrateur'];
+        const fallbacks = ['Accès Admin','Acces_ADMIN','Admin','Administrateur','Accès administrateur'];
         for(const fb of fallbacks){
           blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(fb));
           if(blocsRowsAll.length) break;
