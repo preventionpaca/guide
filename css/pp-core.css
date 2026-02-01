@@ -227,3 +227,17 @@ body {
   opacity: 0.85;
 }
 
+/* Lien inline (texte) : discret, gras, souligné seulement au survol */
+.ppp-link-inline,
+.ppp-link-inline:visited {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ppp-link-inline:hover,
+.ppp-link-inline:focus-visible {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
