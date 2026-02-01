@@ -56,10 +56,7 @@
   <div class="pp-wait-card">
     <div class="pp-wait-top">
       <div class="pp-spinner" aria-hidden="true"></div>
-      <p class="pp-wait-title">Chargement des tuiles du portail…</p>
-    </div>
-  </div>
-</div>
+    
       <p class="pp-wait-title">Chargement des tuiles du portail…</p>
     </div>
   </div>
@@ -471,8 +468,7 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
       const t = b.Titre_bloc || '';
       counts[t] = (counts[t] || 0) + 1;
     });
-    const __pp_count = grid ? grid.querySelectorAll('.tile').length : 0;
-    window.dispatchEvent(new CustomEvent('pp:tiles-rendered', { detail: { count: __pp_count } }));
+ 
 
     const duplicates = new Set(Object.keys(counts).filter(t => counts[t] > 1));
     const already = new Set();
@@ -674,7 +670,17 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
       }
 
       grid.appendChild(tile);
+      
     });
+
+
+
+      // ... après blocsRows.forEach(...)
+const __pp_count = grid ? grid.querySelectorAll('.tile').length : 0;
+window.dispatchEvent(new CustomEvent('pp:tiles-rendered', { detail: { count: __pp_count } }));
+ const ov = document.getElementById('pp-wait-overlay');
+if (ov) ov.remove();
+   
   }
 
   async function loadFromGrist() {
