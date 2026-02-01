@@ -25,13 +25,14 @@
       dashboard: window.PP_APP_BASE + "tableaubord.html",
       base:      window.PP_APP_BASE + "base.html",
       ddfpt:     window.PP_APP_BASE + "ddfpt.html",
-      admin:     window.PP_APP_BASE + "ddfpt.html",
+      admin:     window.PP_APP_BASE + "admin.html",
       avisp:     window.PP_APP_BASE + "avismedical_P.html",
       avism:     window.PP_APP_BASE + "avismedical_P.html",
       analyse:   window.PP_APP_BASE + "analyse_dipl.html",
       contact:   window.PP_APP_BASE + "contact.html",
       ressources:window.PP_APP_BASE + "ressources.html",
       presentation: window.PP_APP_BASE + "presentation.html"
+      
     };
     return map[k] || (window.PP_SITE_BASE + "#" + k);
   };
