@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Equipements — DDFPT / DREETS (Supabase SB_*)</title>
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
-<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <!-- grist-plugin-api removed for public GitHub page -->
 <script>
   console.log('[PP-TR] LOADED v15.13-FIX-CURRENTREC-FALLBACK');
 </script>
@@ -4953,7 +4953,8 @@ const SB_API_READ  = SB_ROOT + '/read-app';
 const SB_API_AUTH  = SB_ROOT + '/auth-code';
 const SB_API_WRITE = SB_ROOT + '/write-app';
 
-const IS_GRIST = !!(window.grist && window.grist.docApi);
+const FORCE_PUBLIC = (new URLSearchParams(location.search).get('forcePublic')==='1') || /github\.io$/i.test(location.hostname);
+const IS_GRIST = !FORCE_PUBLIC && !!(window.grist && window.grist.docApi);
 
 function _hashBaseId(){
   try{
@@ -5025,8 +5026,8 @@ async function sbAuth(code){
 
 async function fetchTable(tbl){
   // Mode Grist (dev / widget) : comportement inchangé
-  if(window.grist?.docApi?.fetchTable) return toRows(await window.grist.docApi.fetchTable(tbl));
-  if(window.grist?.docApi?.getTable)   return toRows(await window.grist.docApi.getTable(tbl));
+  if(IS_GRIST && window.grist?.docApi?.fetchTable) return toRows(await window.grist.docApi.fetchTable(tbl));
+  if(IS_GRIST && window.grist?.docApi?.getTable)   return toRows(await window.grist.docApi.getTable(tbl));
 
   // Mode public : on ne charge que la table principale via Supabase (liste)
   try{
@@ -5796,25 +5797,15 @@ function shouldUseEtabOverride(){
 }
 
 async function ensurePersoLoaded(force=false){
-  // ✅ Charger la table Champs_perso uniquement quand un établissement est réellement "connecté"
-  // (code établissement validé en mode ajout, ou établissement cible sélectionné en mode admin).
-  const _persoCode = (typeof getEffectivePersoCode === 'function') ? String(getEffectivePersoCode()||'').trim() : '';
-  if(!_persoCode){
-    // Pas de code => on ne tente pas d'accéder à la table (évite les erreurs au chargement initial)
-    PERSO_LOADED = false;
-    return;
-  }
-
   if(PERSO_LOADED && !force) return;
   PERSO_INDEX = new Map();
-
+  
   console.log('[PERSO v15.4] ensurePersoLoaded appelé', {
     force: force,
-    code: _persoCode,
     has_grist: !!window.grist,
     has_docApi: !!(window.grist && window.grist.docApi)
   });
-
+  
   try{
     if(!window.grist || !grist.docApi) {
       console.warn('[PERSO v15.4] Grist API indisponible');
@@ -10088,14 +10079,6 @@ function bootOnce(){
 
 // --- Grist API guard ---
 function __ppHasGristApi(){
-  // En wrapper (iframe) sur GitHub Pages, window.grist peut exister mais ne correspond pas à un vrai contexte Grist.
-  // On force donc le mode public sur preventionpaca.github.io (et option ?forcePublic=1).
-  try{
-    const qs = new URLSearchParams(location.search);
-    if(qs.get('forcePublic')==='1') return false;
-    const host = String(location.hostname||'').toLowerCase();
-    if(host.endsWith('github.io') || host.includes('preventionpaca.github.io')) return false;
-  }catch(e){}
   return !!(
     window.grist && 
     window.grist.docApi && 
@@ -10146,15 +10129,11 @@ if(!__ppHasGristApi()){
       console.error('[DIAGNOSTIC v15.5] ❌ rowsToRecordsCompat NON définie !');
     }
     
-        // Test de la table Champs_perso uniquement si un établissement est actif
-    const __persoCode = (typeof getEffectivePersoCode === 'function') ? (getEffectivePersoCode() || '') : '';
-    if(!__persoCode){
-      console.log('[DIAGNOSTIC v15.5] ℹ️ Pas de code établissement actif : test Champs_perso ignoré.');
-    } else {
-      console.log('[DIAGNOSTIC v15.5] Test de la table Champs_perso...');
-      try {
-        await ensurePersoLoaded(true);
-
+    console.log('[DIAGNOSTIC v15.5] Test de la table Champs_perso...');
+    
+    try {
+      await ensurePersoLoaded(true);
+      
       if(PERSO_LOADED && PERSO_INDEX.size > 0) {
         console.log('[DIAGNOSTIC v15.5] ✅ Table Champs_perso accessible');
         console.log('[DIAGNOSTIC v15.5] ✅', PERSO_INDEX.size, 'enregistrements trouvés');
@@ -10163,12 +10142,8 @@ if(!__ppHasGristApi()){
       } else {
         console.error('[DIAGNOSTIC v15.5] ❌ Impossible d\'accéder à la table');
       }
-      } catch(err) {
-        console.error('[DIAGNOSTIC v15.5] ❌ Erreur durant le test:', err);
-      }
-    }
-
-// Test d'écriture
+      
+      // Test d'écriture
       console.log('[DIAGNOSTIC v15.5] Test des permissions d\'écriture...');
       const hasWriteAccess = !!(
         window.grist && 
@@ -10182,7 +10157,10 @@ if(!__ppHasGristApi()){
         console.error('[DIAGNOSTIC v15.5] ❌ API d\'écriture NON disponible');
         console.error('[DIAGNOSTIC v15.5] Vérifiez que le widget a access=full');
       }
-
+      
+    } catch(err) {
+      console.error('[DIAGNOSTIC v15.5] ❌ Erreur durant le test:', err);
+    }
     
     console.log('[DIAGNOSTIC v15.5] ========================================');
   }, 2000);
