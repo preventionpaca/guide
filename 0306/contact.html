@@ -508,14 +508,6 @@
       }
       return records;
     }
-      for (let i = 0; i < ids.length; i++) {
-        const rec = { id: ids[i] };
-        for (const [col, values] of Object.entries(columnArrays)) rec[col] = values[i];
-        records.push(rec);
-      }
-      return records;
-    }
-
     function normalizeName(v) {
       if (!v) return '';
       let s = String(v).trim().toLowerCase();
