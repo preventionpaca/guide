@@ -60,6 +60,10 @@
     </div>
   </div>
 </div>
+      <p class="pp-wait-title">Chargement des tuiles du portail…</p>
+    </div>
+  </div>
+</div>
 
 
 
@@ -447,10 +451,9 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
         `Aucun bloc trouvé pour la page "${PAGE_NAME}". ` +
         `Vérifie la colonne "Page" dans la table "Blocs".`;
       grid.appendChild(msg);
-      return;
-      window.dispatchEvent(new CustomEvent('pp:tiles-rendered', { detail: { count: grid.querySelectorAll('.tile').length } }));
-
-    }
+      window.dispatchEvent(new CustomEvent('pp:tiles-rendered', { detail: { count: 0 } }));
+  return;
+      }
 
     const blocsRows = blocsRowsAll
       .slice()
