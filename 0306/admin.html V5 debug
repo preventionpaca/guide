@@ -507,6 +507,22 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
     });
   }
 
+    try{
+      console.info('[ADMIN] Tuiles rendues:', grid.children.length);
+      if(grid.children.length===0){
+        const msg=document.createElement('div');
+        msg.style.gridColumn='1 / -1';
+        msg.style.padding='12px 16px';
+        msg.style.borderRadius='12px';
+        msg.style.background='rgba(220, 38, 38, 0.12)';
+        msg.style.border='1px solid rgba(248, 113, 113, 0.4)';
+        msg.style.fontSize='0.8rem';
+        msg.textContent='Aucune tuile rendue (données présentes). Vérifie les champs Titre_bloc / Sous_titre1 / Url_bloc dans Blocs.';
+        grid.appendChild(msg);
+      }
+    }catch(e){}
+  })
+
   async function loadFromGrist() {
 
     const [tAgenc, tBlocs, tFil] = await Promise.all([
@@ -543,6 +559,11 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
     const blocsRowsAll = blocsAll.filter(
       b => normalizeName(b.Page) === normalizeName(TILE_PAGE_NAME)
     );
+
+    buildTiles;
+    try{
+      console.info('[ADMIN] Blocs page "'+TILE_PAGE_NAME+'":', blocsRowsAll.length, blocsRowsAll.slice(0,3));
+    }catch(e){}
 
     buildTiles(blocsRowsAll, filInfo, layoutRow);
   }
