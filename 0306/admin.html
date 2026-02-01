@@ -135,7 +135,7 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js?v=20260128a"></script>
 <!-- ===== SCRIPT TUILES (chargement reporté après auth) ===== -->
 <script>
-  const PAGE_NAME = 'Acces_ADMIN';
+  const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
 
   const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
   const ROUTES = {
@@ -330,7 +330,7 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
       msg.style.border = '1px solid rgba(248, 113, 113, 0.4)';
       msg.style.fontSize = '0.8rem';
       msg.textContent =
-        `Aucun bloc trouvé pour la page "${PAGE_NAME}". ` +
+        `Aucun bloc trouvé pour la page "${TILE_PAGE_NAME}". ` +
         `Vérifie la colonne "Page" dans la table "Blocs".`;
       grid.appendChild(msg);
       return;
@@ -518,8 +518,8 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
     const blocsAll = rowsToRecordsCompat(tBlocs);
     const filInfo  = rowsToRecordsCompat(tFil);
 
-    const currentNorm = normalizeName(PAGE_NAME);
-    let agencementName = PAGE_NAME;
+    const currentNorm = normalizeName(TILE_PAGE_NAME);
+    let agencementName = TILE_PAGE_NAME;
     if (currentNorm === normalizeName('Portail')) {
       agencementName = 'Accueil';
     } else if (currentNorm === normalizeName('Acces_Admin')) {
@@ -533,7 +533,7 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
       agRows[0] || null;
 
     const blocsRowsAll = blocsAll.filter(
-      b => normalizeName(b.Page) === normalizeName(PAGE_NAME)
+      b => normalizeName(b.Page) === normalizeName(TILE_PAGE_NAME)
     );
 
     buildTiles(blocsRowsAll, filInfo, layoutRow);
