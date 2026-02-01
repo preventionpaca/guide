@@ -4498,6 +4498,8 @@ function libOf(rec){
   let v = rec[COL_LIB_RUNTIME] ?? rec[COL_LIB] ?? '';
   v = (v ?? '').toString().trim();
   if(v) return v;
+  // Secondary: normalized 'label' (public mode)
+  try{ const lb = (rec.label ?? '').toString().trim(); if(lb) return lb; }catch(e){}
 
   // Fallback: pick first meaningful string field (excluding technical/tampon fields)
   const skip = new Set(['id', COL_TRAV, COL_TMP_REG, COL_TMP_DOM, COL_TMP_DIP, COL_TMP_ETB, COL_TMP_TR, COL_TMP_INTI_TR, COL_TMP_ART,
@@ -5754,7 +5756,7 @@ async function buildDomainSectorIndex(){
    STICKY NOM + LIBELLÉ COLORÉ
    ========================================================== */
 function setSticky(rec){
-  const name=String(rec[COL_LIB]||'—');
+  const name = String(libOf(rec) || rec.label || rec[COL_LIB] || rec.id || '—');
   qs('#currentEquipName').textContent=name;
   qs('#delName').textContent=name;
 
@@ -10164,6 +10166,7 @@ if(!__ppHasGristApi()){
   (async ()=>{
     try{
       await loadFull();
+      try{ bootOnce(); }catch(e){}
       try{ await buildDomainSectorIndex(); }catch(e){}
       try{ initTypeRadios && initTypeRadios(); }catch(e){}
       try{ renderList(); }catch(e){}
