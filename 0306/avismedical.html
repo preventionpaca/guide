@@ -278,6 +278,23 @@
       text-align: right;
     }
 
+  
+    .pp-etab-change-btn{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9998;
+      border: 1px solid rgba(27,57,106,.35);
+      background: rgba(255,255,255,.95);
+      color: #1b396a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .pp-etab-change-btn:hover{ filter: brightness(.98); }
+
   </style>
 </head>
 
@@ -492,7 +509,10 @@
     <h2>Accès réservé</h2>
     <p>Merci de saisir le code de l'établissement</p>
 
-    <input id="code-input" class="code-modal-input" type="text" autocomplete="off" />
+    <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+      <input id="code-input" class="code-modal-input" type="password" autocomplete="off" style="margin-top:0; flex:1;" />
+      <button id="code-toggle-visibility" type="button" class="code-btn code-btn-cancel" style="padding:6px 10px; white-space:nowrap;">👁</button>
+    </div>
     <div class="code-modal-actions">
       <button id="code-cancel" type="button" class="code-btn code-btn-cancel">Annuler</button>
       <button id="code-validate" type="button" class="code-btn code-btn-validate">Valider</button>
@@ -714,6 +734,46 @@
     return rows;
   }
 
+  // Convertit la réponse REST Grist (records) en format "colonnaire"
+  // compatible avec tableToRows (raw.id + raw[col][])
+  function gristRecordsToColumnar(json) {
+    const recs = (json && Array.isArray(json.records)) ? json.records : [];
+    const ids = recs.map(r => r.id);
+    const colSet = new Set();
+    recs.forEach(r => {
+      const f = (r && r.fields) ? r.fields : {};
+      Object.keys(f).forEach(k => colSet.add(k));
+    });
+    const cols = Array.from(colSet);
+    const out = { id: ids };
+    cols.forEach(col => {
+      out[col] = recs.map(r => (r && r.fields) ? r.fields[col] : undefined);
+    });
+    return out;
+  }
+
+  // Récupère une table Grist soit via l'API plugin (dans Grist),
+  // soit via rpcFetch (sur GitHub Pages / wrapper).
+  async function fetchGristTableAny(tableId) {
+    // Mode Grist (widget)
+    if (window.grist && grist.docApi && typeof grist.docApi.fetchTable === "function") {
+      return await grist.docApi.fetchTable(tableId);
+    }
+    // Mode GitHub (pp-config + rpcFetch)
+    if (typeof window.rpcFetch === "function" && window.PP_GRIST_DOC_ID) {
+      const base = "https://docs.getgrist.com/api/docs/" + encodeURIComponent(window.PP_GRIST_DOC_ID);
+      const url  = base + "/tables/" + encodeURIComponent(tableId) + "/records";
+      const resp = await window.rpcFetch(url, { method: "GET" });
+      if (!resp || !resp.ok) {
+        const status = resp ? (resp.status + " " + resp.statusText) : "no response";
+        throw new Error("Grist API error: " + status);
+      }
+      const json = await resp.json();
+      return gristRecordsToColumnar(json);
+    }
+    throw new Error("Aucune API Grist disponible (widget/rpcFetch)");
+  }
+
   // Devine une colonne à partir d’un nom préféré + motifs
   function guessColumn(keys, preferred, patterns) {
     if (!keys || !keys.length) return null;
@@ -895,38 +955,54 @@
   }
 
   // -----------------------------
-  // INTÉGRATION GRIST
+  // INTÉGRATION GRIST (widget) / FALLBACK GitHub (rpcFetch)
   // -----------------------------
-  grist.ready({ requiredAccess: 'full' });
+  if (window.grist && typeof grist.ready === "function" && typeof grist.onRecords === "function") {
+    grist.ready({ requiredAccess: 'full' });
 
-  // Diplômes depuis la table source de la vue (tous les diplômes potentiels)
-  grist.onRecords(records => {
-    const vals = [];
-    diplomaIdToLabel = {};
+    // Diplômes depuis la table source de la vue (tous les diplômes potentiels)
+    grist.onRecords(records => {
+      const vals = [];
+      diplomaIdToLabel = {};
 
-    for (const rec of records) {
-      const label = rec[COLUMN_CONCAT];
-      if (label != null) vals.push(label);
-      if (rec.id != null && label != null) diplomaIdToLabel[rec.id] = label;
-    }
+      for (const rec of records) {
+        const label = rec[COLUMN_CONCAT];
+        if (label != null) vals.push(label);
+        if (rec.id != null && label != null) diplomaIdToLabel[rec.id] = label;
+      }
 
-    allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
+      allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
 
+      if (!auxTablesLoaded) {
+        auxTablesLoaded = true;
+        loadAuxTables();
+      }
+    });
+  } else {
+    // Hors Grist (GitHub Pages) : on charge quand même les tables auxiliaires
     if (!auxTablesLoaded) {
       auxTablesLoaded = true;
-      loadAuxTables();
+      // petit délai pour laisser pp-config initialiser rpcFetch
+      (function waitRpcThenLoad(){
+      const t0 = Date.now();
+      (function tick(){
+        const ok = (typeof window.rpcFetch === "function" && !!window.PP_GRIST_DOC_ID);
+        if (ok) return loadAuxTables();
+        if (Date.now() - t0 > 9000) {
+          return loadAuxTables();
+        }
+        setTimeout(tick, 150);
+      })();
+    })();
     }
-  });
+  }
 
   // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
   async function loadAuxTables() {
     try {
-      const docApi = grist.docApi;
-      if (!docApi) return;
-
       const [rawTravTable, rawEtabTable] = await Promise.all([
-        docApi.fetchTable(TABLE_TRAVAUX),
-        docApi.fetchTable(TABLE_ETAB)
+        fetchGristTableAny(TABLE_TRAVAUX),
+        fetchGristTableAny(TABLE_ETAB)
       ]);
 
       const travRecs = tableToRows(rawTravTable);
@@ -1111,6 +1187,11 @@
     try { localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); } catch {}
   }
 
+  function openEtabModal() {
+    if (codeModal) codeModal.style.display = "flex";
+    setTimeout(() => codeInput && codeInput.focus(), 50);
+  }
+
   function lockEtablissement(e) {
     if (!e) return;
     selectedEtabCodeNorm = normalize(e.code || "");
@@ -1135,7 +1216,7 @@
     const remember = opts.remember !== false;
 
     if (!etabsLoaded) {
-      if (!silent) codeError.textContent = "Chargement des établissements, veuillez réessayer dans un instant.";
+      if (!silent) codeError.textContent = "Les établissements ne sont pas encore chargés (connexion Grist). Réessayez dans quelques secondes.";
       return false;
     }
 
@@ -1185,7 +1266,30 @@
     });
   }
 
+
+  const codeToggleBtn = document.getElementById("code-toggle-visibility");
+  if (codeToggleBtn && codeInput) {
+    codeToggleBtn.addEventListener("click", () => {
+      const isPwd = codeInput.type === "password";
+      codeInput.type = isPwd ? "text" : "password";
+      codeToggleBtn.textContent = isPwd ? "🙈" : "👁";
+      codeInput.focus();
+      const v = codeInput.value;
+      codeInput.value = "";
+      codeInput.value = v;
+    });
+  }
+
+
   window.addEventListener("load", () => {
+    const changeBtn = document.getElementById('pp-etab-change-btn');
+    if (changeBtn) {
+      changeBtn.addEventListener('click', () => {
+        clearStoredEtabCode();
+        // On relance la demande de code
+        openEtabModal();
+      });
+    }
     if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
 
     const stored = getStoredEtabCode();
@@ -1206,9 +1310,9 @@
           }
         } else if (Date.now() - t0 > 9000) {
           clearInterval(timer);
-          // Grist/Supabase trop lent → on affiche la lightbox
-          if (codeModal) codeModal.style.display = "flex";
-          setTimeout(() => codeInput && codeInput.focus(), 50);
+          // Tables trop lentes : on reste en mode "auto", sans forcer l'ouverture de la lightbox
+          // (même logique que DDFPT : on ne redemande que si l'utilisateur n'est pas identifié).
+          codeError.textContent = "Chargement des établissements… Si cela persiste, rechargez la page.";
         }
       }, 150);
       return;
@@ -1264,6 +1368,9 @@
   };
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
+
+<button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button" title="Changer de code établissement">Changer d’établissement</button>
 
 </body>
 </html>
