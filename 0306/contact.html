@@ -509,15 +509,31 @@
       if (!listEl) return;
 
       const pageNorm = normalizeName(PAGE_NAME);
-      const lines = [];
 
-      blocsRowsAll
-        .filter(b => normalizeName(b.Page) === pageNorm)
+      // Debug léger (visible uniquement dans la console)
+      try {
+        console.log("[CONTACT] rows Blocs=", Array.isArray(blocsRowsAll) ? blocsRowsAll.length : -1, "PAGE_NAME=", PAGE_NAME);
+        if (Array.isArray(blocsRowsAll) && blocsRowsAll.length) {
+          console.log("[CONTACT] example Page values:", blocsRowsAll.slice(0, 5).map(r => r.Page));
+        }
+      } catch (e) {}
+
+      const candidates = (Array.isArray(blocsRowsAll) ? blocsRowsAll : []).filter(b => {
+        const p1 = normalizeName(b.Page);
+        const p2 = normalizeName(b.Page_ligne || b.PageLigne || b.Ligne);
+        return (p1 && p1 === pageNorm) || (p2 && p2 === pageNorm);
+      });
+
+      const lines = [];
+      candidates
+        .slice()
         .sort((a,b) => (a.num_bloc || 0) - (b.num_bloc || 0))
         .forEach(b => {
           // ✅ Colonne attendue : Titre_bloc (texte multi-lignes)
-          const raw = (b.Titre_bloc || '').toString();
-          raw.split(/\r?\n/).forEach(part => {
+          const raw = (b.Titre_bloc || b.Titre || '').toString();
+          raw.split(/
+?
+/).forEach(part => {
             const t = part.trim();
             if (t) lines.push(t);
           });
@@ -525,17 +541,19 @@
 
       listEl.innerHTML = '';
       if (lines.length) {
-        lines.slice(0, 24).forEach(line => {
+        lines.slice(0, 40).forEach(line => {
           const li = document.createElement('li');
           li.textContent = line;
           listEl.appendChild(li);
         });
       } else {
         const li = document.createElement('li');
-        li.textContent = 'Configuration à compléter dans la table « Blocs » (Page = Contact_sondage, colonne Titre_bloc).';
+        li.textContent = 'Aucune ligne trouvée : vérifie dans « Blocs » la valeur exacte de la colonne Page (attendu : Contact_sondage) et que le texte est bien dans Titre_bloc.';
         li.className = 'ppc-team-placeholder';
         listEl.appendChild(li);
       }
+    }
+
     }
 
     async function loadTeamFromBlocs() {
