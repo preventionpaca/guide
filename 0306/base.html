@@ -5065,11 +5065,27 @@ async function sbFetchOne(id){
 function sbRecToRow(rec){
   try{
     if(!rec) return null;
+
+    // Compat: rec peut déjà être "flatten" {id, ...cols} OU être {id, fields:{...}}
     const id = Number(rec.id);
-    const fields = rec.fields || {};
-    return { id, ...fields };
+    let row = null;
+
+    if(rec.fields && typeof rec.fields === 'object'){
+      row = { id, ...(rec.fields||{}) };
+    }else{
+      // déjà aplati
+      row = { ...rec };
+      row.id = id;
+      // au cas où un vieux format traîne
+      if(row.fields){ 
+        try{ Object.assign(row, row.fields||{}); }catch(e){} 
+        delete row.fields;
+      }
+    }
+    return row;
   }catch(e){ return null; }
 }
+
 
 async function sbWrite(id, fields){
   const token = localStorage.getItem('pp_token') || '';
