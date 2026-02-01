@@ -7,6 +7,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+<script>
+// ===============================
+    // PPP Data Layer (GitHub + Grist)
+    // - Lecture: PP_fetchTable(table)
+    // - En dehors de Grist: utilise Supabase Edge Function read-app
+    // ===============================
+    (function(){
+  const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+  const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
+  const SB_ROOT = sbBase + "/functions/v1";
+  window.PP_SB_ROOT = SB_ROOT;
+  window.PP_SB_API_READ  = SB_ROOT + "/read-app";
+  window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
+  window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+  function getAppName(){
+    return (window.PP_APP_DEFAULT || window.PP_APP_NAME || "equipements");
+  }
+window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function' && window.parent !== window);
+
+
+  function rowsToGristTable(rows){
+    if(!Array.isArray(rows) || !rows.length) return {id:[]};
+    const cols = new Set();
+    for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
+    cols.delete('id');
+    const t={id:[]};
+    for(const c of cols) t[c]=[];
+    for(const r of rows){
+      t.id.push(r.id);
+      for(const c of cols) t[c].push(r[c]);
+    }
+    return t;
+  }
+
+  async function sbFetchTable(tableName){
+    const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName()) + "&table=" + encodeURIComponent(tableName);
+    let r = await fetch(url1, {credentials:'omit'});
+    let j = await r.json().catch(()=>null);
+    if(j && j.ok){
+      // ✅ Support du format {records:[{id, fields:{...}}]}
+      if (Array.isArray(j.records)) {
+        const rows = j.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
+        return rowsToGristTable(rows);
+      }
+      if(j.table) return j.table;
+      if(Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+      if(Array.isArray(j.data)) return rowsToGristTable(j.data);
+      if(j.items && Array.isArray(j.items)) return rowsToGristTable(j.items);
+      if(j.tables && j.tables[tableName]) return j.tables[tableName];
+      return j;
+    }
+    const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName());
+    r = await fetch(url2, {credentials:'omit'});
+    j = await r.json().catch(()=>null);
+    if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
+    throw new Error(j?.error || "Lecture Supabase impossible");
+  }
+
+  window.PP_fetchTable = async function(tableName){
+    if(window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+    return sbFetchTable(tableName);
+  };
+})();
+</script>
 <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
 
@@ -14,9 +79,7 @@
   // Supabase (Edge Functions)
   window.PP_SUPABASE_URL = window.PP_SUPABASE_URL || "https://hpiqwvwpxzppxpxhjede.supabase.co";
 </script>
-<script src="https://preventionpaca.github.io/guide/js/pp-config.js?v=20260128a"></script>
-
-  <style>
+<style>
     .pp-lock-overlay{position:fixed;inset:0;background:rgba(15,23,42,.9);z-index:9999;display:flex;align-items:center;justify-content:center}
     .pp-lock-modal{background:#0b2238;color:#e5f0ff;border-radius:18px;padding:24px 28px;max-width:420px;width:92%;
       box-shadow:0 20px 45px rgba(0,0,0,.6);border:1px solid #f97316;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -68,8 +131,426 @@
   </div>
 </div>
 
+
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js?v=20260128a"></script>
+<!-- ===== SCRIPT TUILES (chargement reporté après auth) ===== -->
 <script>
-  const PAGE_NAME = 'Acces_Admin';
+  const PAGE_NAME = 'Acces_ADMIN';
+
+  const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
+  const ROUTES = {
+    home: PORTAL_ROOT + '#home',
+    base: PORTAL_ROOT + '#base',
+    medicalStd: PORTAL_ROOT + '#medical',
+    medicalCustom: PORTAL_ROOT + '#medical-custom'
+  };
+
+  const HOME_URL = PORTAL_ROOT + '#home';
+  function goHome(evt) {
+    if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'pp:navigate', key: 'home' }, '*');
+      }
+    } catch (e) {}
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = HOME_URL;
+        return;
+      }
+    } catch (e) {}
+    try {
+      window.location.hash = '#home';
+      setTimeout(() => { window.location.href = HOME_URL; }, 50);
+    } catch (e) {
+      try { window.location.href = HOME_URL; } catch (e2) {}
+    }
+  }
+
+  const WRAPPER_BASE   = 'https://preventionpaca.github.io/guide/guide_iframe.html?src=';
+  const WRAPPER_MARKER = 'guide_iframe.html';
+
+  const GRIST_KEY_ROUTES = [
+    { match: '/p/59',  to: ROUTES.home },
+    { match: '/p/119', to: ROUTES.base },
+    { match: '/p/67',  to: ROUTES.medicalStd },
+    { match: '/p/141', to: ROUTES.medicalCustom }
+  ];
+
+  function rowsToRecordsCompat(table) {
+    if (window.grist && typeof grist.rowsToRecords === 'function') {
+      return grist.rowsToRecords(table);
+    }
+    const ids = table.id || [];
+    const records = [];
+    let columnArrays = {};
+
+    if (table.fields && typeof table.fields === 'object') {
+      columnArrays = table.fields;
+    } else {
+      for (const [key, value] of Object.entries(table)) {
+        if (key === 'id') continue;
+        if (Array.isArray(value)) columnArrays[key] = value;
+      }
+    }
+
+    for (let i = 0; i < ids.length; i++) {
+      const rec = { id: ids[i] };
+      for (const [col, values] of Object.entries(columnArrays)) {
+        rec[col] = values[i];
+      }
+      records.push(rec);
+    }
+    return records;
+  }
+
+  function normalizeName(v) {
+    if (!v) return '';
+    let s = String(v).trim().toLowerCase();
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    s = s.replace(/[_\s]+/g, ' ').replace(/\s+/g, ' ');
+    return s;
+  }
+
+  function colorToClass(c) {
+    if (!c) return '';
+    const v = String(c).toLowerCase();
+    if (v.includes('blanc'))        return 'tile--white';
+    if (v.includes('vert'))         return 'tile--green';
+    if (v.includes('orange'))       return 'tile--orange';
+    if (v.includes('noir'))         return 'tile--dark';
+    if (v.includes('marron clair')) return 'tile--brown-light';
+    if (v.includes('marron fon'))   return 'tile--brown-dark';
+    if (v.includes('gris'))         return 'tile--gray-light';
+    return '';
+  }
+
+  function truncate(str, n) {
+    const s = String(str || '');
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+
+  function normalizeUrl(url) {
+    if (!url) return '';
+    const u = String(url).trim();
+    if (!u) return '';
+    if (/^https?:\/\//i.test(u)) return u;
+    return 'https://' + u;
+  }
+
+  function decodeMany(s, max) {
+    let out = String(s || '');
+    for (let i = 0; i < (max || 6); i++) {
+      try {
+        const d = decodeURIComponent(out);
+        if (d === out) break;
+        out = d;
+      } catch (e) { break; }
+    }
+    return out;
+  }
+
+  function makeWrapperUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    if (raw.startsWith(PORTAL_ROOT + '#')) return raw;
+
+    let u = normalizeUrl(raw);
+    if (!u) return '';
+
+    if (u.includes(WRAPPER_MARKER)) {
+      try {
+        const uu = new URL(u);
+        const src = uu.searchParams.get('src');
+        if (src) {
+          const decoded = decodeMany(src, 10);
+          if (/^https?:\/\//i.test(decoded)) u = decoded;
+        } else if (uu.hash && uu.hash.length > 1) {
+          const decoded = decodeMany(uu.hash.slice(1), 8);
+          if (/^https?:\/\//i.test(decoded)) u = decoded;
+        }
+      } catch (e) {
+        const idx = u.indexOf('#');
+        if (idx > -1 && idx < u.length - 1) {
+          const decoded = decodeMany(u.slice(idx + 1), 8);
+          if (/^https?:\/\//i.test(decoded)) u = decoded;
+        }
+      }
+    }
+
+    if (!u.includes('docs.getgrist.com')) return u;
+
+    for (const r of GRIST_KEY_ROUTES) {
+      if (u.includes(r.match)) return r.to;
+    }
+
+    return WRAPPER_BASE + encodeURIComponent(u);
+  }
+
+  function navigateTop(url) {
+    if (!url) return;
+
+    const isPortalRoute = String(url).startsWith(PORTAL_ROOT + '#');
+
+    try {
+      const topWin = (window.top && window.top !== window) ? window.top : window;
+
+      if (isPortalRoute) {
+        const current = String(topWin.location.href || '');
+        if (current.includes('/guide/') && current.includes('preventionpaca.github.io')) {
+          topWin.location.hash = String(url).split('#')[1] || '';
+          return;
+        }
+      }
+
+      topWin.location.href = url;
+    } catch (e) {
+      window.location.href = url;
+    }
+  }
+
+  function buildTiles(blocsRowsAll, filInfoRows, layoutRow) {
+    const grid = document.getElementById('tileGrid');
+    grid.innerHTML = '';
+
+    const layoutCols = layoutRow && layoutRow.Nbre_colonne
+      ? Number(layoutRow.Nbre_colonne) || 4
+      : 4;
+
+    const maxBlocks = layoutRow && layoutRow.Nbre_Bloc
+      ? Number(layoutRow.Nbre_Bloc) || blocsRowsAll.length
+      : blocsRowsAll.length;
+
+    if (!blocsRowsAll.length) {
+      const msg = document.createElement('div');
+      msg.style.gridColumn = '1 / -1';
+      msg.style.padding = '12px 16px';
+      msg.style.borderRadius = '12px';
+      msg.style.background = 'rgba(220, 38, 38, 0.12)';
+      msg.style.border = '1px solid rgba(248, 113, 113, 0.4)';
+      msg.style.fontSize = '0.8rem';
+      msg.textContent =
+        `Aucun bloc trouvé pour la page "${PAGE_NAME}". ` +
+        `Vérifie la colonne "Page" dans la table "Blocs".`;
+      grid.appendChild(msg);
+      return;
+    }
+
+    const blocsRows = blocsRowsAll
+      .slice()
+      .sort((a, b) => (a.num_bloc || 0) - (b.num_bloc || 0))
+      .slice(0, maxBlocks);
+
+    const nbBlocs = blocsRows.length;
+    const cssCols = Math.min(layoutCols, nbBlocs || layoutCols);
+    document.documentElement.style.setProperty('--grid-columns', cssCols);
+
+    const cols = layoutCols;
+
+    const counts = {};
+    blocsRows.forEach(b => {
+      const t = b.Titre_bloc || '';
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    const duplicates = new Set(Object.keys(counts).filter(t => counts[t] > 1));
+    const already = new Set();
+
+    const newsNorm = normalizeName('Fil info');
+    const byTitle = {};
+    blocsRows.forEach(b => {
+      const t = b.Titre_bloc || '';
+      if (!byTitle[t]) byTitle[t] = [];
+      byTitle[t].push(b);
+    });
+
+    blocsRows.forEach(bloc => {
+      const title = bloc.Titre_bloc || '';
+      const dup = duplicates.has(title);
+      if (dup) {
+        if (already.has(title)) return;
+        already.add(title);
+      }
+
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+
+      const colorClass = colorToClass(bloc.Couleur);
+      if (colorClass) tile.classList.add(colorClass);
+
+      if (dup && byTitle[title].length === 2) {
+        const [b1, b2] = byTitle[title].sort((x, y) => x.num_bloc - y.num_bloc);
+        const pos1 = (b1.num_bloc || 1) - 1;
+        const pos2 = (b2.num_bloc || 1) - 1;
+        const r1 = Math.floor(pos1 / cols), c1 = pos1 % cols;
+        const r2 = Math.floor(pos2 / cols), c2 = pos2 % cols;
+
+        if (normalizeName(title) === newsNorm) {
+          tile.classList.add('tile--tall');
+        } else if (r1 === r2 && Math.abs(c1 - c2) === 1) {
+          tile.classList.add('tile--wide');
+        } else if (c1 === c2 && Math.abs(r1 - r2) === 1) {
+          tile.classList.add('tile--tall');
+        }
+      }
+
+      const icon = document.createElement('div');
+      icon.className = 'tile-icon';
+      icon.textContent = bloc.Initiale_bloc || '';
+      tile.appendChild(icon);
+
+      const main = document.createElement('div');
+      main.className = 'tile-main';
+      tile.appendChild(main);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'tile-title';
+      titleEl.textContent = title || '(sans titre)';
+      main.appendChild(titleEl);
+
+      const descEl = document.createElement('div');
+      descEl.className = 'tile-desc';
+      descEl.textContent = bloc.Sous_titre1 || '';
+      main.appendChild(descEl);
+
+      const isNews = normalizeName(title) === newsNorm;
+
+      if (isNews && filInfoRows.length) {
+        tile.style.cursor = 'default';
+
+        const viewport = document.createElement('div');
+        viewport.className = 'news-viewport';
+        const track = document.createElement('div');
+        track.className = 'news-track';
+        viewport.appendChild(track);
+
+        const makeItem = row => {
+          const a = document.createElement('a');
+          a.className = 'news-item';
+
+          const t = row.Titre || '';
+          const st = row.Sous_titre || '';
+          const c = truncate(row.Contenu || '', 20);
+          a.textContent = `${t} — ${st} : ${c}`;
+
+          const url = makeWrapperUrl(row.Lien);
+          if (url) {
+            a.href   = url;
+            a.target = '_top';
+          } else {
+            a.href = '#';
+          }
+          return a;
+        };
+
+        const items = filInfoRows.map(makeItem);
+        [...items, ...items].forEach(it => track.appendChild(it));
+        main.appendChild(viewport);
+
+      } else {
+        const sousG = bloc.Sous_titre_G;
+        const sousD = bloc.Sous_titre_D;
+
+        if (sousG || sousD) {
+          const bottom = document.createElement('div');
+          bottom.className = 'tile-bottom-links';
+
+          if (sousG) {
+            const aG = document.createElement('a');
+            aG.className = 'tile-link';
+            aG.textContent = sousG;
+            if (bloc.Url_G) {
+              const urlG = makeWrapperUrl(bloc.Url_G);
+              aG.href   = urlG || '#';
+              aG.target = '_top';
+            } else {
+              aG.href = '#';
+            }
+            bottom.appendChild(aG);
+          }
+
+          if (sousD) {
+            const aD = document.createElement('a');
+            aD.className = 'tile-link';
+            aD.textContent = sousD;
+            if (bloc.Url_D) {
+              const urlD = makeWrapperUrl(bloc.Url_D);
+              aD.href   = urlD || '#';
+              aD.target = '_top';
+            } else {
+              aD.href = '#';
+            }
+            bottom.appendChild(aD);
+          }
+
+          main.appendChild(bottom);
+
+        } else if (bloc.Url_bloc) {
+          const urlBloc = makeWrapperUrl(bloc.Url_bloc);
+
+          tile.addEventListener('click', () => {
+            if (!urlBloc) return;
+            navigateTop(urlBloc);
+          });
+          tile.tabIndex = 0;
+          tile.setAttribute('role', 'link');
+          tile.addEventListener('keypress', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && urlBloc) {
+              e.preventDefault();
+              navigateTop(urlBloc);
+            }
+          });
+        }
+      }
+
+      grid.appendChild(tile);
+    });
+  }
+
+  async function loadFromGrist() {
+
+    const [tAgenc, tBlocs, tFil] = await Promise.all([
+      PP_fetchTable('Agencement_portail'),
+      PP_fetchTable('Blocs'),
+      PP_fetchTable('Fil_info'),
+    ]);
+
+    const agRows   = rowsToRecordsCompat(tAgenc);
+    const blocsAll = rowsToRecordsCompat(tBlocs);
+    const filInfo  = rowsToRecordsCompat(tFil);
+
+    const currentNorm = normalizeName(PAGE_NAME);
+    let agencementName = PAGE_NAME;
+    if (currentNorm === normalizeName('Portail')) {
+      agencementName = 'Accueil';
+    } else if (currentNorm === normalizeName('Acces_Admin')) {
+      agencementName = 'Accès Admin';
+    } else if (currentNorm === normalizeName('Acces_DDFPT')) {
+      agencementName = 'Accès DDFPT';
+    }
+
+    const layoutRow =
+      agRows.find(r => normalizeName(r.Page) === normalizeName(agencementName)) ||
+      agRows[0] || null;
+
+    const blocsRowsAll = blocsAll.filter(
+      b => normalizeName(b.Page) === normalizeName(PAGE_NAME)
+    );
+
+    buildTiles(blocsRowsAll, filInfo, layoutRow);
+  }
+
+  // ✅ Point d’entrée unique : appelé APRÈS auth (PP_AUTH)
+  window.startPage = async function startPage() {
+    try {
+      if (window.PP_IS_GRIST && window.grist && window.grist.ready) {
+        grist.ready();
+      }
+    } catch (e) {}
+    await loadFromGrist();
+  };
+</script>
+<script>
+  const PAGE_NAME = 'Acces_ADMIN';
   const MAX_ATTEMPTS = 3;
   let attemptCount = 0, accessGranted = false;
 
@@ -95,89 +576,6 @@
     }
     return recs;
   }
-
-
-  function tableToRecords(table){
-    // grist plugin fetchTable() returns {id:[], fields:{col:[]}}
-    if(table && Array.isArray(table.id) && table.fields) return rowsToRecordsCompat(table);
-
-    // REST /records returns {records:[{id, fields:{...}}, ...]}
-    if(table && Array.isArray(table.records)){
-      return table.records.map(r => ({id:r.id, ...(r.fields||{})}));
-    }
-    return [];
-  }
-
-  async function fetchTableSmart(tableName){
-    const inIframe = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
-    // 1) Inside Grist widget (only when embedded). If the bridge is not available, fall through.
-    if(inIframe && window.grist && grist.docApi && typeof grist.docApi.fetchTable === 'function'){
-      try{
-        return await grist.docApi.fetchTable(tableName);
-      }catch(e){
-        const msg = String((e && (e.message||e))||'');
-        // Typical when grist-plugin-api is loaded outside Grist
-        if(msg.toLowerCase().includes('unknown forward destination') || msg.toLowerCase().includes('rpc_unknown_forward_dest')){
-          console.warn('[ADMIN] Grist plugin API présent mais non connecté (hors Grist). Fallback…');
-        }else{
-          console.warn('[ADMIN] Grist docApi.fetchTable a échoué. Fallback…', e);
-        }
-      }
-    }
-
-    // 2) If pp-config exposes helpers (most robust for your portal)
-    const candidates = [
-      () => (window.PP && PP.grist && typeof PP.grist.fetchTable === 'function') ? PP.grist.fetchTable(tableName) : null,
-      () => (window.PP && typeof PP.fetchTable === 'function') ? PP.fetchTable(tableName) : null,
-      () => (window.PP && typeof PP.rpcFetch === 'function') ? PP.rpcFetch({type:'grist', table: tableName}) : null,
-    ];
-    for(const fn of candidates){
-      try{
-        const res = await fn();
-        if(res) return res;
-      }catch(e){ /* try next */ }
-    }
-
-    // 3) Direct REST call (works if doc/table is accessible publicly or via API key in pp-config)
-    const docId = window.PP_GRIST_DOC_ID;
-    if(!docId) throw new Error("PP_GRIST_DOC_ID manquant (pp-config).");
-    const base = `https://docs.getgrist.com/api/docs/${encodeURIComponent(docId)}/tables/${encodeURIComponent(tableName)}/records`;
-    const headers = {'Accept':'application/json'};
-    const apiKey = window.PP_GRIST_API_KEY || window.PP_GRIST_TOKEN || window.PP_GRIST_KEY;
-    if(apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
-
-    const r = await fetch(base, {method:'GET', headers});
-    const j = await r.json().catch(()=> ({}));
-    if(!r.ok){
-      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : ('HTTP '+r.status);
-      throw new Error("Grist API: " + msg + " (table: "+tableName+")");
-    }
-    return j;
-  }
-
-
-
-  function getField(rec, names, fallback=''){
-    if(!rec) return fallback;
-    for(const n of names){
-      if(n in rec && rec[n] !== null && rec[n] !== undefined && String(rec[n]).trim()!=='') return rec[n];
-    }
-    // try case-insensitive match
-    const keys = Object.keys(rec);
-    for(const n of names){
-      const k = keys.find(x => String(x).toLowerCase() === String(n).toLowerCase());
-      if(k && rec[k] !== null && rec[k] !== undefined && String(rec[k]).trim()!=='') return rec[k];
-    }
-    return fallback;
-  }
-
-  function guessPageKey(recs){
-    if(!recs || !recs.length) return 'Page';
-    const keys = Object.keys(recs[0]||{});
-    const cands = keys.filter(k => String(k).toLowerCase().includes('page'));
-    return cands[0] || 'Page';
-  }
-
   function normalizeName(v){
     if(!v) return '';
     let s = String(v).trim().toLowerCase();
@@ -199,26 +597,23 @@
   function buildTiles(blocsRowsAll, layoutRow){
     const grid = document.getElementById('tileGrid');
     grid.innerHTML='';
-
-    const colsRaw = getField(layoutRow, ['Nbre_colonne','Nbre_colonnes','Colonnes','Colonnes_par_ligne'], 4);
-    const cols = Number(colsRaw)||4;
+    const cols = layoutRow && layoutRow.Nbre_colonne ? Number(layoutRow.Nbre_colonne)||4 : 4;
     document.documentElement.style.setProperty('--grid-columns', cols);
 
     blocsRowsAll
-      .slice()
-      .sort((a,b)=> (Number(getField(a,['num_bloc','Num_bloc','Numero','Ordre'],0))||0) - (Number(getField(b,['num_bloc','Num_bloc','Numero','Ordre'],0))||0))
+      .slice().sort((a,b)=>(a.num_bloc||0)-(b.num_bloc||0))
       .forEach(bloc=>{
         const tile=document.createElement('div'); tile.className='tile';
-        const cc=colorToClass(getField(bloc,['Couleur','couleur','Color','Couleur_bloc'],'')); if(cc) tile.classList.add(cc);
+        const cc=colorToClass(bloc.Couleur); if(cc) tile.classList.add(cc);
 
-        const icon=document.createElement('div'); icon.className='tile-icon'; icon.textContent=getField(bloc,['Initiale_bloc','Initiale','Icone','Icône'], '');
+        const icon=document.createElement('div'); icon.className='tile-icon'; icon.textContent=bloc.Initiale_bloc||'';
         const main=document.createElement('div'); main.className='tile-main';
-        const t=document.createElement('div'); t.className='tile-title'; t.textContent=getField(bloc,['Titre_bloc','Titre','Titre_bloc_1','Nom','Libelle','Libellé'], '(sans titre)');
-        const d=document.createElement('div'); d.className='tile-desc'; d.textContent=getField(bloc,['Sous_titre1','Sous_titre','Sous-titre','Description','Desc'], '');
+        const t=document.createElement('div'); t.className='tile-title'; t.textContent=bloc.Titre_bloc||'(sans titre)';
+        const d=document.createElement('div'); d.className='tile-desc'; d.textContent=bloc.Sous_titre1||'';
         main.appendChild(t); main.appendChild(d);
         tile.appendChild(icon); tile.appendChild(main);
 
-        const url = String(getField(bloc,['Url_bloc','URL','Url','Lien','Lien_bloc'], '')||'').trim();
+        const url = (bloc.Url_bloc||'').trim();
         if(url){
           tile.tabIndex=0; tile.setAttribute('role','link');
           tile.addEventListener('click', ()=>{ try{ window.top.location.href=url; }catch(e){ window.location.href=url; } });
@@ -228,57 +623,16 @@
       });
   }
 
-  async function loadTiles(){
-    const grid = document.getElementById('tileGrid');
-    try{
-      const [tAgencRaw, tBlocsRaw] = await Promise.all([
-        fetchTableSmart('Agencement_portail'),
-        fetchTableSmart('Blocs')
-      ]);
-
-      const agRows = tableToRecords(tAgencRaw);
-      const blocsAll = tableToRecords(tBlocsRaw);
-
-      if(!agRows.length && !blocsAll.length){
-        throw new Error("Aucune donnée reçue depuis Grist (tables vides ou accès refusé).");
-      }
-
-      const pageKeyAg = guessPageKey(agRows);
-      const pageKeyBl = guessPageKey(blocsAll);
-
-      const layoutRow =
-        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName(PAGE_NAME)) ||
-        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Accès administrateur')) ||
-        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Acces administrateur')) ||
-        agRows[0] || null;
-
-      let blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(PAGE_NAME));
-
-      if(!blocsRowsAll.length){
-        const fallbacks = ['Acces_ADMIN','Acces_Admin','Accès administrateur','Acces administrateur','Admin','Administrateur'];
-        for(const fb of fallbacks){
-          blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(fb));
-          if(blocsRowsAll.length) break;
-        }
-      }
-      if(!blocsRowsAll.length){
-        blocsRowsAll = blocsAll.slice();
-        console.warn('[ADMIN] Aucun bloc trouvé pour la page "'+PAGE_NAME+'". Affichage de tous les blocs.');
-      }
-
-      buildTiles(blocsRowsAll, layoutRow);
-    }catch(e){
-      console.error('[ADMIN] Erreur chargement tuiles', e);
-      grid.innerHTML =
-        '<div class="ppaca-card" style="max-width:920px;margin:0 auto;">'
-        +'<div class="ppaca-card-body">'
-        +'<p><strong>Impossible de charger les tuiles.</strong></p>'
-        +'<p style="opacity:.85">Détail : <code>'+String(e && e.message ? e.message : e)+'</code></p>'
-        +'<p style="opacity:.75">Astuce : sur GitHub Pages, il faut que <code>PP_GRIST_DOC_ID</code> (et éventuellement une clé API) soient bien fournis par <code>pp-config.js</code>.</p>'
-        +'</div></div>';
-      throw e;
-    }
+  async function loadFromGrist(){
+    const doc = grist.docApi;
+    const [tAgenc, tBlocs] = await Promise.all([doc.fetchTable('Agencement_portail'), doc.fetchTable('Blocs')]);
+    const agRows = rowsToRecordsCompat(tAgenc);
+    const blocsAll = rowsToRecordsCompat(tBlocs);
+    const layoutRow = agRows.find(r=>normalizeName(r.Page)===normalizeName('Accès Admin')) || agRows[0] || null;
+    const blocsRowsAll = blocsAll.filter(b=>normalizeName(b.Page)===normalizeName(PAGE_NAME));
+    buildTiles(blocsRowsAll, layoutRow);
   }
+
   function initLock(){
     const overlay=document.getElementById('ppLockOverlay');
     const input=document.getElementById('ppLockInput');
@@ -325,7 +679,7 @@
         overlay.style.transition='opacity 200ms ease-out';
         overlay.style.opacity='0';
         setTimeout(()=>{ overlay.style.display='none'; }, 220);
-        await loadTiles();
+        if (typeof window.startPage==='function') { await window.startPage(); }
       }catch(e){
         attemptCount++;
         updateAttempts();
@@ -350,12 +704,24 @@
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    const inIframe = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
-    try{ if(inIframe && window.grist && typeof grist.ready==='function') grist.ready(); }catch(e){}
-    initLock();
+    if(window.grist){
+      grist.ready();
+      initLock();
+    }else{
+      document.getElementById('ppLockError').textContent = "Grist API indisponible : ouvre ce widget dans Grist.";
+    }
   });
 </script>
 
-<script src="https://preventionpaca.github.io/guide/js/pp-header.js?v=20260128a"></script>
+
+
+<!-- Header commun + config (charger config avant header) -->
+<script>
+  window.PP_PAGE = "admin";
+</script>
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
 </body>
 </html>
