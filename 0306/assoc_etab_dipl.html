@@ -509,7 +509,23 @@
 }
 
 
-  </style>
+  
+    .pp-etab-change-btn{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9998;
+      border: 1px solid rgba(27,57,106,.35);
+      background: rgba(255,255,255,.95);
+      color: #1b396a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .pp-etab-change-btn:hover{ filter: brightness(.98); }
+</style>
   
 </head>
 <body>
@@ -1255,25 +1271,44 @@ function handleModalSave() {
 }
 
 /* ===== LOGIN PAR CODE UTILISATEUR ===== */
-async function handleLoginSubmit() {
+/* Persistance du code établissement (partagé entre pages, comme PDFT) */
+const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
+function getStoredEtabCode(){ try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; } }
+function setStoredEtabCode(code){
+  try{
+    const v=(code||'').toString().trim();
+    if(v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
+  }catch{}
+}
+function clearStoredEtabCode(){ try{ localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); }catch{} }
+async function handleLoginSubmit(opts = {}) {
+  const silent = !!opts.silent;
+
   const input = document.getElementById("loginCodeInput");
   const msg   = document.getElementById("loginMessage");
   const code  = (input.value || "").trim();
 
   if (!code) {
-    msg.textContent = "Merci de saisir un code.";
-    msg.style.color = "red";
-    return;
+    if (!silent) {
+      msg.textContent = "Merci de saisir un code.";
+      msg.style.color = "red";
+    }
+    return false;
   }
+
   if (!docApiReady) {
-    msg.textContent = "Initialisation en cours, veuillez patienter…";
-    msg.style.color = "red";
-    return;
+    if (!silent) {
+      msg.textContent = "Initialisation en cours, veuillez patienter…";
+      msg.style.color = "red";
+    }
+    return false;
   }
 
   showLoading(true);
-  msg.textContent = "";
-  msg.style.color = "inherit";
+  if (!silent) {
+    msg.textContent = "";
+    msg.style.color = "inherit";
+  }
 
   try {
     const t = await grist.docApi.fetchTable(ETAB_TABLE);
@@ -1291,7 +1326,10 @@ async function handleLoginSubmit() {
     }
 
     if (!codeColData) {
-      throw new Error("Aucune colonne de code utilisateur trouvée dans la table des établissements.");
+      if (!silent) {
+        throw new Error("Aucune colonne de code utilisateur trouvée dans la table des établissements.");
+      }
+      return false;
     }
 
     const adminNomCol    = t["Admin_Nom"]    || [];
@@ -1307,6 +1345,10 @@ async function handleLoginSubmit() {
     }
 
     if (foundIndex === -1) {
+      if (silent) {
+        clearStoredEtabCode();
+        return false;
+      }
       loginAttempts++;
       const reste = MAX_LOGIN_ATTEMPTS - loginAttempts;
       if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
@@ -1320,7 +1362,7 @@ async function handleLoginSubmit() {
         msg.textContent = "Code invalide ou non trouvé. Tentatives restantes : " + reste;
         msg.style.color = "red";
       }
-      return;
+      return false;
     }
 
     currentUser = {
@@ -1332,16 +1374,66 @@ async function handleLoginSubmit() {
       adminEtab: labelCol[foundIndex] || ""
     };
 
+    // mémorise le code (pour ne plus redemander sur les autres pages)
+    setStoredEtabCode(code);
+
     document.getElementById("loginOverlay").classList.remove("visible");
     await reloadAll();
+    return true;
   } catch (e) {
     console.error(e);
-    msg.textContent = "Erreur lors de la vérification du code : " + (e.message || e);
-    msg.style.color = "red";
+    if (!silent) {
+      msg.textContent = "Erreur lors de la vérification du code : " + (e.message || e);
+      msg.style.color = "red";
+    }
+    return false;
   } finally {
     showLoading(false);
   }
 }
+
+/* Auto-login (comme PDFT) : si un code est déjà mémorisé, on ne redemande pas */
+window.addEventListener("load", () => {
+    const changeBtn = document.getElementById("pp-etab-change-btn");
+    if (changeBtn) {
+      changeBtn.addEventListener("click", () => {
+        try { localStorage.removeItem("pp_etab_code"); } catch {}
+        if (typeof codeModal !== "undefined" && codeModal) codeModal.style.display = "flex";
+        setTimeout(() => (typeof codeInput!=="undefined" && codeInput) && codeInput.focus(), 50);
+      });
+    }
+
+  const overlay = document.getElementById("loginOverlay");
+  const input = document.getElementById("loginCodeInput");
+  const msg   = document.getElementById("loginMessage");
+
+  const stored = getStoredEtabCode();
+  if (stored && input) {
+    input.value = stored;
+    overlay && overlay.classList.remove("visible"); // tentative silencieuse
+    const t0 = Date.now();
+    const timer = setInterval(async () => {
+      if (docApiReady) {
+        clearInterval(timer);
+        const ok = await handleLoginSubmit({ silent: true });
+        if (!ok) {
+          overlay && overlay.classList.add("visible");
+          if (msg) { msg.textContent = ""; msg.style.color = "inherit"; }
+          setTimeout(() => input && input.focus(), 50);
+        }
+      } else if (Date.now() - t0 > 9000) {
+        clearInterval(timer);
+        overlay && overlay.classList.add("visible");
+        setTimeout(() => input && input.focus(), 50);
+      }
+    }, 150);
+    return;
+  }
+
+  // première connexion
+  overlay && overlay.classList.add("visible");
+  setTimeout(() => input && input.focus(), 50);
+});
 
 /* ------- ÉCOUTEURS ------- */
 document.getElementById("modalCancelTop").addEventListener("click", closeModal);
@@ -1389,5 +1481,7 @@ function waitForDocApiReady() {
 waitForDocApiReady();
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
+<button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 </body>
 </html>
