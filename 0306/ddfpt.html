@@ -1,136 +1,131 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  
   <script>
     window.PP_APP_NAME = "site";
   </script>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <title>Portail prévention PACA – Accès DDFPT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- API Grist -->
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 
-  
+  <script>
+    // ===============================
+    // PPP Data Layer (GitHub + Grist)
+    // - Lecture: PP_fetchTable(table)
+    // - En dehors de Grist: utilise Supabase Edge Function read-app
+    // ===============================
+    (function () {
+      const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+      const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+      const SB_ROOT = sbBase + "/functions/v1";
 
-<script>
-  // ===============================
-  // PPP Data Layer (GitHub + Grist)
-  // - Lecture: PP_fetchTable(table)
-  // - En dehors de Grist: utilise Supabase Edge Function read-app
-  // ===============================
-  (function () {
-    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
-    const SB_ROOT = sbBase + "/functions/v1";
+      // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
+      window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
 
-    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
-    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+      window.PP_SB_ROOT = SB_ROOT;
+      window.PP_SB_API_READ = SB_ROOT + "/read-app";
+      window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
+      window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
 
-    window.PP_SB_ROOT = SB_ROOT;
-    window.PP_SB_API_READ = SB_ROOT + "/read-app";
-    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
-    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+      window.PP_IS_GRIST = !!(
+        window.grist &&
+        window.grist.docApi &&
+        typeof window.grist.docApi.fetchTable === "function" &&
+        window.parent !== window
+      );
 
-    window.PP_IS_GRIST = !!(
-      window.grist &&
-      window.grist.docApi &&
-      typeof window.grist.docApi.fetchTable === "function" &&
-      window.parent !== window
-    );
-
-    function rowsToGristTable(rows) {
-      if (!Array.isArray(rows) || !rows.length) return { id: [] };
-      const cols = new Set();
-      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
-      cols.delete("id");
-      const t = { id: [] };
-      for (const c of cols) t[c] = [];
-      for (const r of rows) {
-        t.id.push(r.id);
-        for (const c of cols) t[c].push(r[c]);
-      }
-      return t;
-    }
-
-    async function sbFetchTable(tableName) {
-      const url = window.PP_SB_API_READ +
-        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
-        "&table=" + encodeURIComponent(tableName);
-
-      const r = await fetch(url, { credentials: "omit" });
-      const j = await r.json().catch(() => null);
-
-      if (!r.ok || !j || !j.ok) {
-        throw new Error(j?.error || "Lecture Supabase impossible");
+      function rowsToGristTable(rows) {
+        if (!Array.isArray(rows) || !rows.length) return { id: [] };
+        const cols = new Set();
+        for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
+        cols.delete("id");
+        const t = { id: [] };
+        for (const c of cols) t[c] = [];
+        for (const r of rows) {
+          t.id.push(r.id);
+          for (const c of cols) t[c].push(r[c]);
+        }
+        return t;
       }
 
-      // ✅ Support formats possibles:
-      // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
+      async function sbFetchTable(tableName) {
+        const url = window.PP_SB_API_READ +
+          "?app=" + encodeURIComponent(window.PP_APP_NAME) +
+          "&table=" + encodeURIComponent(tableName);
 
-      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
-      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+        const r = await fetch(url, { credentials: "omit" });
+        const j = await r.json().catch(() => null);
 
-      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
-      if (Array.isArray(j.records)) {
-        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
-        return rowsToGristTable(rows);
+        if (!r.ok || !j || !j.ok) {
+          throw new Error(j?.error || "Lecture Supabase impossible");
+        }
+
+        // ✅ Support formats possibles:
+        // 1) { table: {id:[], ...} }
+        if (j.table) return j.table;
+
+        // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
+        if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+        if (Array.isArray(j.data)) return rowsToGristTable(j.data);
+        if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+
+        // 3) { records: [{id, fields:{...}}] } (format Grist-like)
+        if (Array.isArray(j.records)) {
+          const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
+          return rowsToGristTable(rows);
+        }
+
+        // 4) { tables: {TableName: {id:[], ...}} }
+        if (j.tables && j.tables[tableName]) return j.tables[tableName];
+
+        return j;
       }
 
-      // 4) { tables: {TableName: {id:[], ...}} }
-      if (j.tables && j.tables[tableName]) return j.tables[tableName];
+      window.PP_fetchTable = async function (tableName) {
+        if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+        return sbFetchTable(tableName);
+      };
 
-      return j;
-    }
+      // ✅ Shim: pour éviter de retoucher 50 scripts existants
+      if (!window.PP_IS_GRIST) {
+        window.grist = window.grist || {};
+        window.grist.docApi = window.grist.docApi || {};
+        window.grist.docApi.fetchTable = window.PP_fetchTable;
 
-    window.PP_fetchTable = async function (tableName) {
-      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-      return sbFetchTable(tableName);
-    };
+        if (typeof window.grist.rowsToRecords !== "function") {
+          window.grist.rowsToRecords = function (table) {
+            const ids = table.id || [];
+            const records = [];
+            let cols = {};
 
-    // ✅ Shim: pour éviter de retoucher 50 scripts existants
-    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
-    // En mode GitHub, on "simule" juste ces fonctions.
-    if (!window.PP_IS_GRIST) {
-      window.grist = window.grist || {};
-      window.grist.docApi = window.grist.docApi || {};
-      window.grist.docApi.fetchTable = window.PP_fetchTable;
-
-      if (typeof window.grist.rowsToRecords !== "function") {
-        window.grist.rowsToRecords = function (table) {
-          const ids = table.id || [];
-          const records = [];
-          let cols = {};
-
-          if (table.fields && typeof table.fields === "object") cols = table.fields;
-          else {
-            for (const [k, v] of Object.entries(table)) {
-              if (k === "id") continue;
-              if (Array.isArray(v)) cols[k] = v;
+            if (table.fields && typeof table.fields === "object") cols = table.fields;
+            else {
+              for (const [k, v] of Object.entries(table)) {
+                if (k === "id") continue;
+                if (Array.isArray(v)) cols[k] = v;
+              }
             }
-          }
 
-          for (let i = 0; i < ids.length; i++) {
-            const rec = { id: ids[i] };
-            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
-            records.push(rec);
-          }
-          return records;
-        };
+            for (let i = 0; i < ids.length; i++) {
+              const rec = { id: ids[i] };
+              for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
+              records.push(rec);
+            }
+            return records;
+          };
+        }
       }
-    }
-  })();
-</script>
+    })();
+  </script>
 
-<!-- CSS commun + portail -->
+  <!-- CSS commun + portail -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
 
-  <!-- ===== CSS LIGHTBOX ACCÈS DDFPT ===== -->
+  <!-- ===== CSS LIGHTBOX ACCÈS DDFPT (ancienne lightbox conservée, mais neutralisée) ===== -->
   <style>
     .pp-lock-overlay {
       position: fixed;
@@ -226,7 +221,7 @@
 
 </div>
 
-<!-- ===== LIGHTBOX ACCÈS DDFPT ===== -->
+<!-- ===== ANCIENNE LIGHTBOX (conservée mais ne sert plus) ===== -->
 <div id="ppLockOverlay" class="pp-lock-overlay" aria-modal="true" role="dialog">
   <div class="pp-lock-modal">
     <h2 class="pp-lock-title">Accès réservé</h2>
@@ -234,30 +229,20 @@
       Cette page est réservée aux Directeurs Délégués aux Formations.
       Merci de saisir le code d’accès.
     </p>
-    <input
-      id="ppLockInput"
-      class="pp-lock-input"
-      type="password"
-      autocomplete="off"
-      placeholder="Code DDFPT"
-    />
+    <input id="ppLockInput" class="pp-lock-input" type="password" autocomplete="off" placeholder="Code DDFPT" />
     <div id="ppLockError" class="pp-lock-error"></div>
     <div id="ppLockAttempts" class="pp-lock-attempts"></div>
     <div class="pp-lock-actions">
       <button id="ppLockCancel" class="pp-lock-btn" type="button">Annuler</button>
-      <button id="ppLockSubmit" class="pp-lock-btn pp-lock-btn-primary" type="button">
-        Valider
-      </button>
+      <button id="ppLockSubmit" class="pp-lock-btn pp-lock-btn-primary" type="button">Valider</button>
     </div>
   </div>
 </div>
 
-<!-- ===== SCRIPT TUILES + VERROU ACCÈS DDFPT ===== -->
+<!-- ===== SCRIPT TUILES (chargement reporté après auth) ===== -->
 <script>
-  // ⚠️ Nom de page côté Grist (table Pages / Blocs)
   const PAGE_NAME = 'Acces_DDFPT';
 
-  // Racine du portail (index.html)
   const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
   const ROUTES = {
     home: PORTAL_ROOT + '#home',
@@ -266,7 +251,6 @@
     medicalCustom: PORTAL_ROOT + '#medical-custom'
   };
 
-  // Retour portail fiable (iframe-safe)
   const HOME_URL = PORTAL_ROOT + '#home';
   function goHome(evt) {
     if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
@@ -275,16 +259,12 @@
         window.parent.postMessage({ type: 'pp:navigate', key: 'home' }, '*');
       }
     } catch (e) {}
-
-    // Fallback : tentative de navigation "top" (souvent autorisée sur action utilisateur)
     try {
       if (window.top && window.top !== window) {
         window.top.location.href = HOME_URL;
         return;
       }
     } catch (e) {}
-
-    // Dernier recours : navigation locale
     try {
       window.location.hash = '#home';
       setTimeout(() => { window.location.href = HOME_URL; }, 50);
@@ -293,31 +273,15 @@
     }
   }
 
-  // wrapper QR / deep-link (on conserve)
   const WRAPPER_BASE   = 'https://preventionpaca.github.io/guide/guide_iframe.html?src=';
   const WRAPPER_MARKER = 'guide_iframe.html';
 
-  // mapping Grist -> route interne (pages cles)
   const GRIST_KEY_ROUTES = [
     { match: '/p/59',  to: ROUTES.home },
     { match: '/p/119', to: ROUTES.base },
     { match: '/p/67',  to: ROUTES.medicalStd },
     { match: '/p/141', to: ROUTES.medicalCustom }
   ];
-
-  // ⚠️ CONFIG TABLE CODES : adapté à tes champs
-  const ADMIN_TABLE       = 'Administrateur'; // table des codes
-  const ADMIN_FIELD_CODE  = 'Code';           // colonne contenant le code
-  const ADMIN_FIELD_PAGE  = 'Page';           // optionnel : code dédié à une page
-
-  const ETAB_TABLE = 'Etablissements_edi';
-  const ETAB_FIELD_CODE = 'Codepaca';
-
-  const MAX_ATTEMPTS = 3;
-
-  let adminCodes     = [];
-  let attemptCount   = 0;
-  let accessGranted  = false;
 
   function rowsToRecordsCompat(table) {
     if (window.grist && typeof grist.rowsToRecords === 'function') {
@@ -395,15 +359,11 @@
   function makeWrapperUrl(url) {
     const raw = String(url || '').trim();
     if (!raw) return '';
-
-    // Routes deja propres
     if (raw.startsWith(PORTAL_ROOT + '#')) return raw;
 
-    // 1) Normalisation
     let u = normalizeUrl(raw);
     if (!u) return '';
 
-    // 2) Si deja wrapper, on extrait la cible
     if (u.includes(WRAPPER_MARKER)) {
       try {
         const uu = new URL(u);
@@ -424,15 +384,12 @@
       }
     }
 
-    // 3) Externe : on laisse tel quel
     if (!u.includes('docs.getgrist.com')) return u;
 
-    // 4) Pages "cles" : routes internes
     for (const r of GRIST_KEY_ROUTES) {
       if (u.includes(r.match)) return r.to;
     }
 
-    // 5) Sinon : wrapper ?src=
     return WRAPPER_BASE + encodeURIComponent(u);
   }
 
@@ -445,7 +402,6 @@
       const topWin = (window.top && window.top !== window) ? window.top : window;
 
       if (isPortalRoute) {
-        // Si on est deja sur le portail, on ne change que le hash => pas de reload
         const current = String(topWin.location.href || '');
         if (current.includes('/guide/') && current.includes('preventionpaca.github.io')) {
           topWin.location.hash = String(url).split('#')[1] || '';
@@ -610,12 +566,8 @@
             aG.textContent = sousG;
             if (bloc.Url_G) {
               const urlG = makeWrapperUrl(bloc.Url_G);
-              if (urlG) {
-                aG.href   = urlG;
-                aG.target = '_top';
-              } else {
-                aG.href = '#';
-              }
+              aG.href   = urlG || '#';
+              aG.target = '_top';
             } else {
               aG.href = '#';
             }
@@ -628,12 +580,8 @@
             aD.textContent = sousD;
             if (bloc.Url_D) {
               const urlD = makeWrapperUrl(bloc.Url_D);
-              if (urlD) {
-                aD.href   = urlD;
-                aD.target = '_top';
-              } else {
-                aD.href = '#';
-              }
+              aD.href   = urlD || '#';
+              aD.target = '_top';
             } else {
               aD.href = '#';
             }
@@ -698,174 +646,15 @@
     buildTiles(blocsRowsAll, filInfo, layoutRow);
   }
 
-  function normalizeCode(v) {
-    if (v === null || v === undefined) return '';
-    return String(v).trim().replace(/\s+/g, '');
-  }
-
-  async function loadAdminCodes(doc) {
+  // ✅ Point d’entrée unique : appelé APRÈS auth (PP_AUTH)
+  window.startPage = async function startPage() {
     try {
-      const currentNorm = normalizeName(PAGE_NAME);
-
-      // 1) Codes "admin" (table Administrateur)
-      let adminList = [];
-      try {
-        const tAdmin = await doc.fetchTable(ADMIN_TABLE);
-        const adminRows = rowsToRecordsCompat(tAdmin);
-
-        adminList = adminRows
-          .filter(r => {
-            if (!r[ADMIN_FIELD_CODE]) return false;
-            if (r[ADMIN_FIELD_PAGE]) {
-              return normalizeName(r[ADMIN_FIELD_PAGE]) === currentNorm;
-            }
-            return true;
-          })
-          .map(r => normalizeCode(r[ADMIN_FIELD_CODE]))
-          .filter(Boolean);
-      } catch (e) {
-        console.warn('Impossible de lire la table Administrateur:', e);
+      if (window.PP_IS_GRIST && window.grist && window.grist.ready) {
+        grist.ready();
       }
-
-      // 2) Codes "établissements" (colonne Code PACA)
-      let etabList = [];
-      try {
-        const tEtab = await doc.fetchTable(ETAB_TABLE);
-        const etabRows = rowsToRecordsCompat(tEtab);
-
-        etabList = etabRows
-          .map(r => normalizeCode(r[ETAB_FIELD_CODE]))
-          .filter(Boolean);
-      } catch (e) {
-        console.warn('Impossible de lire la table établissements:', e);
-      }
-
-      // 3) Fusion + dédoublonnage
-      adminCodes = Array.from(new Set([...adminList, ...etabList]));
-
-      console.log('Codes DDFPT chargés (admin + établissements) :', adminCodes.length);
-    } catch (err) {
-      console.error('Erreur chargement codes DDFPT', err);
-      adminCodes = [];
-    }
-  }
-
-  function initAdminLock() {
-    const overlay    = document.getElementById('ppLockOverlay');
-    const input      = document.getElementById('ppLockInput');
-    const errorEl    = document.getElementById('ppLockError');
-    const attemptsEl = document.getElementById('ppLockAttempts');
-    const btnSubmit  = document.getElementById('ppLockSubmit');
-    const btnCancel  = document.getElementById('ppLockCancel');
-
-    function updateAttempts() {
-      const remaining = MAX_ATTEMPTS - attemptCount;
-      if (remaining < MAX_ATTEMPTS && remaining > 0) {
-        attemptsEl.textContent = 'Tentatives restantes : ' + remaining;
-      } else if (remaining <= 0) {
-        attemptsEl.textContent = 'Nombre maximal de tentatives atteint.';
-      } else {
-        attemptsEl.textContent = '';
-      }
-    }
-
-    function refuse() {
-      attemptCount++;
-      updateAttempts();
-
-      if (attemptCount >= MAX_ATTEMPTS) {
-        errorEl.textContent = 'Accès refusé. Retour au portail…';
-        setTimeout(() => {
-          goHome();
-        }, 800);
-      } else {
-        errorEl.textContent = 'Code incorrect. Merci de réessayer.';
-        input.value = '';
-        input.focus();
-      }
-    }
-
-    function grantAccess() {
-      if (accessGranted) return;
-      accessGranted = true;
-      overlay.style.transition = 'opacity 200ms ease-out';
-      overlay.style.opacity = '1';
-      requestAnimationFrame(() => {
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-          overlay.style.display = 'none';
-        }, 220);
-      });
-      loadFromGrist().catch(err => console.error('Erreur chargement Grist', err));
-    }
-
-    function handleSubmit() {
-      if (accessGranted) return;
-
-      const value = normalizeCode(input.value);
-      if (!value) {
-        errorEl.textContent = 'Merci de saisir un code.';
-        return;
-      }
-
-      if (!adminCodes.length) {
-        console.warn('Aucun code DDFPT trouvé : accès laissé libre.');
-        grantAccess();
-        return;
-      }
-
-      if (adminCodes.includes(value)) {
-        grantAccess();
-      } else {
-        refuse();
-      }
-    }
-
-    btnSubmit.addEventListener('click', handleSubmit);
-    input.addEventListener('keypress', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSubmit();
-      }
-    });
-
-    // Annuler = retour direct au portail
-    btnCancel.addEventListener('click', (e) => {
-      errorEl.textContent = '';
-      goHome(e);
-    });
-
-    updateAttempts();
-    setTimeout(() => input.focus(), 50);
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-
-try {
-    await PP_AUTH.requireDdfpt();
-    // ✅ seulement après : ton code actuel
-    // loadFromGrist() / buildTiles() / etc.
-  } catch (e) {
-    // AUTH_REQUIRED => la modal est ouverte, on ne fait rien.
-  }
-    
-    if (window.PP_IS_GRIST && window.grist && window.grist.ready) { if (window.PP_IS_GRIST && window.grist && window.grist.ready) { grist.ready(); }
-      const doc = grist.docApi;
-
-      await loadAdminCodes(doc);
-
-      const overlay = document.getElementById('ppLockOverlay');
-      if (!adminCodes.length) {
-        overlay.style.display = 'none';
-        accessGranted = true;
-        loadFromGrist().catch(err => console.error('Erreur chargement Grist', err));
-      } else {
-        initAdminLock();
-      }
-    } else {
-      console.warn('Grist API non disponible');
-    }
-  });
+    } catch (e) {}
+    await loadFromGrist();
+  };
 </script>
 
 <!-- Header commun + config (charger config avant header) -->
@@ -873,6 +662,28 @@ try {
   window.PP_PAGE = "ddfpt";
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+
+<!-- ✅ Verrou global : identification au démarrage, puis lancement startPage() -->
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      await window.PP_AUTH.requireDdfpt();
+
+      // Neutralise l’ancienne lightbox locale
+      const oldOverlay = document.getElementById('ppLockOverlay');
+      if (oldOverlay) oldOverlay.style.display = 'none';
+
+      if (typeof window.startPage === 'function') {
+        await window.startPage();
+      } else {
+        console.error('startPage() introuvable');
+      }
+    } catch (e) {
+      // AUTH_REQUIRED => PP_AUTH ouvre sa modal, on ne lance rien.
+    }
+  });
+</script>
+
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
