@@ -97,6 +97,55 @@
   }
 
 
+  function tableToRecords(table){
+    // grist plugin fetchTable() returns {id:[], fields:{col:[]}}
+    if(table && Array.isArray(table.id) && table.fields) return rowsToRecordsCompat(table);
+
+    // REST /records returns {records:[{id, fields:{...}}, ...]}
+    if(table && Array.isArray(table.records)){
+      return table.records.map(r => ({id:r.id, ...(r.fields||{})}));
+    }
+    return [];
+  }
+
+  async function fetchTableSmart(tableName){
+    // 1) Inside Grist widget
+    if(window.grist && grist.docApi && typeof grist.docApi.fetchTable === 'function'){
+      return await grist.docApi.fetchTable(tableName);
+    }
+
+    // 2) If pp-config exposes helpers (most robust for your portal)
+    const candidates = [
+      () => (window.PP && PP.grist && typeof PP.grist.fetchTable === 'function') ? PP.grist.fetchTable(tableName) : null,
+      () => (window.PP && typeof PP.fetchTable === 'function') ? PP.fetchTable(tableName) : null,
+      () => (window.PP && typeof PP.rpcFetch === 'function') ? PP.rpcFetch({type:'grist', table: tableName}) : null,
+    ];
+    for(const fn of candidates){
+      try{
+        const res = await fn();
+        if(res) return res;
+      }catch(e){ /* try next */ }
+    }
+
+    // 3) Direct REST call (works if doc/table is accessible publicly or via API key in pp-config)
+    const docId = window.PP_GRIST_DOC_ID;
+    if(!docId) throw new Error("PP_GRIST_DOC_ID manquant (pp-config).");
+    const base = `https://docs.getgrist.com/api/docs/${encodeURIComponent(docId)}/tables/${encodeURIComponent(tableName)}/records`;
+    const headers = {'Accept':'application/json'};
+    const apiKey = window.PP_GRIST_API_KEY || window.PP_GRIST_TOKEN || window.PP_GRIST_KEY;
+    if(apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+
+    const r = await fetch(base, {method:'GET', headers});
+    const j = await r.json().catch(()=> ({}));
+    if(!r.ok){
+      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : ('HTTP '+r.status);
+      throw new Error("Grist API: " + msg + " (table: "+tableName+")");
+    }
+    return j;
+  }
+
+
+
   function getField(rec, names, fallback=''){
     if(!rec) return fallback;
     for(const n of names){
@@ -168,38 +217,40 @@
       });
   }
 
-  async function loadFromGrist(){
+  async function loadTiles(){
     const grid = document.getElementById('tileGrid');
     try{
-      const doc = grist.docApi;
-      const [tAgenc, tBlocs] = await Promise.all([
-        doc.fetchTable('Agencement_portail'),
-        doc.fetchTable('Blocs')
+      const [tAgencRaw, tBlocsRaw] = await Promise.all([
+        fetchTableSmart('Agencement_portail'),
+        fetchTableSmart('Blocs')
       ]);
 
-      const agRows = rowsToRecordsCompat(tAgenc);
-      const blocsAll = rowsToRecordsCompat(tBlocs);
+      const agRows = tableToRecords(tAgencRaw);
+      const blocsAll = tableToRecords(tBlocsRaw);
+
+      if(!agRows.length && !blocsAll.length){
+        throw new Error("Aucune donnée reçue depuis Grist (tables vides ou accès refusé).");
+      }
 
       const pageKeyAg = guessPageKey(agRows);
       const pageKeyBl = guessPageKey(blocsAll);
 
-      // Layout: try by PAGE_NAME, then by human label, else first row
       const layoutRow =
         agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName(PAGE_NAME)) ||
-        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Accès Admin')) ||
+        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Accès administrateur')) ||
+        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Acces administrateur')) ||
         agRows[0] || null;
 
-      // Blocs: filter by PAGE_NAME; if empty, try common labels; if still empty, show all blocs (better than rien)
       let blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(PAGE_NAME));
+
       if(!blocsRowsAll.length){
-        const fallbacks = ['Accès Admin','Acces_ADMIN','Admin','Administrateur','Accès administrateur'];
+        const fallbacks = ['Acces_ADMIN','Acces_Admin','Accès administrateur','Acces administrateur','Admin','Administrateur'];
         for(const fb of fallbacks){
           blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(fb));
           if(blocsRowsAll.length) break;
         }
       }
       if(!blocsRowsAll.length){
-        // dernier recours : tout afficher
         blocsRowsAll = blocsAll.slice();
         console.warn('[ADMIN] Aucun bloc trouvé pour la page "'+PAGE_NAME+'". Affichage de tous les blocs.');
       }
@@ -207,11 +258,16 @@
       buildTiles(blocsRowsAll, layoutRow);
     }catch(e){
       console.error('[ADMIN] Erreur chargement tuiles', e);
-      grid.innerHTML = '<div class="ppaca-card" style="max-width:920px;margin:0 auto;"><div class="ppaca-card-body"><p><strong>Impossible de charger les tuiles.</strong></p><p style="opacity:.8">Vérifie que ce widget est bien ouvert <em>dans Grist</em> et que les tables <code>Agencement_portail</code> et <code>Blocs</code> existent (noms exacts).</p></div></div>';
+      grid.innerHTML =
+        '<div class="ppaca-card" style="max-width:920px;margin:0 auto;">'
+        +'<div class="ppaca-card-body">'
+        +'<p><strong>Impossible de charger les tuiles.</strong></p>'
+        +'<p style="opacity:.85">Détail : <code>'+String(e && e.message ? e.message : e)+'</code></p>'
+        +'<p style="opacity:.75">Astuce : sur GitHub Pages, il faut que <code>PP_GRIST_DOC_ID</code> (et éventuellement une clé API) soient bien fournis par <code>pp-config.js</code>.</p>'
+        +'</div></div>';
       throw e;
     }
   }
-
   function initLock(){
     const overlay=document.getElementById('ppLockOverlay');
     const input=document.getElementById('ppLockInput');
@@ -258,7 +314,7 @@
         overlay.style.transition='opacity 200ms ease-out';
         overlay.style.opacity='0';
         setTimeout(()=>{ overlay.style.display='none'; }, 220);
-        await loadFromGrist();
+        await loadTiles();
       }catch(e){
         attemptCount++;
         updateAttempts();
@@ -283,12 +339,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    if(window.grist){
-      grist.ready();
-      initLock();
-    }else{
-      document.getElementById('ppLockError').textContent = "Grist API indisponible : ouvre ce widget dans Grist.";
-    }
+    try{ if(window.grist && typeof grist.ready==='function') grist.ready(); }catch(e){}
+    initLock();
   });
 </script>
 
