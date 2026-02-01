@@ -332,7 +332,7 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
       msg.style.fontSize = '0.8rem';
       msg.textContent =
         `Aucun bloc trouvé pour la page "${TILE_PAGE_NAME}". ` +
-        `Vérifie la colonne "Page" dans la table "Blocs".`;
+        `Vérifie la valeur exacte dans la colonne "Page" (table "Blocs") : par ex. Acces_ADMIN / Acces_Admin / Accès Admin.`;
       grid.appendChild(msg);
       return;
     }
@@ -519,6 +519,13 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
     const blocsAll = rowsToRecordsCompat(tBlocs);
     const filInfo  = rowsToRecordsCompat(tFil);
 
+
+    // --- Diagnostic léger (utile si la page ne trouve pas ses blocs) ---
+    try{
+      const pages = Array.from(new Set(blocsAll.map(b => String(b.Page||'').trim()).filter(Boolean))).slice(0, 20);
+      console.info('[ADMIN] Blocs total:', blocsAll.length, '| Pages détectées (échantillon):', pages);
+    }catch(e){}
+
     const currentNorm = normalizeName(TILE_PAGE_NAME);
     let agencementName = TILE_PAGE_NAME;
     if (currentNorm === normalizeName('Portail')) {
@@ -648,9 +655,11 @@ const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
       at.textContent = (rem<MAX_ATTEMPTS && rem>0) ? ('Tentatives restantes : '+rem) : '';
     }
     function freeze(state){
-      btnOk.disabled = state; btnCancel.disabled = state; input.disabled = state;
+      btnOk.disabled = state; input.disabled = state;
+      // Annuler reste toujours actif (même si la requête auth est en cours)
+      btnCancel.disabled = false;
       btnOk.style.opacity = state ? .65 : 1;
-      btnCancel.style.opacity = state ? .65 : 1;
+      btnCancel.style.opacity = 1;
     }
     async function handle(){
       if(accessGranted) return;
