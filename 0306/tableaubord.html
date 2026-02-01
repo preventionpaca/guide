@@ -23,16 +23,17 @@
   // ===============================
   (function () {
     const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
-    const SB_ROOT = sbBase + "/functions/v1";
 
-    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
-    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+function getSBRoot(){
+  const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+  return sbBase + "/functions/v1";
+}
 
-    window.PP_SB_ROOT = SB_ROOT;
-    window.PP_SB_API_READ = SB_ROOT + "/read-app";
-    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
-    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+function getAppName(){
+  return window.PP_APP_NAME || window.PP_APP_DEFAULT || "equipements";
+}
+
+    
 
     window.PP_IS_GRIST = !!(
       window.grist &&
@@ -56,9 +57,11 @@
     }
 
     async function sbFetchTable(tableName) {
-      const url = window.PP_SB_API_READ +
-        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
-        "&table=" + encodeURIComponent(tableName);
+    const SB_ROOT = getSBRoot();
+const url = SB_ROOT + "/read-app"
+  + "?app=" + encodeURIComponent(getAppName())
+  + "&table=" + encodeURIComponent(tableName);
+
 
       const r = await fetch(url, { credentials: "omit" });
       const j = await r.json().catch(() => null);
