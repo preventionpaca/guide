@@ -211,3 +211,19 @@ body {
   .panel-orange { padding: 18px 14px; }
   .feat-card { padding: 16px 14px; }
 }
+/* Chips partenaires : liens invisibles (aspect conservé) */
+.ppp-chip a,
+.ppp-chip a:visited,
+.ppp-chip a:hover,
+.ppp-chip a:active,
+.ppp-chip a:focus {
+  color: inherit;          /* garde la couleur du texte */
+  text-decoration: none;   /* pas de soulignement */
+  font-weight: inherit;
+}
+
+/* Optionnel : feedback discret au survol */
+.ppp-chip a:hover {
+  opacity: 0.85;
+}
+
