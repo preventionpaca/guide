@@ -109,9 +109,20 @@
   }
 
   async function fetchTableSmart(tableName){
-    // 1) Inside Grist widget
-    if(window.grist && grist.docApi && typeof grist.docApi.fetchTable === 'function'){
-      return await grist.docApi.fetchTable(tableName);
+    const inIframe = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
+    // 1) Inside Grist widget (only when embedded). If the bridge is not available, fall through.
+    if(inIframe && window.grist && grist.docApi && typeof grist.docApi.fetchTable === 'function'){
+      try{
+        return await grist.docApi.fetchTable(tableName);
+      }catch(e){
+        const msg = String((e && (e.message||e))||'');
+        // Typical when grist-plugin-api is loaded outside Grist
+        if(msg.toLowerCase().includes('unknown forward destination') || msg.toLowerCase().includes('rpc_unknown_forward_dest')){
+          console.warn('[ADMIN] Grist plugin API présent mais non connecté (hors Grist). Fallback…');
+        }else{
+          console.warn('[ADMIN] Grist docApi.fetchTable a échoué. Fallback…', e);
+        }
+      }
     }
 
     // 2) If pp-config exposes helpers (most robust for your portal)
@@ -339,7 +350,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    try{ if(window.grist && typeof grist.ready==='function') grist.ready(); }catch(e){}
+    const inIframe = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
+    try{ if(inIframe && window.grist && typeof grist.ready==='function') grist.ready(); }catch(e){}
     initLock();
   });
 </script>
