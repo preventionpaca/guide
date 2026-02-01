@@ -5796,15 +5796,25 @@ function shouldUseEtabOverride(){
 }
 
 async function ensurePersoLoaded(force=false){
+  // ✅ Charger la table Champs_perso uniquement quand un établissement est réellement "connecté"
+  // (code établissement validé en mode ajout, ou établissement cible sélectionné en mode admin).
+  const _persoCode = (typeof getEffectivePersoCode === 'function') ? String(getEffectivePersoCode()||'').trim() : '';
+  if(!_persoCode){
+    // Pas de code => on ne tente pas d'accéder à la table (évite les erreurs au chargement initial)
+    PERSO_LOADED = false;
+    return;
+  }
+
   if(PERSO_LOADED && !force) return;
   PERSO_INDEX = new Map();
-  
+
   console.log('[PERSO v15.4] ensurePersoLoaded appelé', {
     force: force,
+    code: _persoCode,
     has_grist: !!window.grist,
     has_docApi: !!(window.grist && window.grist.docApi)
   });
-  
+
   try{
     if(!window.grist || !grist.docApi) {
       console.warn('[PERSO v15.4] Grist API indisponible');
