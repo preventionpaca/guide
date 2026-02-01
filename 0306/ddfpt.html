@@ -607,6 +607,8 @@
 
     const agRows   = rowsToRecordsCompat(tAgenc);
     const blocsAll = rowsToRecordsCompat(tBlocs);
+    window.__DEBUG_blocsAll = blocsAll;
+
     const filInfo  = rowsToRecordsCompat(tFil);
 
     const currentNorm = normalizeName(PAGE_NAME);
