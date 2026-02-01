@@ -5,13 +5,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tableau de bord — Portail Prévention PACA</title>
 
+  <!-- Nom d'app (registre resolve-app) -->
   <script>
     window.PP_APP_NAME = "equipements";
   </script>
 
+  <!-- CSS -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
+
+  <!-- Grist plugin (utile si la page est embarquée dans Grist) -->
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+  <!-- ⚠️ pp-config AVANT le data layer -->
+  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+
+  <script>
+    // ===============================
+    // PPP Data Layer (GitHub + Grist)
+    // - grist.docApi.fetchTable(table)
+    //   => Grist si embedded
+    //   => Supabase read-app si GitHub
+    // ===============================
+    (function () {
+      const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+
+      function getSBRoot() {
+        const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
+        return sbBase + "/functions/v1";
+      }
+
+      function getAppName() {
+        return window.PP_APP_NAME || window.PP_APP_DEFAULT || "equipements";
+      }
+
+      // Détecte si on est dans un Custom Widget Grist
+      window.PP_IS_GRIST = !!(
+        window.grist &&
+        window.grist.docApi &&
+        typeof window.grist.docApi.fetchTable === "function" &&
+        window.parent !== window
+      );
+
+      function rowsToGristTable(rows) {
+        if (!Array.isArray(rows) || !rows.length) return { id: [] };
+        const cols = new Set();
+        for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
+        cols.delete("id");
+        const t = { id: [] };
+        for (const c of cols) t[c] = [];
+        for (const r of rows) {
+          t.id.push(r.id);
+          for (const c of cols) t[c].push(r[c]);
+        }
+        return t;
+      }
+
+      // Normalise TOUT ce qui sort de read-app en table Grist-like
+      function normalizeReadAppPayload(j, tableName) {
+        // 1) table Grist-like directe
+        if (j && j.table && Array.isArray(j.table.id)) return j.table;
+
+        // 2) items/rows/data => liste de lignes
+        if (j && Array.isArray(j.items)) return rowsToGristTable(j.items);
+        if (j && Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+        if (j && Array.isArray(j.data)) return rowsToGristTable(j.data);
+
+        // 3) records Grist API => {id, fields:{}}
+        if (j && Array.isArray(j.records)) {
+          const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
+          return rowsToGristTable(rows);
+        }
+
+        // 4) tables:{TableName:{id:[],...}}
+        if (j && j.tables && j.tables[tableName] && Array.isArray(j.tables[tableName].id)) {
+          return j.tables[tableName];
+        }
+
+        // 5) si on reçoit déjà un tableau
+        if (Array.isArray(j)) return rowsToGristTable(j);
+
+        // Dernier recours : renvoyer table vide + signaler
+        console.warn("read-app payload non reconnu pour", tableName, j);
+        return { id: [] };
+      }
+
+      async function sbFetchTable(tableName) {
+        const SB_ROOT = getSBRoot();
+        const url =
+          SB_ROOT +
+          "/read-app" +
+          "?app=" +
+          encodeURIComponent(getAppName()) +
+          "&table=" +
+          encodeURIComponent(tableName);
+
+        const r = await fetch(url, { credentials: "omit" });
+        const j = await r.json().catch(() => null);
+
+        if (!r.ok || !j || !j.ok) {
+          const msg = j?.error || "Lecture Supabase impossible";
+          throw new Error(msg);
+        }
+
+        return normalizeReadAppPayload(j, tableName);
+      }
+
+      window.PP_fetchTable = async function (tableName) {
+        // Mode Grist : direct
+        if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+        // Mode GitHub : Supabase read-app
+        return sbFetchTable(tableName);
+      };
+
+      // Shim grist.* en mode GitHub (pour compatibilité)
+      if (!window.PP_IS_GRIST) {
+        window.grist = window.grist || {};
+        window.grist.docApi = window.grist.docApi || {};
+        window.grist.docApi.fetchTable = window.PP_fetchTable;
+
+        if (typeof window.grist.rowsToRecords !== "function") {
+          window.grist.rowsToRecords = function (table) {
+            const ids = table.id || [];
+            const records = [];
+            const cols = {};
+            for (const [k, v] of Object.entries(table)) {
+              if (k === "id") continue;
+              if (Array.isArray(v)) cols[k] = v;
+            }
+            for (let i = 0; i < ids.length; i++) {
+              const rec = { id: ids[i] };
+              for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
+              records.push(rec);
+            }
+            return records;
+          };
+        }
+      }
+    })();
+  </script>
 
   <style>
     .pp-db{
@@ -147,180 +279,31 @@
     </div>
   </div>
 
-  <!-- ✅ On charge d’abord ton config (routes/header/branding) -->
-  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
-
-  <!-- ✅ Puis on impose NOTRE couche data-layer APRÈS (pour ne pas se faire écraser) -->
-  <script>
-    // ===============================
-    // PPP Data Layer (GitHub + Grist) — OVERRIDE SAFE
-    // ===============================
-    (function () {
-      const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-
-      function getSBRoot() {
-        const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
-        return sbBase + "/functions/v1";
-      }
-
-      function getAppName() {
-        return window.PP_APP_NAME || window.PP_APP_DEFAULT || "equipements";
-      }
-
-      // On est dans Grist IFRAME uniquement si parent != window
-      const IS_GRIST = !!(
-        window.grist &&
-        window.grist.docApi &&
-        typeof window.grist.docApi.fetchTable === "function" &&
-        window.parent !== window
-      );
-      window.PP_IS_GRIST = IS_GRIST;
-
-      function rowsToGristTable(rows) {
-        if (!Array.isArray(rows) || !rows.length) return { id: [] };
-        const cols = new Set();
-        for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
-        cols.delete("id");
-        const t = { id: [] };
-        for (const c of cols) t[c] = [];
-        for (const r of rows) {
-          t.id.push(r.id);
-          for (const c of cols) t[c].push(r[c]);
-        }
-        return t;
-      }
-
-      async function sbFetchTable(tableName) {
-        const SB_ROOT = getSBRoot();
-        const url =
-          SB_ROOT +
-          "/read-app" +
-          "?app=" +
-          encodeURIComponent(getAppName()) +
-          "&table=" +
-          encodeURIComponent(tableName);
-
-        const r = await fetch(url, { credentials: "omit" });
-        const j = await r.json().catch(() => null);
-
-        if (!r.ok || !j || !j.ok) {
-          throw new Error(j?.error || "Lecture Supabase impossible");
-        }
-
-        // 1) { table: {id:[], ...} }
-        if (j.table) return j.table;
-
-        // 2) { rows: [...] } | { data:[...] } | { items:[...] }
-        if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-        if (Array.isArray(j.data)) return rowsToGristTable(j.data);
-        if (Array.isArray(j.items)) return rowsToGristTable(j.items);
-
-        // 3) { records: [{id, fields:{...}}] }
-        if (Array.isArray(j.records)) {
-          const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
-          return rowsToGristTable(rows);
-        }
-
-        // 4) { tables: {TableName: {id:[], ...}} }
-        if (j.tables && j.tables[tableName]) return j.tables[tableName];
-
-        return j;
-      }
-
-      window.PP_fetchTable = async function (tableName) {
-        if (IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-
-        const t = await sbFetchTable(tableName);
-
-        if (Array.isArray(t)) return rowsToGristTable(t);
-        if (t && t.ok && Array.isArray(t.items)) return rowsToGristTable(t.items);
-        if (t && Array.isArray(t.id)) return t;
-        if (t && Array.isArray(t.rows)) return rowsToGristTable(t.rows);
-        if (t && Array.isArray(t.data)) return rowsToGristTable(t.data);
-
-        return t;
-      };
-
-      // Shim grist en mode GitHub
-      if (!IS_GRIST) {
-        window.grist = window.grist || {};
-        window.grist.docApi = window.grist.docApi || {};
-        window.grist.docApi.fetchTable = window.PP_fetchTable;
-
-        if (typeof window.grist.rowsToRecords !== "function") {
-          window.grist.rowsToRecords = function (table) {
-            const ids = table.id || [];
-            const records = [];
-            let cols = {};
-            if (table.fields && typeof table.fields === "object") cols = table.fields;
-            else {
-              for (const [k, v] of Object.entries(table)) {
-                if (k === "id") continue;
-                if (Array.isArray(v)) cols[k] = v;
-              }
-            }
-            for (let i = 0; i < ids.length; i++) {
-              const rec = { id: ids[i] };
-              for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
-              records.push(rec);
-            }
-            return records;
-          };
-        }
-      }
-    })();
-  </script>
-
-  <!-- header après config (et ça ne touche pas à fetchTable) -->
   <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
   <script>
     // ===============================
-    // Dashboard logic — basé sur la table relationnelle Lien_equip_etab_dipl
+    // Dashboard logic
+    // Source: Lien_equip_etab_dipl
     // ===============================
-
-    // ⚠️ IMPORTANT: on fige la fonction utilisée (même si autre JS bidouille grist derrière)
-    const FETCH = (table) => (window.PP_fetchTable ? window.PP_fetchTable(table) : grist.docApi.fetchTable(table));
-
     const CFG = {
+      linkTable: "Lien_equip_etab_dipl",
       diplomeTable: "Diplomes_EN_OK",
       etabTable: "Etablissements_edi",
       equipTable: "Liste_des_equipements",
-      linkTable:  "Lien_equip_etab_dipl",
 
-      fDiplome: "Diplome",
-      fEtab:    "Etablissement",
-      fEquip:   "Equipement",
+      // Colonnes de la table de lien
+      linkEquipField: "Equipement",
+      linkEtabField: "Etablissement",
+      linkDiplField: "Diplome",
 
+      // Champs d'affichage / statut
       diplomeStatusField: "statut",
       etabStatusField: "statut",
 
       diplomeLabelField: "Concatenation",
       etabLabelField: "appellation_officielle",
-
-      etabKeyCandidates: ["UAI","uai","code_uai","Code_UAI","code","Code"],
-      dipKeyCandidates: ["Code","code","RNCP","rncp","id","ID"]
     };
-
-    function rowsToRecordsCompat(table) {
-      if (window.grist && typeof grist.rowsToRecords === "function") return grist.rowsToRecords(table);
-      const ids = table.id || [];
-      const records = [];
-      let cols = {};
-      if (table.fields && typeof table.fields === "object") cols = table.fields;
-      else {
-        for (const [k, v] of Object.entries(table)) {
-          if (k === "id") continue;
-          if (Array.isArray(v)) cols[k] = v;
-        }
-      }
-      for (let i = 0; i < ids.length; i++) {
-        const r = { id: ids[i] };
-        for (const [c, values] of Object.entries(cols)) r[c] = values[i];
-        records.push(r);
-      }
-      return records;
-    }
 
     function safeText(v){ return (v===null || v===undefined) ? "" : String(v); }
     function htmlEscape(s){
@@ -335,9 +318,6 @@
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g," ");
     }
-    function normalizeEquipLabel(s){
-      return safeText(s).replace(/\s+/g," ").trim();
-    }
     function uniqSorted(arr){
       return Array.from(new Set(arr))
         .map(x => safeText(x).trim())
@@ -351,42 +331,21 @@
     }
     function toggleDetails(el){ el.classList.toggle("open"); }
 
-    function buildFixedIndex(records, opts){
-      const { statusField, labelField, keyCandidates } = opts;
-
-      const idToLabel = new Map();
-      const textToId  = new Map();
-      const onIds     = new Set();
-      const normLabels = [];
-
-      let keyField = null;
-      if (records?.length){
-        const keys = Object.keys(records[0] || {});
-        for (const c of (keyCandidates || [])){
-          if (keys.includes(c)) { keyField = c; break; }
-        }
+    function rowsToRecordsCompat(table) {
+      if (window.grist && typeof grist.rowsToRecords === "function") return grist.rowsToRecords(table);
+      const ids = table.id || [];
+      const records = [];
+      const cols = {};
+      for (const [k, v] of Object.entries(table)) {
+        if (k === "id") continue;
+        if (Array.isArray(v)) cols[k] = v;
       }
-
-      for (const r of (records || [])){
-        const id = r.id;
-        if (!statusField || isOnValue(r[statusField])) onIds.add(id);
-
-        const label = safeText(r[labelField]).trim();
-        idToLabel.set(id, label || `#${id}`);
-
-        if (label){
-          const n = normalizeKey(label);
-          textToId.set(n, id);
-          normLabels.push({ norm: n, id });
-        }
-
-        if (keyField){
-          const keyVal = safeText(r[keyField]).trim();
-          if (keyVal) textToId.set(normalizeKey(keyVal), id);
-        }
+      for (let i = 0; i < ids.length; i++) {
+        const r = { id: ids[i] };
+        for (const [c, values] of Object.entries(cols)) r[c] = values[i];
+        records.push(r);
       }
-
-      return { idToLabel, onIds };
+      return records;
     }
 
     function etabCategory(label){
@@ -397,6 +356,35 @@
           || s.includes("sep") || s.includes("enseignement general et professionnel")) return 2;
       if (s.includes("lycee")) return 3;
       return 4;
+    }
+
+    function buildFixedIndex(records, opts){
+      const { statusField, labelField } = opts;
+      const idToLabel = new Map();
+      const onIds = new Set();
+
+      for (const r of (records || [])){
+        const id = Number(r.id);
+        if (!statusField || isOnValue(r[statusField])) onIds.add(id);
+
+        const label = safeText(r[labelField]).trim();
+        idToLabel.set(id, label || `#${id}`);
+      }
+      return { idToLabel, onIds };
+    }
+
+    function buildEquipIndex(records){
+      const idToLabel = new Map();
+      for (const r of (records || [])) {
+        const id = Number(r.id);
+        const label =
+          safeText(r["Equipements_ou_produits"]).trim() ||
+          safeText(r["label"]).trim() ||
+          safeText(r["Nom"]).trim() ||
+          `#${id}`;
+        idToLabel.set(id, label);
+      }
+      return { idToLabel };
     }
 
     function buildRowSimple({ label, count, list }, idx){
@@ -542,7 +530,14 @@
     let state = {
       diplomeRows: { nonZero: [], zero: [] },
       etabCards: { nonZero: [], zero: [] },
-      stats: { workRows: 0, diplOnTotal: 0, diplOnUsed: 0, etabOnTotal: 0, etabOnUsed: 0 }
+      stats: {
+        linkRows: 0,
+        diplOnTotal: 0, diplOnUsed: 0,
+        etabOnTotal: 0, etabOnUsed: 0,
+        orphanDiplomeRefs: 0,
+        orphanEtabRefs: 0,
+        orphanEquipRefs: 0
+      }
     };
 
     async function loadData(){
@@ -550,13 +545,13 @@
       warn.style.display = "none";
       warn.textContent = "";
 
-      let tDip, tEtab, tEquip, tLink;
+      let tLink, tDip, tEtab, tEq;
       try{
-        [tDip, tEtab, tEquip, tLink] = await Promise.all([
-          FETCH(CFG.diplomeTable),
-          FETCH(CFG.etabTable),
-          FETCH(CFG.equipTable),
-          FETCH(CFG.linkTable)
+        [tLink, tDip, tEtab, tEq] = await Promise.all([
+          grist.docApi.fetchTable(CFG.linkTable),
+          grist.docApi.fetchTable(CFG.diplomeTable),
+          grist.docApi.fetchTable(CFG.etabTable),
+          grist.docApi.fetchTable(CFG.equipTable)
         ]);
       }catch(e){
         warn.style.display = "block";
@@ -564,57 +559,54 @@
         return;
       }
 
-      const dipRecs   = rowsToRecordsCompat(tDip);
-      const etabRecs  = rowsToRecordsCompat(tEtab);
-      const equipRecs = rowsToRecordsCompat(tEquip);
-      const linkRecs  = rowsToRecordsCompat(tLink);
+      const linkRecs = rowsToRecordsCompat(tLink);
+      const dipRecs  = rowsToRecordsCompat(tDip);
+      const etabRecs = rowsToRecordsCompat(tEtab);
+      const eqRecs   = rowsToRecordsCompat(tEq);
 
-      const dipIndex = buildFixedIndex(dipRecs, {
-        statusField: CFG.diplomeStatusField,
-        labelField: CFG.diplomeLabelField,
-        keyCandidates: CFG.dipKeyCandidates
-      });
-      const etabIndex = buildFixedIndex(etabRecs, {
-        statusField: CFG.etabStatusField,
-        labelField: CFG.etabLabelField,
-        keyCandidates: CFG.etabKeyCandidates
-      });
+      const dipIndex  = buildFixedIndex(dipRecs,  { statusField: CFG.diplomeStatusField, labelField: CFG.diplomeLabelField });
+      const etabIndex = buildFixedIndex(etabRecs, { statusField: CFG.etabStatusField,    labelField: CFG.etabLabelField });
+      const eqIndex   = buildEquipIndex(eqRecs);
 
-      // Map Equipement id -> label
-      const equipLabelById = new Map();
-      for (const r of equipRecs){
-        const label = normalizeEquipLabel(r.label ?? r.Equipements_ou_produits ?? "");
-        if (label) equipLabelById.set(Number(r.id), label);
-      }
+      const byDiplomeId = new Map();       // dipId -> Set(equipLabel)
+      const byEtabIdTotal = new Map();     // etabId -> Set(equipLabel)
+      const byEtabIdDipId = new Map();     // "etab||dip" -> Set(equipLabel)
 
-      const byDiplomeId = new Map();
-      const byEtabIdTotal = new Map();
-      const byEtabIdDipId = new Map();
+      let orphanDiplomeRefs = 0;
+      let orphanEtabRefs = 0;
+      let orphanEquipRefs = 0;
 
       for (const r of linkRecs){
-        const dipId  = Number(r[CFG.fDiplome]);
-        const etabId = Number(r[CFG.fEtab]);
-        const equipId = Number(r[CFG.fEquip]);
+        const equipId = Number(r[CFG.linkEquipField]);
+        const etabId  = Number(r[CFG.linkEtabField]);
+        const dipId   = Number(r[CFG.linkDiplField]);
 
+        const equipLabel = eqIndex.idToLabel.get(equipId);
+        if (!equipLabel) orphanEquipRefs++;
+
+        if (!dipIndex.idToLabel.has(dipId)) orphanDiplomeRefs++;
+        if (!etabIndex.idToLabel.has(etabId)) orphanEtabRefs++;
+
+        // Filtre "actif" via statut
         if (!dipIndex.onIds.has(dipId)) continue;
         if (!etabIndex.onIds.has(etabId)) continue;
 
-        const eqLabel = equipLabelById.get(equipId) || `Équipement #${equipId}`;
+        const eq = equipLabel || `#${equipId}`;
 
         if (!byDiplomeId.has(dipId)) byDiplomeId.set(dipId, new Set());
-        byDiplomeId.get(dipId).add(eqLabel);
+        byDiplomeId.get(dipId).add(eq);
 
         if (!byEtabIdTotal.has(etabId)) byEtabIdTotal.set(etabId, new Set());
-        byEtabIdTotal.get(etabId).add(eqLabel);
+        byEtabIdTotal.get(etabId).add(eq);
 
         const k = `${etabId}||${dipId}`;
         if (!byEtabIdDipId.has(k)) byEtabIdDipId.set(k, new Set());
-        byEtabIdDipId.get(k).add(eqLabel);
+        byEtabIdDipId.get(k).add(eq);
       }
 
+      // Diplômes
       const dNonZero = [], dZero = [];
       let diplOnUsed = 0;
-
       for (const dipId of dipIndex.onIds){
         const label = dipIndex.idToLabel.get(dipId) || `#${dipId}`;
         const list = uniqSorted(Array.from(byDiplomeId.get(dipId) || new Set()));
@@ -622,9 +614,9 @@
         if (list.length) { diplOnUsed++; dNonZero.push(rec); } else dZero.push(rec);
       }
 
+      // Établissements
       const eNonZero = [], eZero = [];
       let etabOnUsed = 0;
-
       for (const etabId of etabIndex.onIds){
         const etabLabel = etabIndex.idToLabel.get(etabId) || `#${etabId}`;
         const totalList = uniqSorted(Array.from(byEtabIdTotal.get(etabId) || new Set()));
@@ -660,9 +652,12 @@
         diplomeRows: { nonZero: dNonZero, zero: dZero },
         etabCards: { nonZero: eNonZero, zero: eZero },
         stats: {
-          workRows: linkRecs.length,
+          linkRows: linkRecs.length,
           diplOnTotal: dipIndex.onIds.size, diplOnUsed,
-          etabOnTotal: etabIndex.onIds.size, etabOnUsed
+          etabOnTotal: etabIndex.onIds.size, etabOnUsed,
+          orphanDiplomeRefs,
+          orphanEtabRefs,
+          orphanEquipRefs
         }
       };
     }
@@ -673,6 +668,15 @@
 
       document.getElementById("hDiplomes").textContent = `Diplômes (${state.stats.diplOnUsed}/${state.stats.diplOnTotal})`;
       document.getElementById("hEtab").textContent = `Établissements (${state.stats.etabOnUsed}/${state.stats.etabOnTotal})`;
+
+      const md = [];
+      if (state.stats.orphanDiplomeRefs) md.push(`Valeurs diplôme non rattachées : ${state.stats.orphanDiplomeRefs}`);
+      document.getElementById("missDiplomes").textContent = md.join(" • ");
+
+      const me = [];
+      if (state.stats.orphanEtabRefs) me.push(`Valeurs établissement non rattachées : ${state.stats.orphanEtabRefs}`);
+      if (state.stats.orphanEquipRefs) me.push(`Valeurs équipement non rattachées : ${state.stats.orphanEquipRefs}`);
+      document.getElementById("missEtab").textContent = me.join(" • ");
 
       const colDiplomes = document.getElementById("colDiplomes");
       const colEtab = document.getElementById("colEtab");
@@ -688,6 +692,7 @@
         dNonZero.sort((a,b)=>(b.count-a.count) || a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
       }
       dZero.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+
       dNonZero.forEach((d,i)=> colDiplomes.appendChild(buildRowSimple(d,i)));
       dZero.forEach((d,i)=> colDiplomes.appendChild(buildRowSimple(d, dNonZero.length + i)));
 
@@ -700,11 +705,12 @@
         eNonZero.sort((a,b)=>(a.cat-b.cat) || (b.countEquip-a.countEquip) || a.etabLabel.localeCompare(b.etabLabel,"fr",{sensitivity:"base"}));
       }
       eZero.sort((a,b)=>(a.cat-b.cat) || a.etabLabel.localeCompare(b.etabLabel,"fr",{sensitivity:"base"}));
+
       eNonZero.forEach((e,i)=> colEtab.appendChild(buildEtabCard(e,i)));
       eZero.forEach((e,i)=> colEtab.appendChild(buildEtabCard(e, eNonZero.length + i)));
 
       document.getElementById("footnote").textContent =
-        `Source : « ${CFG.linkTable} » — ${state.stats.workRows} liens analysés.`;
+        `Source : « ${CFG.linkTable} » — ${state.stats.linkRows} liens analysés.`;
     }
 
     async function init(){
