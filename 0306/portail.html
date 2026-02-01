@@ -10,6 +10,91 @@
 
   <link rel="stylesheet" href="../css/pp-core.css" />
   <link rel="stylesheet" href="../css/pp-portail.css" />
+
+<style>
+  /* Overlay de chargement */
+  #pp-wait-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(255,255,255,.88);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    transition: opacity .25s ease;
+  }
+  #pp-wait-overlay.pp-hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pp-wait-card {
+    width: min(520px, 92vw);
+    background: #fff;
+    border: 1px solid rgba(27,57,106,.18);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.10);
+    padding: 18px 18px 14px;
+  }
+  .pp-wait-top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .pp-spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 4px solid rgba(63,114,175,.22);
+    border-top-color: rgba(27,57,106,.95);
+    animation: pp-spin .85s linear infinite;
+    flex: 0 0 auto;
+  }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
+
+  .pp-wait-title {
+    font-weight: 800;
+    color: #1B396A;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+  .pp-wait-text {
+    margin: 6px 0 0;
+    color: rgba(27,57,106,.85);
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .pp-wait-foot {
+    margin-top: 12px;
+    font-size: 12px;
+    color: rgba(27,57,106,.65);
+  }
+
+  /* Option : éviter le scroll pendant le chargement */
+  html.pp-lock, body.pp-lock { overflow: hidden; }
+</style>
+
+<div id="pp-wait-overlay" aria-live="polite" aria-busy="true">
+  <div class="pp-wait-card">
+    <div class="pp-wait-top">
+      <div class="pp-spinner" aria-hidden="true"></div>
+      <div>
+        <p class="pp-wait-title">Chargement du portail…</p>
+        <p class="pp-wait-text">Les tuiles arrivent dans un instant (Grist prend parfois son café avant nous).</p>
+      </div>
+    </div>
+    <div class="pp-wait-foot">Si ça dure, c’est souvent un cache navigateur ou une table lente à répondre.</div>
+  </div>
+</div>
+
+
+
+
+  
 <script type="module">
 import { isInGristWidget } from "../js/pp-runtime.js";
 </script>
@@ -677,6 +762,84 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="../js/pp-config.js"></script>
 <script src="../js/pp-header.js"></script>
+<script>
+(function () {
+  const overlay = document.getElementById('pp-wait-overlay');
+  if (!overlay) return;
+
+  // Option : bloquer le scroll pendant le chargement
+  document.documentElement.classList.add('pp-lock');
+  document.body.classList.add('pp-lock');
+
+  // ⚠️ À ADAPTER : sélecteur du conteneur qui reçoit les tuiles
+  // Mets ici l'ID/classe du "grid" des tuiles si tu l’as.
+  // Exemples possibles :
+  // const TILES_CONTAINER_SELECTOR = '#pp-tiles';
+  // const TILES_CONTAINER_SELECTOR = '.pp-tiles';
+  const TILES_CONTAINER_SELECTOR = '.ppaca-tiles, .pp-tiles, #pp-tiles';
+
+  // ⚠️ À ADAPTER : sélecteur d’une tuile (ou d’un item) une fois chargée
+  // Mets ici la classe réelle d'une tuile dans ton portail.
+  // Exemples : '.pp-tile', '.tile', 'a.ppaca-tile'
+  const TILE_SELECTOR = '.ppaca-tile, .pp-tile, .tile';
+
+  const MAX_WAIT_MS = 25000; // filet de sécurité
+  const t0 = Date.now();
+
+  function isVisible(el) {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return (r.width > 0 && r.height > 0);
+  }
+
+  function tilesAreReady() {
+    const container = document.querySelector(TILES_CONTAINER_SELECTOR);
+    if (!container) return false;
+    const tile = container.querySelector(TILE_SELECTOR);
+    return isVisible(tile);
+  }
+
+  function hideOverlay() {
+    overlay.classList.add('pp-hide');
+    // petit délai pour laisser l’animation se faire
+    setTimeout(() => {
+      overlay.remove();
+      document.documentElement.classList.remove('pp-lock');
+      document.body.classList.remove('pp-lock');
+    }, 260);
+  }
+
+  // 1) Si c’est déjà prêt (cache chaud, navigation instantanée), on enlève direct.
+  if (tilesAreReady()) {
+    hideOverlay();
+    return;
+  }
+
+  // 2) Sinon, on observe le DOM : dès que les tuiles arrivent -> on masque.
+  const mo = new MutationObserver(() => {
+    if (tilesAreReady()) {
+      mo.disconnect();
+      hideOverlay();
+    }
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+
+  // 3) Filet de sécurité : au bout d’un moment, on enlève quand même.
+  const timer = setInterval(() => {
+    const elapsed = Date.now() - t0;
+    if (tilesAreReady()) {
+      clearInterval(timer);
+      mo.disconnect();
+      hideOverlay();
+    } else if (elapsed > MAX_WAIT_MS) {
+      clearInterval(timer);
+      mo.disconnect();
+      // On n’empêche pas l’accès : on retire l’overlay même si aucune tuile n’est venue.
+      hideOverlay();
+    }
+  }, 250);
+})();
+</script>
 
 </body>
 </html>
