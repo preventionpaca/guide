@@ -530,7 +530,9 @@
   /* ===== Connexion Grist ===== */
   let docApi;
   async function waitDoc(maxMs=8000){
-    try{ window.grist?.ready?.({requiredAccess:'full document access'}); }catch{}
+    if (!window.PP_IS_GRIST) return null;
+
+    if (window.PP_IS_GRIST) { try{ window.grist?.ready?.({requiredAccess:'full document access'}); }catch{} }
     const t0=Date.now();
     while(!window.grist?.docApi){
       await new Promise(r=>setTimeout(r,120));
