@@ -479,13 +479,35 @@
   <script>
     // ====== Compat records (comme DDFPT) ======
     function rowsToRecordsCompat(table) {
-      if (window.grist && typeof grist.rowsToRecords === 'function') return grist.rowsToRecords(table);
-      const ids = table.id || [];
-      const records = [];
-      let columnArrays = table.fields && typeof table.fields === 'object' ? table.fields : {};
-      if (!Object.keys(columnArrays).length) {
-        for (const [k, v] of Object.entries(table)) if (k !== 'id' && Array.isArray(v)) columnArrays[k] = v;
+      // 0) Déjà au format "records" (ex: réponse Edge Function: {ok:true, records:[{id, fields:{...}}]})
+      if (table && Array.isArray(table.records)) {
+        return table.records.map(rec => ({ id: rec.id, ...(rec.fields || {}) }));
       }
+
+      // 1) Grist helper natif si dispo
+      if (window.grist && typeof grist.rowsToRecords === 'function') {
+        try { return grist.rowsToRecords(table); } catch(e) {}
+      }
+
+      // 2) Format Grist "table" classique : {id:[...], Col1:[...], ...}
+      const ids = (table && table.id) ? table.id : [];
+      const records = [];
+      let columnArrays = (table && table.fields && typeof table.fields === 'object') ? table.fields : {};
+
+      if (!Object.keys(columnArrays).length && table && typeof table === 'object') {
+        for (const [k, v] of Object.entries(table)) {
+          if (k === 'id') continue;
+          if (Array.isArray(v)) columnArrays[k] = v;
+        }
+      }
+
+      for (let i = 0; i < ids.length; i++) {
+        const rec = { id: ids[i] };
+        for (const [col, values] of Object.entries(columnArrays)) rec[col] = values[i];
+        records.push(rec);
+      }
+      return records;
+    }
       for (let i = 0; i < ids.length; i++) {
         const rec = { id: ids[i] };
         for (const [col, values] of Object.entries(columnArrays)) rec[col] = values[i];
