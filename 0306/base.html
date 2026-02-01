@@ -10138,11 +10138,15 @@ if(!__ppHasGristApi()){
       console.error('[DIAGNOSTIC v15.5] ❌ rowsToRecordsCompat NON définie !');
     }
     
-    console.log('[DIAGNOSTIC v15.5] Test de la table Champs_perso...');
-    
-    try {
-      await ensurePersoLoaded(true);
-      
+        // Test de la table Champs_perso uniquement si un établissement est actif
+    const __persoCode = (typeof getEffectivePersoCode === 'function') ? (getEffectivePersoCode() || '') : '';
+    if(!__persoCode){
+      console.log('[DIAGNOSTIC v15.5] ℹ️ Pas de code établissement actif : test Champs_perso ignoré.');
+    } else {
+      console.log('[DIAGNOSTIC v15.5] Test de la table Champs_perso...');
+      try {
+        await ensurePersoLoaded(true);
+
       if(PERSO_LOADED && PERSO_INDEX.size > 0) {
         console.log('[DIAGNOSTIC v15.5] ✅ Table Champs_perso accessible');
         console.log('[DIAGNOSTIC v15.5] ✅', PERSO_INDEX.size, 'enregistrements trouvés');
@@ -10151,8 +10155,12 @@ if(!__ppHasGristApi()){
       } else {
         console.error('[DIAGNOSTIC v15.5] ❌ Impossible d\'accéder à la table');
       }
-      
-      // Test d'écriture
+      } catch(err) {
+        console.error('[DIAGNOSTIC v15.5] ❌ Erreur durant le test:', err);
+      }
+    }
+
+// Test d'écriture
       console.log('[DIAGNOSTIC v15.5] Test des permissions d\'écriture...');
       const hasWriteAccess = !!(
         window.grist && 
@@ -10166,10 +10174,7 @@ if(!__ppHasGristApi()){
         console.error('[DIAGNOSTIC v15.5] ❌ API d\'écriture NON disponible');
         console.error('[DIAGNOSTIC v15.5] Vérifiez que le widget a access=full');
       }
-      
-    } catch(err) {
-      console.error('[DIAGNOSTIC v15.5] ❌ Erreur durant le test:', err);
-    }
+
     
     console.log('[DIAGNOSTIC v15.5] ========================================');
   }, 2000);
