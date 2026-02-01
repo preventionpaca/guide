@@ -531,9 +531,7 @@
         .forEach(b => {
           // ✅ Colonne attendue : Titre_bloc (texte multi-lignes)
           const raw = (b.Titre_bloc || b.Titre || '').toString();
-          raw.split(/
-?
-/).forEach(part => {
+          raw.split(/\r?\n/).forEach(part => {
             const t = part.trim();
             if (t) lines.push(t);
           });
