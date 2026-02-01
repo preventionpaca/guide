@@ -95,6 +95,29 @@
     }
     return recs;
   }
+
+
+  function getField(rec, names, fallback=''){
+    if(!rec) return fallback;
+    for(const n of names){
+      if(n in rec && rec[n] !== null && rec[n] !== undefined && String(rec[n]).trim()!=='') return rec[n];
+    }
+    // try case-insensitive match
+    const keys = Object.keys(rec);
+    for(const n of names){
+      const k = keys.find(x => String(x).toLowerCase() === String(n).toLowerCase());
+      if(k && rec[k] !== null && rec[k] !== undefined && String(rec[k]).trim()!=='') return rec[k];
+    }
+    return fallback;
+  }
+
+  function guessPageKey(recs){
+    if(!recs || !recs.length) return 'Page';
+    const keys = Object.keys(recs[0]||{});
+    const cands = keys.filter(k => String(k).toLowerCase().includes('page'));
+    return cands[0] || 'Page';
+  }
+
   function normalizeName(v){
     if(!v) return '';
     let s = String(v).trim().toLowerCase();
@@ -116,23 +139,26 @@
   function buildTiles(blocsRowsAll, layoutRow){
     const grid = document.getElementById('tileGrid');
     grid.innerHTML='';
-    const cols = layoutRow && layoutRow.Nbre_colonne ? Number(layoutRow.Nbre_colonne)||4 : 4;
+
+    const colsRaw = getField(layoutRow, ['Nbre_colonne','Nbre_colonnes','Colonnes','Colonnes_par_ligne'], 4);
+    const cols = Number(colsRaw)||4;
     document.documentElement.style.setProperty('--grid-columns', cols);
 
     blocsRowsAll
-      .slice().sort((a,b)=>(a.num_bloc||0)-(b.num_bloc||0))
+      .slice()
+      .sort((a,b)=> (Number(getField(a,['num_bloc','Num_bloc','Numero','Ordre'],0))||0) - (Number(getField(b,['num_bloc','Num_bloc','Numero','Ordre'],0))||0))
       .forEach(bloc=>{
         const tile=document.createElement('div'); tile.className='tile';
-        const cc=colorToClass(bloc.Couleur); if(cc) tile.classList.add(cc);
+        const cc=colorToClass(getField(bloc,['Couleur','couleur','Color','Couleur_bloc'],'')); if(cc) tile.classList.add(cc);
 
-        const icon=document.createElement('div'); icon.className='tile-icon'; icon.textContent=bloc.Initiale_bloc||'';
+        const icon=document.createElement('div'); icon.className='tile-icon'; icon.textContent=getField(bloc,['Initiale_bloc','Initiale','Icone','Icône'], '');
         const main=document.createElement('div'); main.className='tile-main';
-        const t=document.createElement('div'); t.className='tile-title'; t.textContent=bloc.Titre_bloc||'(sans titre)';
-        const d=document.createElement('div'); d.className='tile-desc'; d.textContent=bloc.Sous_titre1||'';
+        const t=document.createElement('div'); t.className='tile-title'; t.textContent=getField(bloc,['Titre_bloc','Titre','Titre_bloc_1','Nom','Libelle','Libellé'], '(sans titre)');
+        const d=document.createElement('div'); d.className='tile-desc'; d.textContent=getField(bloc,['Sous_titre1','Sous_titre','Sous-titre','Description','Desc'], '');
         main.appendChild(t); main.appendChild(d);
         tile.appendChild(icon); tile.appendChild(main);
 
-        const url = (bloc.Url_bloc||'').trim();
+        const url = String(getField(bloc,['Url_bloc','URL','Url','Lien','Lien_bloc'], '')||'').trim();
         if(url){
           tile.tabIndex=0; tile.setAttribute('role','link');
           tile.addEventListener('click', ()=>{ try{ window.top.location.href=url; }catch(e){ window.location.href=url; } });
@@ -143,13 +169,47 @@
   }
 
   async function loadFromGrist(){
-    const doc = grist.docApi;
-    const [tAgenc, tBlocs] = await Promise.all([doc.fetchTable('Agencement_portail'), doc.fetchTable('Blocs')]);
-    const agRows = rowsToRecordsCompat(tAgenc);
-    const blocsAll = rowsToRecordsCompat(tBlocs);
-    const layoutRow = agRows.find(r=>normalizeName(r.Page)===normalizeName('Accès Admin')) || agRows[0] || null;
-    const blocsRowsAll = blocsAll.filter(b=>normalizeName(b.Page)===normalizeName(PAGE_NAME));
-    buildTiles(blocsRowsAll, layoutRow);
+    const grid = document.getElementById('tileGrid');
+    try{
+      const doc = grist.docApi;
+      const [tAgenc, tBlocs] = await Promise.all([
+        doc.fetchTable('Agencement_portail'),
+        doc.fetchTable('Blocs')
+      ]);
+
+      const agRows = rowsToRecordsCompat(tAgenc);
+      const blocsAll = rowsToRecordsCompat(tBlocs);
+
+      const pageKeyAg = guessPageKey(agRows);
+      const pageKeyBl = guessPageKey(blocsAll);
+
+      // Layout: try by PAGE_NAME, then by human label, else first row
+      const layoutRow =
+        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName(PAGE_NAME)) ||
+        agRows.find(r=>normalizeName(getField(r,[pageKeyAg,'Page','page'],''))===normalizeName('Accès Admin')) ||
+        agRows[0] || null;
+
+      // Blocs: filter by PAGE_NAME; if empty, try common labels; if still empty, show all blocs (better than rien)
+      let blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(PAGE_NAME));
+      if(!blocsRowsAll.length){
+        const fallbacks = ['Accès Admin','Acces Admin','Admin','Administrateur','Accès administrateur'];
+        for(const fb of fallbacks){
+          blocsRowsAll = blocsAll.filter(b=>normalizeName(getField(b,[pageKeyBl,'Page','page'],''))===normalizeName(fb));
+          if(blocsRowsAll.length) break;
+        }
+      }
+      if(!blocsRowsAll.length){
+        // dernier recours : tout afficher
+        blocsRowsAll = blocsAll.slice();
+        console.warn('[ADMIN] Aucun bloc trouvé pour la page "'+PAGE_NAME+'". Affichage de tous les blocs.');
+      }
+
+      buildTiles(blocsRowsAll, layoutRow);
+    }catch(e){
+      console.error('[ADMIN] Erreur chargement tuiles', e);
+      grid.innerHTML = '<div class="ppaca-card" style="max-width:920px;margin:0 auto;"><div class="ppaca-card-body"><p><strong>Impossible de charger les tuiles.</strong></p><p style="opacity:.8">Vérifie que ce widget est bien ouvert <em>dans Grist</em> et que les tables <code>Agencement_portail</code> et <code>Blocs</code> existent (noms exacts).</p></div></div>';
+      throw e;
+    }
   }
 
   function initLock(){
