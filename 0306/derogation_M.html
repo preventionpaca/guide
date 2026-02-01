@@ -173,7 +173,23 @@
       gap: 8px;
       margin-top: 12px;
     }
-  </style>
+  
+    .pp-etab-change-btn{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9998;
+      border: 1px solid rgba(27,57,106,.35);
+      background: rgba(255,255,255,.95);
+      color: #1b396a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .pp-etab-change-btn:hover{ filter: brightness(.98); }
+</style>
 
   <!-- Masquage du header en mode impression -->
   <style>
@@ -1355,7 +1371,18 @@
     window.print();
   });
 
-  // ===== GESTION LIGHTBOX CODE ETABLISSEMENT =====
+    // ===== GESTION LIGHTBOX CODE ETABLISSEMENT =====
+  // Persistance du code établissement (comme PDFT) : partagé entre pages
+  const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
+  function getStoredEtabCode(){ try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; } }
+  function setStoredEtabCode(code){
+    try{
+      const v=(code||'').toString().trim().toUpperCase();
+      if(v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
+    }catch{}
+  }
+  function clearStoredEtabCode(){ try{ localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); }catch{} }
+
   function openCodeModal(){
     if(!$codeModal) return;
     $codeModal.classList.remove('hidden');
@@ -1365,60 +1392,93 @@
     if(!$codeModal) return;
     $codeModal.classList.add('hidden');
   }
-  function handleCodeSubmit(){
+
+  function handleCodeSubmit(opts={}){
+    const silent = !!opts.silent;
+    const remember = opts.remember !== false;
+
     if(!hasCodeColumn || !etabCodeToObj.size){
-      alert("Colonne de code établissement indisponible dans la base. Sélection manuelle requise.");
+      if(!silent){
+        alert("Colonne de code établissement indisponible dans la base. Sélection manuelle requise.");
+      }
       closeCodeModal();
       $q.readOnly = false;
-      return;
+      return false;
     }
+
     const code = ($codeInput.value || '').trim().toUpperCase();
     if(!code){
-      alert("Merci de saisir le code établissement.");
-      return;
+      if(!silent) alert("Merci de saisir le code établissement.");
+      return false;
     }
+
     const rec = etabCodeToObj.get(code);
     if(!rec){
+      if(silent){
+        clearStoredEtabCode();
+        return false;
+      }
       alert("Code établissement non reconnu.\nVérifiez le code et recommencez.");
-      return;
+      return false;
     }
+
+    // OK
     $q.value = rec.label;
     onSelectEtab(rec.label);
+    if(remember) setStoredEtabCode(code);
     closeCodeModal();
+    return true;
   }
 
   if($codeBtn){
-    $codeBtn.addEventListener('click',handleCodeSubmit);
+    $codeBtn.addEventListener('click', ()=>handleCodeSubmit({silent:false, remember:true}));
   }
   if($codeInput){
     $codeInput.addEventListener('keydown',e=>{
       if(e.key==='Enter'){
         e.preventDefault();
-        handleCodeSubmit();
+        handleCodeSubmit({silent:false, remember:true});
       }
     });
   }
   if ($codeCancel) {
     $codeCancel.addEventListener('click', () => {
-      // On ferme la modale (pour être propre) puis on redirige vers l’accueil
       closeCodeModal();
       window.location.href = HOMEPAGE_URL;
     });
   }
 
-  // Au chargement : si la colonne de code existe, on impose le passage par la lightbox
+  // Au chargement :
+  // - si un code est déjà mémorisé : tentative d’auto-connexion silencieuse
+  // - sinon : première connexion → lightbox
   if(hasCodeColumn && etabCodeToObj.size){
     $q.readOnly = true;
-    openCodeModal();
+
+    const stored = getStoredEtabCode();
+    if(stored){
+      if($codeInput) $codeInput.value = stored;
+      closeCodeModal();
+
+      const ok = handleCodeSubmit({silent:true, remember:true});
+      if(!ok){
+        openCodeModal();
+      }
+    }else{
+      openCodeModal();
+    }
   }else{
     // fallback : sélection manuelle possible
     $q.readOnly = false;
     if($codeModal) $codeModal.classList.add('hidden');
   }
 
+
+
   $overlay.classList.add('hidden');
 })();
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
+<button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 </body>
 </html>
