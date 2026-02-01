@@ -71,8 +71,11 @@ const url = SB_ROOT + "/read-app"
       }
 
       // ✅ Support formats possibles:
-      // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
+   // 1) { table: {id:[], ...} }  (attention: chez vous "table" est un STRING)
+if (j.table && typeof j.table === "object" && Array.isArray(j.table.id)) {
+  return j.table;
+}
+
 
       // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
       if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
