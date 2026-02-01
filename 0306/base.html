@@ -4494,8 +4494,28 @@ function detectLibCol(rows){
 }
 function libOf(rec){
   if(!rec) return '';
-  const v = rec[COL_LIB_RUNTIME] ?? rec[COL_LIB] ?? '';
-  return (v ?? '').toString();
+  // Primary: detected label column, then legacy COL_LIB
+  let v = rec[COL_LIB_RUNTIME] ?? rec[COL_LIB] ?? '';
+  v = (v ?? '').toString().trim();
+  if(v) return v;
+
+  // Fallback: pick first meaningful string field (excluding technical/tampon fields)
+  const skip = new Set(['id', COL_TRAV, COL_TMP_REG, COL_TMP_DOM, COL_TMP_DIP, COL_TMP_ETB, COL_TMP_TR, COL_TMP_INTI_TR, COL_TMP_ART,
+    COL_TMP_SIT, COL_TMP_PREV, COL_TMP_ENV, COL_TMP_PREREQ
+  ]);
+  for(const k of Object.keys(rec)){
+    if(skip.has(k)) continue;
+    if(k.startsWith('Tampon_')) continue;
+    const val = rec[k];
+    if(val === null || val === undefined) continue;
+    const s = String(val).trim();
+    if(!s) continue;
+    // avoid huge blobs
+    if(s.length > 140) continue;
+    return s;
+  }
+  // Last resort
+  return String(rec.id ?? '').trim();
 }
 const COL_TRAV='Nature_des_travaux';
 const COL_TMP_REG='Tampon_regime';
@@ -5103,6 +5123,7 @@ async function fetchTable(tbl){
 async function loadFull(){
   const rows=await fetchTable(TBL_MAIN);
   try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
+  try{ console.log('[LIST] label col:', COL_LIB_RUNTIME, 'legacy:', COL_LIB, 'sample keys:', Object.keys(rows[0]||{}).slice(0,20)); }catch(e){}
   MAP=new Map(rows.map(r=>[Number(r.id),r]));
 }
 
@@ -9679,8 +9700,7 @@ function initAddModeDialog(){
   if(!btn) return;
 
   // remove any previous listeners (best-effort)
-  btn.replaceWith(btn.cloneNode(true));
-  const freshBtn = document.getElementById('addModeBtn');
+  const freshBtn = btn;
 
   freshBtn.addEventListener('click', async ()=>{
     if (ADD_MODE_ACTIVE && !ADMIN_MODE) {
@@ -9780,8 +9800,8 @@ function initAdminModeDialog(){
   const btn = document.getElementById('adminModeBtn');
   if(!btn) return;
 
-  btn.replaceWith(btn.cloneNode(true));
-  const freshBtn = document.getElementById('adminModeBtn');
+  // Do not clone button in public mode; it can drop listeners unexpectedly
+  const freshBtn = btn;
 
   freshBtn.addEventListener('click', async ()=>{
     if (ADMIN_MODE) {
