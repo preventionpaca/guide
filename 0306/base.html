@@ -10088,6 +10088,14 @@ function bootOnce(){
 
 // --- Grist API guard ---
 function __ppHasGristApi(){
+  // En wrapper (iframe) sur GitHub Pages, window.grist peut exister mais ne correspond pas à un vrai contexte Grist.
+  // On force donc le mode public sur preventionpaca.github.io (et option ?forcePublic=1).
+  try{
+    const qs = new URLSearchParams(location.search);
+    if(qs.get('forcePublic')==='1') return false;
+    const host = String(location.hostname||'').toLowerCase();
+    if(host.endsWith('github.io') || host.includes('preventionpaca.github.io')) return false;
+  }catch(e){}
   return !!(
     window.grist && 
     window.grist.docApi && 
