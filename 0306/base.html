@@ -4466,6 +4466,37 @@ function rowsToRecordsCompat(t){
    ========================================================== */
 const TBL_MAIN='Liste_des_equipements';
 const COL_LIB ='Equipements_ou_produits';
+// --- Runtime label column (robust across schema variations)
+let COL_LIB_RUNTIME = COL_LIB;
+function detectLibCol(rows){
+  const cands = [
+    'Equipements_ou_produits','Equipement_ou_produit',
+    'Libellé','Libelle','Nom','Intitulé','Intitule','Titre',
+    'Désignation','Designation','Materiel','Matériel'
+  ];
+  // Prefer columns that exist AND are populated
+  for(const c of cands){
+    let seen = 0;
+    for(const r of (rows||[])){
+      if(r && (c in r)){
+        const v = (r[c] ?? '').toString().trim();
+        if(v){ seen++; if(seen >= 2) return c; } // quick confidence
+      }
+    }
+  }
+  // Otherwise just pick the first existing candidate
+  for(const c of cands){
+    for(const r of (rows||[])){
+      if(r && (c in r)) return c;
+    }
+  }
+  return COL_LIB;
+}
+function libOf(rec){
+  if(!rec) return '';
+  const v = rec[COL_LIB_RUNTIME] ?? rec[COL_LIB] ?? '';
+  return (v ?? '').toString();
+}
 const COL_TRAV='Nature_des_travaux';
 const COL_TMP_REG='Tampon_regime';
 const COL_TMP_DOM='Tampon_Domaines';
@@ -5071,6 +5102,7 @@ async function fetchTable(tbl){
 
 async function loadFull(){
   const rows=await fetchTable(TBL_MAIN);
+  try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
   MAP=new Map(rows.map(r=>[Number(r.id),r]));
 }
 
@@ -5288,14 +5320,14 @@ function matchDiplomeForRow(rec,fNorm){
 function renderList(){
   const cont=qs('#list');
   cont.innerHTML='';
-  let rows=[...MAP.values()].sort((a,b)=>String(a[COL_LIB]||'').localeCompare(String(b[COL_LIB]||''),'fr',{sensitivity:'base'}));
+  let rows=[...MAP.values()].sort((a,b)=>String(libOf(a)||'').localeCompare(String(libOf(b)||''),'fr',{sensitivity:'base'}));
 
   const raw=(qs('#filter').value||'').trim();
   const fNorm=norm(raw);
 
   if(raw){
     if(filterMode==='autocomp'){
-      rows=rows.filter(r=>norm(r[COL_LIB]||'').includes(fNorm));
+      rows=rows.filter(r=>norm(libOf(r)||'').includes(fNorm));
     }else if(filterMode==='domaine'){
       rows=rows.filter(r=>matchDomainForRow(r,fNorm));
     }else if(filterMode==='secteur'){
@@ -5329,7 +5361,7 @@ function renderList(){
     el.className='item'+(Number(r.id)===Number(selectedId)?' selected':'');
     const color=colorFromLabel((r[COL_TMP_REG]??'').toString().trim()) || 'var(--stripe-default)';
     el.style.setProperty('--stripe',color);
-    el.innerHTML=`<strong>${r[COL_LIB]??''}</strong>`;
+    el.innerHTML=`<strong>${(libOf(r) ?? '').toString()}</strong>`;
     el.onclick=()=>selectRow(r.id,true);
     cont.appendChild(el);
   }
@@ -7030,7 +7062,7 @@ async function refreshRight(){
     }
   }catch(e){}
 
-  qs('#f-lib').value = rec[COL_LIB] ?? '';
+  qs('#f-lib').value = rec[COL_LIB_RUNTIME] ?? rec[COL_LIB] ?? '';
   
   // Protection focus pour f-travaux
   try{
@@ -7403,7 +7435,7 @@ qs('#f-lib').addEventListener('change',async()=>{
   if(!ROW) return;
   const v=qs('#f-lib').value.trim();
   await runQuick(async()=>{
-    await applyUA([['UpdateRecord',TBL_MAIN,Number(ROW.id),{[COL_LIB]:v}]]);
+    await applyUA([['UpdateRecord',TBL_MAIN,Number(ROW.id),{[COL_LIB_RUNTIME]:v}]]);
     const r=MAP.get(Number(ROW.id));
     if(r){
       r[COL_LIB]=v;
@@ -7509,7 +7541,7 @@ qs('#addBtn').onclick = async () => {
 
   await runQuick(async () => {
     const r = await window.grist.docApi.applyUserActions([
-      ['AddRecord', TBL_MAIN, null, { [COL_LIB]: val, [KIND_COL]: 'Equipement' }]
+      ['AddRecord', TBL_MAIN, null, { [COL_LIB_RUNTIME]: val, [KIND_COL]: 'Equipement' }]
     ]);
     newId = r?.retValues?.[0] ?? null;
     qs('#newName').value = '';
