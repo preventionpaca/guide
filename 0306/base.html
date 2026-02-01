@@ -4635,6 +4635,20 @@ const COL_ADM_NOM       = 'Nom';
 const COL_ADM_PRENOM    = 'Prenom';
 const COL_ADM_ETAB      = 'Etab';
 const COL_ADM_CODE_DREETS = 'Code_dreets';
+const COL_ADM_CODE_DREETS = 'Code_dreets';
+
+function detectCodeCol(rows, preferred){
+  if(!Array.isArray(rows) || rows.length===0) return preferred;
+  const keys = Object.keys(rows[0]||{});
+  // exact match preferred
+  if(preferred && keys.includes(preferred)) return preferred;
+  // common alternates
+  const wanted = ['Code','code','CODE','Code_admin','Code_Admin','code_admin','CodeAdministrateur','Code_administrateur','Passcode','Password'];
+  for(const k of wanted){ if(keys.includes(k)) return k; }
+  // heuristic: first key containing 'code'
+  const hit = keys.find(k => /code/i.test(k));
+  return hit || preferred;
+}
 
 /* ========================== ÉTAT GLOBAL ========================== */
 const qs = s => document.querySelector(s);
@@ -5007,6 +5021,20 @@ const SB_API_AUTH  = SB_ROOT + '/auth-code';
 const SB_API_WRITE = SB_ROOT + '/write-app';
 const SB_TABLE_MAIN = (typeof TBL_MAIN!=='undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
 
+// En mode public, l'Edge Function peut renvoyer une version "light".
+// On tente de demander la version complète quand on a besoin des colonnes Tampon_* / codes.
+function sbFullParam(table){
+  const t = String(table||'');
+  const fullTables = new Set([
+    String(SB_TABLE_MAIN||'Liste_des_equipements'),
+    'Administrateur','Administrateurs','Admin','Admins',
+    'Diplomes_EN_OK','Lien_equip_etab_dipl','Lien_equip_etab_diplome','Lien_equip_etab_diplomes',
+    'ETABLISSEMENTS EDI Personnalisée','Etablissements','ETABLISSEMENTS'
+  ]);
+  return fullTables.has(t) ? '&full=1' : '';
+}
+
+
 const FORCE_PUBLIC = (new URLSearchParams(location.search).get('forcePublic')==='1') || /github\.io$/i.test(location.hostname);
 const IS_GRIST = !FORCE_PUBLIC && !!(window.grist && window.grist.docApi);
 
@@ -5026,7 +5054,8 @@ function _hashBaseId(){
 
 async function sbFetchTable(table){
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(String(table||''));
+            + '&table=' + encodeURIComponent(String(table||''))
+            + sbFullParam(table);
   const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || ('Lecture table impossible: ' + table));
@@ -5040,6 +5069,7 @@ async function sbFetchTable(table){
 async function sbFetchRow(table, id){
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
             + '&table=' + encodeURIComponent(String(table||''))
+            + sbFullParam(table)
             + '&id=' + encodeURIComponent(String(id));
   const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
@@ -5706,6 +5736,13 @@ function isPlausibleDiplomeLabel(label){
 
 /* index domaines / secteurs / diplômes */
 async function buildDomainSectorIndex(){
+
+  let hasTampon = false;
+  try{
+    const rowsProbe = (MAP ? Array.from(MAP.values()) : []);
+    hasTampon = rowsProbe.some(r => r && (COL_TMP_DOM in r || COL_TMP_DIP in r));
+  }catch(e){}
+
   domainSectorIndex = {};
   domainValues = new Set();
   sectorValues = new Set();
@@ -5714,6 +5751,39 @@ async function buildDomainSectorIndex(){
   // IMPORTANT : on ne dépend pas de la table Lien_equip_etab_dipl (incomplète chez certains)
   // On indexe à partir des colonnes Tampon_* de Liste_des_equipements.
   const rows = (MAP ? Array.from(MAP.values()) : []);
+
+  // Fallback: si la Edge Function renvoie une version "light" sans Tampon_*, on reconstruit
+  // l'autocomplétion diplôme à partir des tables de lien + diplômes actifs.
+  if(!hasTampon){
+    try{
+      const linkTbl = await fetchTable('Lien_equip_etab_dipl');
+      const dipsTbl = await fetchTable('Diplomes_EN_OK');
+      const dipKey = (dipsTbl[0] && ('Concatenation' in dipsTbl[0])) ? 'Concatenation' : (Object.keys(dipsTbl[0]||{}).find(k=>/concat/i.test(k)) || 'Concatenation');
+
+      // On ne garde que les diplômes "actifs" (colonne Actif/actif si elle existe)
+      const isActif = (r)=>{
+        if(!r) return true;
+        const k = Object.keys(r).find(x=>/^actif$/i.test(x));
+        if(!k) return true;
+        const v = r[k];
+        return v===true || v===1 || String(v).toLowerCase()==='true' || String(v).toLowerCase()==='oui';
+      };
+      const setActifs = new Set(dipsTbl.filter(isActif).map(r=>String(r[dipKey]||'').trim()).filter(Boolean));
+
+      for(const ln of (linkTbl||[])){
+        const eid = Number(ln[COL_L_EID] ?? ln['Equipement'] ?? ln['Equipement_id'] ?? ln['equipement_id']);
+        const lbl = String(ln[COL_L_DIP] ?? ln['Diplome'] ?? '').trim();
+        if(!eid || !lbl) continue;
+        if(setActifs.size && !setActifs.has(lbl)) continue;
+        if(!domainSectorIndex[eid]) domainSectorIndex[eid] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
+        domainSectorIndex[eid].diplomes.add(lbl);
+        if(isPlausibleDiplomeLabel(lbl)) diplomaValues.add(lbl);
+      }
+    }catch(e){
+      console.warn('[FILTER] fallback diplome index failed', e);
+    }
+  }
+
 
   for(const r of rows){
     const id = r && r.id != null ? Number(r.id) : null;
@@ -8304,8 +8374,18 @@ function initDreetsModeDialog(){
     }
     err.textContent = '';
 
-    const admins = await fetchTable(TBL_ADMIN);
-    const adminRow = admins.find(a => (a[COL_ADM_CODE_DREETS] ?? '').toString().trim() === code);
+    let admins = await fetchTable(TBL_ADMIN);
+    if(!admins || admins.length===0){
+      // Fallback noms possibles selon les versions
+      const tries = ['Administrateurs','Admin','Admins','ADMIN'];
+      for(const nm of tries){
+        admins = await fetchTable(nm);
+        if(admins && admins.length) break;
+      }
+    }
+    const ADM_CODE_COL = detectCodeCol(admins, COL_ADM_CODE);
+    const DREETS_CODE_COL = detectCodeCol(admins, COL_ADM_CODE_DREETS);
+    const adminRow = admins.find(a => (a[DREETS_CODE_COL] ?? '').toString().trim() === code);
     if(!adminRow){
       err.textContent = 'Code DREETS invalide.';
       return;
@@ -8490,8 +8570,18 @@ function initAdminModeDialog(){
     }
     err.textContent = '';
 
-    const admins = await fetchTable(TBL_ADMIN);
-    const adminRow = admins.find(a => (a[COL_ADM_CODE] ?? '').toString().trim() === code);
+    let admins = await fetchTable(TBL_ADMIN);
+    if(!admins || admins.length===0){
+      // Fallback noms possibles selon les versions
+      const tries = ['Administrateurs','Admin','Admins','ADMIN'];
+      for(const nm of tries){
+        admins = await fetchTable(nm);
+        if(admins && admins.length) break;
+      }
+    }
+    const ADM_CODE_COL = detectCodeCol(admins, COL_ADM_CODE);
+    const DREETS_CODE_COL = detectCodeCol(admins, COL_ADM_CODE_DREETS);
+    const adminRow = admins.find(a => (a[ADM_CODE_COL] ?? '').toString().trim() === code);
     if (!adminRow){
       err.textContent = 'Code administrateur invalide.';
       return;
@@ -8608,8 +8698,18 @@ if (admOkBtn) {
     }
     err.textContent = '';
 
-    const admins = await fetchTable(TBL_ADMIN);
-    const adminRow = admins.find(a => (a[COL_ADM_CODE] ?? '').toString().trim() === code);
+    let admins = await fetchTable(TBL_ADMIN);
+    if(!admins || admins.length===0){
+      // Fallback noms possibles selon les versions
+      const tries = ['Administrateurs','Admin','Admins','ADMIN'];
+      for(const nm of tries){
+        admins = await fetchTable(nm);
+        if(admins && admins.length) break;
+      }
+    }
+    const ADM_CODE_COL = detectCodeCol(admins, COL_ADM_CODE);
+    const DREETS_CODE_COL = detectCodeCol(admins, COL_ADM_CODE_DREETS);
+    const adminRow = admins.find(a => (a[ADM_CODE_COL] ?? '').toString().trim() === code);
     if (!adminRow) {
       err.textContent = 'Code administrateur invalide.';
       return;
@@ -8866,7 +8966,7 @@ function initFichePosteDialog(){
 // - Ce script ne fait que RENDRE le QR (image) à partir de l'URL stockée.
 // Fallback : si la colonne n'existe pas encore / est vide sur un ancien enregistrement,
 // on reconstruit un lien compatible portail.
-const FP_QR_BASE_DEFAULT  = 'https://docs.getgrist.com/gvPEJV3qAHS9/Equipements-de-travail-et-produits/p/119';
+const FP_QR_BASE_DEFAULT  = (window.location.origin||'') + (window.location.pathname||'');
 const FP_QR_BASE_OVERRIDE = ''; // Optionnel: forcer la base (ex: 'https://docs.getgrist.com/.../p/119')
 
 function _normalizeGristHostUrl(raw){
@@ -8943,40 +9043,38 @@ function _resolveTargetUrl(raw){
 
 function _getDeepLinkUrlForFiche(rec){
   if(!rec || !rec.id) return '';
-
-  // 0) PRIORITE : URL depuis la colonne QR_code_URL de la table Liste des équipements
-  //    Cette colonne contient l'URL complète pré-calculée (formule Grist)
-  //    Avantage : rapide + maintenable + centralisé
-  try{
-    const colUrl = ('QR_code_URL' in rec) ? 'QR_code_URL' : (('QR code URL' in rec) ? 'QR code URL' : null);
-    const v = colUrl ? String(rec[colUrl] || '').trim() : '';
-    if(v) return _sanitizeQrUrl(v);
-  }catch(e){}
-
-  // 1) Fallback (anciens enregistrements) : on reconstruit un lien portail via ?src=
   const rowId = Number(rec.id);
   if(!rowId) return '';
 
-  // Base Grist : soit surcharge manuelle, soit base par defaut, soit auto-detection depuis l'URL courante.
-  let gristBase = FP_QR_BASE_OVERRIDE ? FP_QR_BASE_OVERRIDE : FP_QR_BASE_DEFAULT;
+  // En mode GitHub/base.html : on préfère un deep-link direct vers cette page,
+  // pour éviter les renvois vers le portail.
   try{
-    const m = String(window.location.href||'').match(/https:\/\/docs\.getgrist\.com\/([^\/]+)\/([^\/]+)\//i);
-    if(m){
-      // Conserve le p/119 (ou ce que contient FP_QR_BASE_DEFAULT)
-      const p = String(gristBase||'').match(/\/p\/(\d+)/);
-      const pageId = p ? p[1] : '119';
-      gristBase = 'https://docs.getgrist.com/' + m[1] + '/' + m[2] + '/p/' + pageId;
+    const base = (window.location.origin || '') + (window.location.pathname || '');
+    if(base){
+      return base + '#equip=' + encodeURIComponent(String(rowId));
     }
   }catch(e){}
 
-  const gristUrl =
-    gristBase +
-    '?embed=true&style=singlePage&exclude-headers=true' +
-    '#a1.s' + _detectGristSectionId() + '.r' + rowId;
+  // 0) Si une URL est déjà stockée et qu'elle ne pointe PAS sur le portail, on peut l'utiliser.
+  try{
+    const colUrl = ('QR_code_URL' in rec) ? 'QR_code_URL' : (('QR code URL' in rec) ? 'QR code URL' : null);
+    const v = colUrl ? String(rec[colUrl] || '').trim() : '';
+    if(v && !/preventionpaca\.github\.io\/guide\/?\b/i.test(v)) return _sanitizeQrUrl(v);
+  }catch(e){}
 
-  const portalBase = (window.PP_PORTAL_BASE_URL || 'https://preventionpaca.github.io/guide/').replace(/\?+.*/,'');
-  // L'index du portail sait gerer ?src= (QR) et ouvre dans une vue "widget".
-  return portalBase.replace(/\/$/,'/') + '?src=' + encodeURIComponent(gristUrl);
+  // Dernier recours : garde l'ancien comportement (portail) si jamais on n'a rien.
+  // (normalement on ne passe jamais ici sur GitHub Pages)
+  try{
+    let gristBase = FP_QR_BASE_OVERRIDE ? FP_QR_BASE_OVERRIDE : FP_QR_BASE_DEFAULT;
+    const gristUrl =
+      gristBase +
+      '?embed=true&style=singlePage&exclude-headers=true' +
+      '#a1.s' + _detectGristSectionId() + '.r' + rowId;
+
+    const portalBase = (window.PP_PORTAL_BASE_URL || 'https://preventionpaca.github.io/guide/').replace(/\?+.*/,'');
+    return portalBase.replace(/\/$/,'/') + '?src=' + encodeURIComponent(gristUrl);
+  }catch(e){}
+  return '';
 }
 
 
@@ -9799,8 +9897,18 @@ function initDreetsModeDialog(){
     const code = (window.prompt("Code DREETS :", "") || "").trim();
     if(!code) return;
 
-    const admins = await fetchTable(TBL_ADMIN);
-    const adminRow = admins.find(a => (a[COL_ADM_CODE_DREETS] ?? '').toString().trim() === code);
+    let admins = await fetchTable(TBL_ADMIN);
+    if(!admins || admins.length===0){
+      // Fallback noms possibles selon les versions
+      const tries = ['Administrateurs','Admin','Admins','ADMIN'];
+      for(const nm of tries){
+        admins = await fetchTable(nm);
+        if(admins && admins.length) break;
+      }
+    }
+    const ADM_CODE_COL = detectCodeCol(admins, COL_ADM_CODE);
+    const DREETS_CODE_COL = detectCodeCol(admins, COL_ADM_CODE_DREETS);
+    const adminRow = admins.find(a => (a[DREETS_CODE_COL] ?? '').toString().trim() === code);
     if(!adminRow){
       alert('Code DREETS invalide.');
       return;
@@ -9836,8 +9944,18 @@ function initAdminModeDialog(){
     const code = (window.prompt("Code administrateur :", "") || "").trim();
     if(!code) return;
 
-    const admins = await fetchTable(TBL_ADMIN);
-    const adminRow = admins.find(a => (a[COL_ADM_CODE] ?? '').toString().trim() === code);
+    let admins = await fetchTable(TBL_ADMIN);
+    if(!admins || admins.length===0){
+      // Fallback noms possibles selon les versions
+      const tries = ['Administrateurs','Admin','Admins','ADMIN'];
+      for(const nm of tries){
+        admins = await fetchTable(nm);
+        if(admins && admins.length) break;
+      }
+    }
+    const ADM_CODE_COL = detectCodeCol(admins, COL_ADM_CODE);
+    const DREETS_CODE_COL = detectCodeCol(admins, COL_ADM_CODE_DREETS);
+    const adminRow = admins.find(a => (a[ADM_CODE_COL] ?? '').toString().trim() === code);
     if (!adminRow){
       alert('Code administrateur invalide.');
       return;
