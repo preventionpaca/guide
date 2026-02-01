@@ -224,13 +224,13 @@
   </div>
 
   <!-- ===== LIGHTBOX CODE ETABLISSEMENT ===== -->
-  <div id="code-modal">
+  <div id="code-modal" class="hidden">
     <div class="code-modal-box">
       <h2 class="code-modal-title">Code établissement</h2>
       <p class="code-modal-text">
         Merci de saisir le code de l’établissement pour charger automatiquement sa fiche.
       </p>
-      <input id="code-etab-input" type="text" class="input" autocomplete="off"
+      <input id="code-etab-input" type="password" class="input" autocomplete="off"
              placeholder="Saisir le code établissement…">
       <div class="code-modal-actions">
   <button id="code-etab-annuler" type="button" class="btn btn-secondary">Annuler</button>
@@ -546,41 +546,41 @@
   const $codeCancel  = $('code-etab-annuler');
 
 
-  /* ===== Connexion Grist ===== */
-  let docApi;
-  async function waitDoc(maxMs=8000){
-    try{ window.grist?.ready?.({requiredAccess:'full document access'}); }catch{}
-    const t0=Date.now();
-    while(!window.grist?.docApi){
-      await new Promise(r=>setTimeout(r,120));
-      if(Date.now()-t0>maxMs) break;
-    }
-    return window.grist?.docApi || null;
-  }
+  /* ===== Connexion Data Layer (Grist OU GitHub) ===== */
+const fetchTable =
+  (window.PP_fetchTable && typeof window.PP_fetchTable === "function")
+    ? window.PP_fetchTable
+    : (window.grist?.docApi?.fetchTable && typeof window.grist.docApi.fetchTable === "function")
+      ? window.grist.docApi.fetchTable
+      : null;
 
-  docApi = await waitDoc();
-  if (!docApi){
-    $hint.textContent='Grist non accessible.';
-    $hint.classList.add('err');
-    $overlay.classList.add('hidden');
-    return;
-  }
+// docApi = uniquement si on est vraiment dans Grist (écriture possible)
+const docApi = (window.PP_IS_GRIST && window.grist?.docApi && typeof window.grist.docApi.applyUserActions === "function")
+  ? window.grist.docApi
+  : null;
 
-  let tE, tD, tR, tQ;
-  try{
-    [tE, tD, tR, tQ] = await Promise.all([
-      docApi.fetchTable(T_ETAB),
-      docApi.fetchTable(T_DIP),
-      docApi.fetchTable(T_RISK),
-      docApi.fetchTable(T_EQ)
-    ]);
-  }catch(e){
-    console.error(e);
-    $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
-    $hint.classList.add('err');
-    $overlay.classList.add('hidden');
-    return;
-  }
+if (!fetchTable){
+  $hint.textContent = 'Grist non accessible (couche de données absente).';
+  $hint.classList.add('err');
+  $overlay.classList.add('hidden');
+  return;
+}
+
+let tE, tD, tR, tQ;
+try{
+  [tE, tD, tR, tQ] = await Promise.all([
+    fetchTable(T_ETAB),
+    fetchTable(T_DIP),
+    fetchTable(T_RISK),
+    fetchTable(T_EQ)
+  ]);
+}catch(e){
+  console.error(e);
+  $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
+  $hint.classList.add('err');
+  $overlay.classList.add('hidden');
+  return;
+}
 
   // === ETABLISSEMENTS statut ON ===
   let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
@@ -1157,6 +1157,8 @@
   });
 
   async function updateEtabField(field, value){
+    // Écriture seulement si le formulaire tourne dans Grist (docApi.applyUserActions disponible)
+    if(!docApi) return;
     if(!currentEtabRow || currentEtabRow.rowId==null) return;
     const updates={};
     updates[field] = value || null;
