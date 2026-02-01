@@ -240,4 +240,18 @@ body {
   text-decoration: underline;
   cursor: pointer;
 }
+/* Chips partenaires : liens "invisibles" mais avec feedback au survol */
+.ppp-chip a,
+.ppp-chip a:visited {
+  color: inherit;
+  text-decoration: none;
+  font-weight: inherit;
+}
+
+.ppp-chip a:hover,
+.ppp-chip a:focus-visible {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 
