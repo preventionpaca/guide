@@ -135,7 +135,8 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js?v=20260128a"></script>
 <!-- ===== SCRIPT TUILES (chargement reporté après auth) ===== -->
 <script>
-  const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
+(function(){
+const TILE_TILE_PAGE_NAME = 'Acces_ADMIN';
 
   const PORTAL_ROOT = 'https://preventionpaca.github.io/guide/';
   const ROUTES = {
@@ -548,6 +549,7 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
     } catch (e) {}
     await loadFromGrist();
   };
+})();
 </script>
 <script>
   const PAGE_NAME = 'Acces_ADMIN';
