@@ -91,10 +91,29 @@ const url = SB_ROOT + "/read-app"
       return j;
     }
 
-    window.PP_fetchTable = async function (tableName) {
-      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-      return sbFetchTable(tableName);
-    };
+window.PP_fetchTable = async function (tableName) {
+  // En mode Grist: on renvoie tel quel
+  if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+
+  // En mode GitHub/Supabase: on normalise tous les formats possibles
+  const t = await sbFetchTable(tableName);
+
+  // 1) Si on reçoit carrément un tableau de lignes [{id,...}, ...]
+  if (Array.isArray(t)) return rowsToGristTable(t);
+
+  // 2) Si une fonction (ou une version) renvoie { ok:true, items:[...] } directement
+  if (t && t.ok && Array.isArray(t.items)) return rowsToGristTable(t.items);
+
+  // 3) Si la fonction renvoie déjà une table Grist-like {id:[], ...}
+  if (t && Array.isArray(t.id)) return t;
+
+  // 4) Dernier recours: essayer de détecter un "items" imbriqué
+  if (t && Array.isArray(t.rows))  return rowsToGristTable(t.rows);
+  if (t && Array.isArray(t.data))  return rowsToGristTable(t.data);
+
+  return t;
+};
+
 
     // ✅ Shim: pour éviter de retoucher 50 scripts existants
     // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
