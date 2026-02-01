@@ -49,4 +49,7 @@
 
   // debug (tu peux enlever après)
   window.PP_CONFIG_VERSION = "REGISTRY-FIRST-0306-CLEAN+LINKS";
+    // --- App courante (consommée par le data layer) ---
+  window.PP_APP_NAME = window.PP_APP_NAME || window.PP_APP_DEFAULT;
+
 })();
