@@ -4952,6 +4952,7 @@ const SB_ROOT = 'https://hpiqwvwpxzppxpxhjede.supabase.co/functions/v1';
 const SB_API_READ  = SB_ROOT + '/read-app';
 const SB_API_AUTH  = SB_ROOT + '/auth-code';
 const SB_API_WRITE = SB_ROOT + '/write-app';
+const SB_TABLE_MAIN = (typeof TBL_MAIN!=='undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
 
 const FORCE_PUBLIC = (new URLSearchParams(location.search).get('forcePublic')==='1') || /github\.io$/i.test(location.hostname);
 const IS_GRIST = !FORCE_PUBLIC && !!(window.grist && window.grist.docApi);
@@ -4971,17 +4972,27 @@ function _hashBaseId(){
 }
 
 async function sbFetchList(){
-  const r = await fetch(SB_API_READ + '?app=' + encodeURIComponent(SB_APP), { credentials:'omit' });
+  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
+            + '&table=' + encodeURIComponent(SB_TABLE_MAIN);
+  const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Lecture liste impossible (Supabase)');
-  return Array.isArray(j.items) ? j.items : [];
+  // Compat: anciennes réponses {items:[...]} ou nouvelles {records:[{id,fields}...]}
+  if(Array.isArray(j.items)) return j.items;
+  if(Array.isArray(j.records)) return j.records.map(rec=>({ id: rec.id, ...(rec.fields||{}) }));
+  return [];
 }
 
 async function sbFetchOne(id){
-  const r = await fetch(SB_API_READ + '?app=' + encodeURIComponent(SB_APP) + '&id=' + encodeURIComponent(String(id)), { credentials:'omit' });
+  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
+            + '&table=' + encodeURIComponent(SB_TABLE_MAIN)
+            + '&id=' + encodeURIComponent(String(id));
+  const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Lecture fiche impossible (Supabase)');
-  return j.record; // {id, fields}
+  if(j.record) return j.record; // ancien format {record:{id,fields}}
+  if(Array.isArray(j.records) && j.records[0]) return j.records[0]; // nouveau format
+  return null;
 }
 
 function sbRecToRow(rec){
