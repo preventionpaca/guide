@@ -6,10 +6,11 @@
   <title>Avis médical – Travaux réglementés</title>
 
   <!-- API GRIST -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-<script>
+  <script>
   window.PP_APP_NAME = "equipements";
 </script>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
 
 <script>
   (function(){
@@ -63,13 +64,84 @@ window.PP_fetchTable = async function(tableName){
 })();
 </script>
 
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
   <!-- CSS commun portail + CSS spécifique avis médical -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-avis.css" />
 
   
+  
+
+    /* ===== IMPRESSION : FORCER UN VERSO (PAGE 2) ===== */
+    @media print {
+      .page-break {
+        break-before: page;
+        page-break-before: always;
+      }
+    }
+
+    /* ===== VERSO ===== */
+    .verso {
+      margin-top: 10px;
+      font-size: 11px;
+      line-height: 1.18;
+    }
+    .verso h2 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      letter-spacing: .2px;
+    }
+    .verso-meta {
+      font-size: 11px;
+      color: #111827;
+      margin: 0 0 8px;
+      padding: 6px 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    .verso-meta strong { color: #0b2238; }
+    .trav-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 6px 8px;
+      margin: 6px 0;
+      background: #ffffff;
+      page-break-inside: avoid;
+    }
+    .trav-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #0b2238;
+      font-size: 12px;
+    }
+    .equip-list {
+      margin: 0;
+      padding-left: 16px;
+    }
+    .equip-list li {
+      margin: 0;
+      padding: 0;
+      line-height: 1.15;
+    }
+    /* 2 colonnes seulement quand la liste est longue */
+    .equip-list.two-cols {
+      column-count: 2;
+      column-gap: 18px;
+    }
+    .equip-empty {
+      margin: 0;
+      color: #6b7280;
+      font-size: 11px;
+    }
+    .doc-edited {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #374151;
+      text-align: right;
+    }
+
+  </style>
 </head>
 
 <body>
@@ -756,9 +828,6 @@ window.PP_fetchTable = async function(tableName){
         docApi.fetchTable(TABLE_TRAVAUX),
         docApi.fetchTable(TABLE_ETAB)
       ]);
-
-      const travRecs = tableToRows(rawTravTable);
-      const etabRecs = tableToRows(rawEtabTable);
 
       // ===== TRAVAUX =====
       if (travRecs.length) {
