@@ -1,184 +1,75 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  
-  <script>
-    // ✅ CORRECTION : Définir le bon nom d'app
-    window.PP_APP_NAME = "equipements";
-  </script>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Avis médical – Travaux réglementés</title>
 
   <!-- API GRIST -->
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-  
-  <!-- ✅ Data Layer Supabase (identique à ddfpt.html) -->
-  <script>
-    (function(){
-  const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-  const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
-  const SB_ROOT = sbBase + "/functions/v1";
-  window.PP_SB_ROOT = SB_ROOT;
-  window.PP_SB_API_READ  = SB_ROOT + "/read-app";
-  window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
-  window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
-  
-  function getAppName(){
-    return (window.PP_APP_DEFAULT || window.PP_APP_NAME || "equipements");
-  }
-  
-  window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function' && window.parent !== window);
+<script>
+  window.PP_APP_NAME = "equipements";
+</script>
 
-  function rowsToGristTable(rows){
-    if(!Array.isArray(rows) || !rows.length) return {id:[]};
-    const cols = new Set();
-    for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
-    cols.delete('id');
-    const t={id:[]};
-    for(const c of cols) t[c]=[];
-    for(const r of rows){
-      t.id.push(r.id);
-      for(const c of cols) t[c].push(r[c]);
+<script>
+  (function(){
+const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
+const SB_ROOT = sbBase + "/functions/v1";
+window.PP_SB_ROOT = SB_ROOT;
+window.PP_SB_API_READ  = SB_ROOT + "/read-app";
+window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
+window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+function getAppName(){
+  return (window.PP_APP_DEFAULT || window.PP_APP_NAME || "equipements");
+}
+window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.fetchTable === 'function' && window.parent !== window);
+function rowsToGristTable(rows){
+  if(!Array.isArray(rows) || !rows.length) return {id:[]};
+  const cols = new Set();
+  for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
+  cols.delete('id');
+  const t={id:[]};
+  for(const c of cols) t[c]=[];
+  for(const r of rows){
+    t.id.push(r.id);
+    for(const c of cols) t[c].push(r[c]);
+  }
+  return t;
+}
+async function sbFetchTable(tableName){
+  const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName()) + "&table=" + encodeURIComponent(tableName);
+  let r = await fetch(url1, {credentials:'omit'});
+  let j = await r.json().catch(()=>null);
+  if(j && j.ok){
+    if (Array.isArray(j.records)) {
+      const rows = j.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
+      return rowsToGristTable(rows);
     }
-    return t;
+    if(j.table) return j.table;
+    if(Array.isArray(j.rows)) return rowsToGristTable(j.rows);
+    if(j.tables && j.tables[tableName]) return j.tables[tableName];
   }
-
-  async function sbFetchTable(tableName){
-    const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName()) + "&table=" + encodeURIComponent(tableName);
-    let r = await fetch(url1, {credentials:'omit'});
-    let j = await r.json().catch(()=>null);
-    if(j && j.ok){
-      if (Array.isArray(j.records)) {
-        const rows = j.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
-        return rowsToGristTable(rows);
-      }
-      if(j.table) return j.table;
-      if(Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-      if(Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if(j.items && Array.isArray(j.items)) return rowsToGristTable(j.items);
-      if(j.tables && j.tables[tableName]) return j.tables[tableName];
-      return j;
-    }
-    const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName());
-    r = await fetch(url2, {credentials:'omit'});
-    j = await r.json().catch(()=>null);
-    if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
-    throw new Error(j?.error || "Lecture Supabase impossible");
-  }
-
-  window.PP_fetchTable = async function(tableName){
-    if(window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-    return sbFetchTable(tableName);
-  };
-  
-  // ✅ Shim pour compatibilité
-  if (!window.PP_IS_GRIST) {
-    window.grist = window.grist || {};
-    window.grist.docApi = window.grist.docApi || {};
-    window.grist.docApi.fetchTable = window.PP_fetchTable;
-
-    if (typeof window.grist.rowsToRecords !== "function") {
-      window.grist.rowsToRecords = function (table) {
-        const ids = table.id || [];
-        const records = [];
-        let cols = {};
-
-        if (table.fields && typeof table.fields === "object") cols = table.fields;
-        else {
-          for (const [k, v] of Object.entries(table)) {
-            if (k === "id") continue;
-            if (Array.isArray(v)) cols[k] = v;
-          }
-        }
-
-        for (let i = 0; i < ids.length; i++) {
-          const rec = { id: ids[i] };
-          for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
-          records.push(rec);
-        }
-        return records;
-      };
-    }
-  }
+  const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName());
+  r = await fetch(url2, {credentials:'omit'});
+  j = await r.json().catch(()=>null);
+  if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
+  throw new Error(j?.error || "Lecture Supabase impossible");
+}
+window.PP_fetchTable = async function(tableName){
+  if(window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
+  return sbFetchTable(tableName);
+};
 })();
 </script>
 
-<link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
+  <!-- CSS commun portail + CSS spécifique avis médical -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-avis.css" />
 
-  <style>
-    /* ===== IMPRESSION : FORCER UN VERSO (PAGE 2) ===== */
-    @media print {
-      .page-break {
-        break-before: page;
-        page-break-before: always;
-      }
-    }
-
-    /* ===== VERSO ===== */
-    .verso {
-      margin-top: 10px;
-      font-size: 11px;
-      line-height: 1.18;
-    }
-    .verso h2 {
-      margin: 0 0 6px;
-      font-size: 14px;
-      letter-spacing: .2px;
-    }
-    .verso-meta {
-      font-size: 11px;
-      color: #111827;
-      margin: 0 0 8px;
-      padding: 6px 8px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      background: #f8fafc;
-    }
-    .verso-meta strong { color: #0b2238; }
-    .trav-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 6px 8px;
-      margin: 6px 0;
-      background: #ffffff;
-      page-break-inside: avoid;
-    }
-    .trav-title {
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: #0b2238;
-      font-size: 12px;
-    }
-    .equip-list {
-      list-style-type: disc;
-      margin: 0;
-      padding-left: 16px;
-    }
-    .equip-list li {
-      margin: 0;
-      padding: 0;
-      line-height: 1.15;
-    }
-    .equip-list.two-cols {
-      column-count: 2;
-      column-gap: 18px;
-    }
-    .equip-empty {
-      margin: 0;
-      color: #6b7280;
-      font-size: 11px;
-    }
-    .doc-edited {
-      margin-top: 14px;
-      font-size: 12px;
-      color: #374151;
-      text-align: right;
-    }
-  </style>
+  
 </head>
 
 <body>
@@ -195,7 +86,8 @@
         <h3>Recherche</h3>
         <p>
           1. Choisissez une <strong>formation</strong> (diplôme).<br>
-          2. Ces choix alimentent automatiquement le formulaire ci-dessous.
+          2. Choisissez un <strong>établissement</strong>.<br>
+          Ces choix alimentent automatiquement le formulaire ci-dessous.
         </p>
 
         <div class="field-block">
@@ -208,6 +100,18 @@
             autocomplete="off"
           />
           <div id="diplome-dropdown" class="dropdown"></div>
+        </div>
+
+        <div class="field-block">
+          <label for="etab-input">Recherche d'établissement</label>
+          <input
+            id="etab-input"
+            class="search-input"
+            type="text"
+            placeholder="Ex. : Lycée Les Eucalyptus…"
+            autocomplete="off"
+          />
+          <div id="etab-dropdown" class="dropdown"></div>
         </div>
       </div>
 
@@ -225,14 +129,14 @@
         </tr>
       </table>
 
-      <!-- ETABLISSEMENT + RÉFÉRENCES JURIDIQUES -->
+      <!-- ETABLISSEMENT + RÉFÉRENCES JURIDIQUES SUR UNE LIGNE -->
       <div class="header-info-row">
         <div id="etab-text" class="etab-text">
           <!-- Contenu rempli dynamiquement -->
         </div>
         <div class="legal-box">
           <ul>
-            <li>Décret n°2015-443 du 17 avril 2015 relatif à la procédure de dérogation prévue à l'article L4153-9 du code du travail.</li>
+            <li>Décret n°2015-443 du 17 avril 2015 relatif à la procédure de dérogation prévue à l’article L4153-9 du code du travail.</li>
             <li>Décret n°2013-915 du 11 octobre 2013 relatif aux travaux interdits et réglementés pour les jeunes de moins de 18 ans.</li>
             <li>Décret n°2015-444 du 17 avril 2015 modifiant les articles D 4153-30 et D 4153-31 du code du travail.</li>
             <li>Instruction interministérielle n°2016-273 du 7 septembre 2016.</li>
@@ -270,8 +174,9 @@
       <h3 style="margin-top: 20px;"><u>Liste des travaux réglementés :</u></h3>
       <ul id="travaux-list"></ul>
 
-      <!-- AVIS MÉDICAL + DATE + CACHETS -->
+      <!-- AVIS MÉDICAL + DATE + CACHETS SUR UN BLOC COMMUN -->
       <div class="avoid-break">
+        <!-- En-tête : Avis médical + Date -->
         <div class="avis-header">
           <h3 class="avis-title"><u>Avis médical</u></h3>
 
@@ -291,6 +196,7 @@
           </div>
         </div>
 
+        <!-- Choix d'avis -->
         <form class="avis-medical-container">
           <input type="radio" id="avis1" name="avis_medical">
           <input type="radio" id="avis2" name="avis_medical">
@@ -345,12 +251,14 @@
         </table>
       </div>
 
-      <!-- BOUTON EXPORT PDF -->
+      <!-- BOUTON EXPORT PDF – non imprimé -->
       <div class="non-printable" style="text-align: right;">
         <button id="export-pdf-btn" class="export-btn">Exporter en PDF</button>
       </div>
 
-      <!-- ===== VERSO (PAGE 2) ===== -->
+    
+
+      <!-- ===== VERSO (PAGE 2) : TRAVAUX + EQUIPEMENTS/PRODUITS ===== -->
       <div class="page-break"></div>
       <section class="verso">
         <h2>ANNEXE – Détail des travaux réglementés et équipements associés</h2>
@@ -364,167 +272,270 @@
         <div class="doc-edited">Document édité le <span id="doc-edited-date"></span></div>
       </section>
 
-    </div>
+    </div><!-- /.wrapper -->
+
   </main>
+</div><!-- /.page-wrap -->
+
+
 </div>
 
-<!-- ===== SCRIPT PRINCIPAL ===== -->
+<!-- ================== SCRIPT GRIST + LOGIQUE FORMULAIRE ================== -->
 <script>
-  const COLUMN_CONCAT = "Concatenation";
-  const TABLE_TRAVAUX = "Liste_des_equipements";
-  const COL_TRAV_DIPLOME = "Tampon_Diplomes";
-  const COL_TRAV_LIBELLE = "Tampon_Travaux";
-  const COL_TRAV_CODES = "Tampon_intitule_travaux";
-  const COL_TRAV_ETAB = "Tampon_Etab";
-  const TABLE_ETAB = "Etablissements_edi";
-  const HINT_ETAB_NOM = "appellation_officielle";
-  const HINT_ETAB_ADR1 = "Adresse";
-  const HINT_ETAB_CP = "Code_postal";
-  const HINT_ETAB_VILLE = "Ville";
-  const HINT_ETAB_MAIL = "email_etab";
-  const HINT_ETAB_CODE = "Codepaca";
-  const HINT_ETAB_DIPLOMES = "Diplomes";
+  // -----------------------------
+  // CONSTANTES GRIST
+  // -----------------------------
+  const COLUMN_CONCAT = "Concatenation";          // Diplomes_EN_OK
 
+  const TABLE_TRAVAUX      = "Liste_des_equipements";
+  const COL_TRAV_DIPLOME   = "Tampon_Diplomes";            // texte, liste de diplômes séparés par ;
+
+  // Source des libellés de travaux (OK)
+  const COL_TRAV_LIBELLE   = "Tampon_Travaux";
+  const COL_TRAV_CODES    = "Tampon_intitule_travaux";  // ex: "22|red;31|orange"
+  const COL_TRAV_ETAB     = "Tampon_Etab"; // ✅ rattachement établissement (colonne verrouillée)
+
+  const TABLE_ETAB         = "Etablissements_edi";
+
+  // Pistes de noms pour les colonnes établissements
+  const HINT_ETAB_NOM       = "appellation_officielle";
+  const HINT_ETAB_ADR1      = "Adresse";
+  const HINT_ETAB_CP        = "Code_postal";
+  const HINT_ETAB_VILLE     = "Ville";
+  const HINT_ETAB_MAIL      = "email_etab";
+  const HINT_ETAB_CODE      = "Codepaca";   // colonne de code établissement (Codepaca / UAI / etc.)
+  const HINT_ETAB_DIPLOMES  = "Diplomes";   // colonne listant les diplômes affectés à l'établissement
+
+  // -----------------------------
+  // VARIABLES GLOBALES
+  // -----------------------------
   let allDiplomes = [];
-  let travauxByDiplomeEtab = {};
-  let equipByDiplomeEtabTrav = {};
+  // Dans cette variante, on filtre par diplome ET par etablissement (code)
+  let travauxByDiplomeEtab = {}; // { diplomeNorm: { etabCodeNorm: [travaux...] } }
+  let equipByDiplomeEtabTrav = {}; // { diplomeNorm: { etabCodeNorm: { travailLabel: Set(equipements) } } }
   let etablissements = [];
   let auxTablesLoaded = false;
+
+  // map ID de diplôme -> libellé Concatenation (au cas où)
   let diplomaIdToLabel = {};
+
+  let colEtabNom       = null;
+  let colEtabAdr1      = null;
+  let colEtabCP        = null;
+  let colEtabVille     = null;
+  let colEtabMail      = null;
+  let colEtabCode      = null;
+  let colEtabDiplomes  = null;
+
+  // key = code établissement normalisé, value = Set de libellés de diplômes (texte)
   let diplomeByEtabCode = {};
-  let selectedEtabCodeNorm = null;
-  let selectedEtabNameNorm = null;
-  let selectedEtabNameLoose = null;
+  let selectedEtabCodeNorm = null;  // code établissement normalisé choisi via lightbox
+  let selectedEtabNameNorm = null;  // nom établissement normalisé (pour Tampon_Etab)
+  let selectedEtabNameLoose = null; // nom établissement normalisé sans ponctuation
+
+  let codeAttempts = 0;
+  let etabsLoaded = false;
+
+  const inputDiplome   = document.getElementById("diplome-input");
+  const dropDiplome    = document.getElementById("diplome-dropdown");
+  const formationText  = document.getElementById("formation-text");
+  const travauxListEl  = document.getElementById("travaux-list");
+
+  // ===== VERSO =====
+  const versoEtabEl      = document.getElementById("verso-etab");
+  const versoFormEl      = document.getElementById("verso-formation");
+  const versoContentEl   = document.getElementById("verso-content");
+  const docEditedDateEl  = document.getElementById("doc-edited-date");
+
   let currentEtabName = "";
 
-  const inputDiplome = document.getElementById("diplome-input");
-  const dropDiplome = document.getElementById("diplome-dropdown");
-  const formationText = document.getElementById("formation-text");
-  const travauxListEl = document.getElementById("travaux-list");
-  const versoEtabEl = document.getElementById("verso-etab");
-  const versoFormEl = document.getElementById("verso-formation");
-  const versoContentEl = document.getElementById("verso-content");
-  const docEditedDateEl = document.getElementById("doc-edited-date");
-  const etabText = document.getElementById("etab-text");
 
-  function normalize(s) {
-    if (!s) return "";
-    let r = String(s).trim().toLowerCase();
-    try { r = r.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) {}
-    r = r.replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-    return r;
+  const inputEtab   = document.getElementById("etab-input");
+  const dropEtab    = document.getElementById("etab-dropdown");
+  const etabText    = document.getElementById("etab-text");
+
+  const codeModal   = document.getElementById("code-modal");
+  const codeInput   = document.getElementById("code-input");
+  const codeError   = document.getElementById("code-error");
+  const codeValidateBtn = document.getElementById("code-validate");
+  const codeCancelBtn   = document.getElementById("code-cancel");
+
+  function normalize(str) {
+    if (str == null) return "";
+    return String(str)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
   }
 
-  function splitItems(txt) {
-    if (!txt) return [];
-    const s = String(txt).replace(/[\[\]]/g, " ");
-    return s.split(/[;,|\/\n]+/).map(x => x.trim()).filter(Boolean);
+  // Découpe texte "A; B; C" en ["A", "B", "C"]
+  function splitItems(str) {
+    if (str == null) return [];
+    return String(str)
+      .split(/[;\n]/)
+      .map(s => s.trim())
+      .filter(Boolean);
   }
 
-  function startsWithTravauxWord(s) {
-    const n = normalize(s);
-    return n.startsWith("travail") || n.startsWith("travaux");
-  }
-
+  // Détermine le régime (interdit / derog / autorise / non_classe) à partir d'un code du type '22|red'
   function regimeFromColorCode(code) {
-    if (!code) return "unknown";
-    const c = String(code).toLowerCase();
-    if (c.includes("31") || c.includes("orange")) return "derog";
-    if (c.includes("21") || c.includes("vert")) return "autorise";
-    if (c.includes("11") || c.includes("rouge") || c.includes("red")) return "interdit";
-    return "unknown";
+    if (!code) return "non_classe";
+    const parts = String(code).split("|");
+    const colorPart = parts[1] ? parts[1].trim() : "";
+    const n = normalize(colorPart);
+    if (n.includes("red") || n.includes("rouge")) return "interdit";
+    if (n.includes("orange")) return "derog";
+    if (n.includes("green") || n.includes("vert")) return "autorise";
+    return "non_classe";
+  }
+
+  // Ne garde que les libellés commençant par 'travail' ou 'travaux' (insensible à la casse/accents)
+  function startsWithTravauxWord(label) {
+    const n = normalize(label);
+    return n.startsWith("travail") || n.startsWith("travaux");
   }
 
   function formatTodayFR() {
     const d = new Date();
-    const j = String(d.getDate()).padStart(2, "0");
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const a = d.getFullYear();
-    return j + "/" + m + "/" + a;
+    const jj = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const aa = d.getFullYear();
+    return jj + "/" + mm + "/" + aa;
   }
 
   function renderVerso() {
-    const diplNorm = normalize(inputDiplome.value || "");
-    if (!diplNorm || !selectedEtabNameNorm) {
-      if (versoContentEl) versoContentEl.innerHTML = "";
+    if (!versoContentEl) return;
+
+    // Meta
+    if (versoEtabEl) versoEtabEl.textContent = currentEtabName || "";
+    if (versoFormEl) versoFormEl.textContent = (formationText && formationText.textContent) ? formationText.textContent : "";
+    if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
+
+    versoContentEl.innerHTML = "";
+
+    const diplLbl = (formationText && formationText.textContent) ? formationText.textContent.trim() : "";
+    const k = normalize(diplLbl);
+
+    if (!selectedEtabCodeNorm) {
+      const p = document.createElement("p");
+      p.className = "equip-empty";
+      p.textContent = "Sélectionnez un établissement pour générer le verso.";
+      versoContentEl.appendChild(p);
       return;
     }
 
-    if (versoFormEl) versoFormEl.textContent = inputDiplome.value || "";
-
-    const byDipl = travauxByDiplomeEtab[diplNorm] || {};
-    let travaux = [];
-    if (byDipl[selectedEtabNameNorm]) {
-      travaux = [...byDipl[selectedEtabNameNorm]];
-    } else {
-      const loose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
-      for (const k of Object.keys(byDipl)) {
-        if (String(k).replace(/[^a-z0-9]/g, "") === loose) {
-          travaux = [...byDipl[k]];
-          break;
-        }
-      }
+    if (!k) {
+      const p = document.createElement("p");
+      p.className = "equip-empty";
+      p.textContent = "Sélectionnez une formation pour générer le verso.";
+      versoContentEl.appendChild(p);
+      return;
     }
 
-    travaux = travaux.map(t => String(t || "").trim()).filter(Boolean).filter(startsWithTravauxWord);
+    const travaux = (function(){
+      const byDipl = travauxByDiplomeEtab[k] || {};
+      if (!selectedEtabCodeNorm) return [];
+      if (byDipl[selectedEtabNameNorm]) return [...byDipl[selectedEtabNameNorm]];
+      const looseSel = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+      for (const key of Object.keys(byDipl)) {
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) return [...byDipl[key]];
+      }
+      return [];
+    })();
     if (!travaux.length) {
-      if (versoContentEl) versoContentEl.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "equip-empty";
+      p.textContent = "Aucun travail réglementé (dérogation) trouvé pour cette formation.";
+      versoContentEl.appendChild(p);
       return;
     }
 
-    travaux.sort((a, b) => a.localeCompare(b, "fr"));
+    const mapTrav = (function(){
+      const byDipl = equipByDiplomeEtabTrav[k] || {};
+      if (!selectedEtabCodeNorm) return {};
+      if (byDipl[selectedEtabNameNorm]) return byDipl[selectedEtabNameNorm];
+      // fallback "loose" (codes avec tirets/espaces)
+      const looseSel = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+      for (const key of Object.keys(byDipl)) {
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) return byDipl[key];
+      }
+      return {};
+    })();
 
-    let html = "";
-    for (const trav of travaux) {
-      const equipSet = (equipByDiplomeEtabTrav[diplNorm] || {})[selectedEtabNameNorm] || {};
-      const items = equipSet[trav] || new Set();
-      const arr = Array.from(items).filter(Boolean).sort((a, b) => a.localeCompare(b, "fr"));
+    travaux.forEach(trav => {
+      const card = document.createElement("div");
+      card.className = "trav-card";
 
-      html += '<div class="trav-card">';
-      html += '<div class="trav-title">' + trav + '</div>';
+      const title = document.createElement("div");
+      title.className = "trav-title";
+      title.textContent = trav;
+      card.appendChild(title);
 
-      if (arr.length) {
-        const cls = arr.length > 10 ? "equip-list two-cols" : "equip-list";
-        html += '<ul class="' + cls + '">';
-        for (const eq of arr) html += '<li>' + eq + '</li>';
-        html += '</ul>';
+      const setEq = mapTrav[trav];
+      if (setEq && setEq.size) {
+        const ul = document.createElement("ul");
+        ul.className = "equip-list";
+
+        const items = Array.from(setEq)
+          .map(x => String(x || "").trim())
+          .filter(Boolean)
+          .sort((a,b) => a.localeCompare(b, "fr"));
+
+        // Passage automatique en 2 colonnes si la liste est longue (objectif : tenir sur 1 verso)
+        if (items.length >= 7) {
+          ul.classList.add("two-cols");
+        }
+
+        items.forEach(it => {
+          const li = document.createElement("li");
+          li.textContent = it;
+          ul.appendChild(li);
+        });
+
+        card.appendChild(ul);
       } else {
-        html += '<p class="equip-empty">Aucun équipement ou produit spécifié.</p>';
+        const p = document.createElement("p");
+        p.className = "equip-empty";
+        p.textContent = "Aucun matériel / produit classé pour ce travail.";
+        card.appendChild(p);
       }
 
-      html += '</div>';
-    }
-    if (versoContentEl) versoContentEl.innerHTML = html;
+      versoContentEl.appendChild(card);
+    });
   }
 
-  function tableToRows(table) {
-    const ids = table.id || table.$id || [];
-    const cols = {};
-    for (const [k, v] of Object.entries(table)) {
-      if (k === "id" || k === "$id") continue;
-      if (Array.isArray(v)) cols[k] = v;
-    }
+
+
+  // Convertit le format colonnes de fetchTable en lignes {id, fields:{...}}
+  function tableToRows(raw) {
+    if (!raw || !Array.isArray(raw.id)) return [];
+    const cols = Object.keys(raw).filter(k => k !== "id");
+    const n = raw.id.length;
     const rows = [];
-    for (let i = 0; i < ids.length; i++) {
-      const rec = { id: ids[i], fields: {} };
-      for (const [k, arr] of Object.entries(cols)) rec.fields[k] = arr[i];
-      rows.push(rec);
+    for (let i = 0; i < n; i++) {
+      const fields = {};
+      for (const col of cols) {
+        const arr = raw[col] || [];
+        fields[col] = arr[i];
+      }
+      rows.push({ id: raw.id[i], fields });
     }
     return rows;
   }
 
-  async function fetchGristTableAny(tableName) {
-    return await window.PP_fetchTable(tableName);
-  }
-
+  // Devine une colonne à partir d’un nom préféré + motifs
   function guessColumn(keys, preferred, patterns) {
     if (!keys || !keys.length) return null;
+
     if (preferred && keys.includes(preferred)) return preferred;
+
     if (preferred) {
       const pLow = preferred.toLowerCase();
       const exact = keys.find(k => k.toLowerCase() === pLow);
       if (exact) return exact;
     }
+
     for (const pat of patterns) {
       const found = keys.find(k => k.toLowerCase().includes(pat));
       if (found) return found;
@@ -532,10 +543,15 @@
     return null;
   }
 
+  // -----------------------------
+  // AUTOCOMPLÉTION DIPLÔMES (filtrée par établissement sélectionné)
+  // -----------------------------
   function getCurrentDiplomePool() {
     if (selectedEtabCodeNorm) {
       const set = diplomeByEtabCode[selectedEtabCodeNorm];
-      if (set && set.size) return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
+      if (set && set.size) {
+        return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
+      }
     }
     return allDiplomes;
   }
@@ -571,6 +587,67 @@
     updateTravauxForDiplome(lbl);
   });
 
+  // -----------------------------
+  // AUTOCOMPLÉTION ETABLISSEMENTS
+  // -----------------------------
+  function buildEtabDropdown(query) {
+    if (inputEtab.readOnly) return;
+
+    dropEtab.innerHTML = "";
+    const q = normalize(query);
+    if (!q) { dropEtab.style.display = "none"; return; }
+
+    const matches = etablissements.filter(e => normalize(e.label).includes(q));
+    if (!matches.length) { dropEtab.style.display = "none"; return; }
+
+    matches.slice(0, 40).forEach(e => {
+      const item = document.createElement("div");
+      item.className = "dropdown-item";
+      item.textContent = e.label;
+      item.addEventListener("mousedown", () => {
+        inputEtab.value = e.label;
+        dropEtab.style.display = "none";
+        updateEtabInfo(e);
+      });
+      dropEtab.appendChild(item);
+    });
+    dropEtab.style.display = "block";
+  }
+
+  inputEtab.addEventListener("input", () => {
+    if (!inputEtab.readOnly) buildEtabDropdown(inputEtab.value);
+  });
+
+  inputEtab.addEventListener("change", () => {
+    if (inputEtab.readOnly) return;
+    const q = normalize(inputEtab.value || "");
+    const found = etablissements.find(e => normalize(e.label) === q);
+    if (found) updateEtabInfo(found);
+  });
+
+  function updateEtabInfo(e) {
+    if (!e) { etabText.innerHTML = ""; return; }
+    const lines = [];
+
+    if (e.nom) lines.push("<strong>" + e.nom + "</strong>");
+    if (e.adresse) lines.push(e.adresse);
+
+    const cpVille = [e.cp || "", e.ville || ""].join(" ").trim();
+    if (cpVille) lines.push(cpVille);
+
+    if (e.mail) lines.push("Courriel : " + e.mail);
+
+    etabText.innerHTML = lines.join("<br>");
+
+    // Meta verso (annexe)
+    currentEtabName = e.nom || e.label || "";
+    if (versoEtabEl) versoEtabEl.textContent = currentEtabName;
+    renderVerso();
+  }
+
+  // -----------------------------
+  // TRAVAUX RÉGLEMENTÉS
+  // -----------------------------
   function keepOnlyTravailItems(label) {
     const n = normalize(label);
     return n.startsWith("travail") || n.startsWith("travaux");
@@ -584,9 +661,10 @@
 
     if (!label) return;
 
-    // ✅ Vérifier que l'établissement est bien défini
-    if (!selectedEtabCodeNorm || !selectedEtabNameNorm) {
-      console.warn("⚠️ Établissement non défini. Attendez l'authentification.");
+    // 1) correspondance exacte (filtrée par établissement verrouillé)
+    if (!selectedEtabCodeNorm) {
+      // pas d'établissement → on n'affiche rien dans cette variante
+      renderVerso();
       return;
     }
 
@@ -604,6 +682,7 @@
       }
     }
 
+    // 2) si rien trouvé, correspondance « floue » : contient / contenu dans
     if (!travaux.length) {
       const vus = new Set();
       for (const [k, arr] of Object.entries(byDipl)) {
@@ -621,9 +700,15 @@
 
     if (!travaux.length) return;
 
-    travaux = travaux.map(t => String(t || "").trim()).filter(Boolean).filter(keepOnlyTravailItems);
+    // ✅ Filtre demandé : ne garder que les intitulés qui commencent par "Travail" / "Travaux"
+    travaux = travaux
+      .map(t => String(t || "").trim())
+      .filter(Boolean)
+      .filter(keepOnlyTravailItems);
+
     if (!travaux.length) return;
 
+    // Tri des libellés pour un affichage propre
     travaux.sort((a, b) => a.localeCompare(b, "fr"));
 
     travaux.forEach(t => {
@@ -632,77 +717,127 @@
       travauxListEl.appendChild(li);
     });
 
+    // Met a jour le verso (page 2)
     renderVerso();
+
   }
 
-  if (window.grist && typeof grist.ready === "function" && typeof grist.onRecords === "function") {
-    grist.ready({ requiredAccess: 'full' });
+  // -----------------------------
+  // INTÉGRATION GRIST
+  // -----------------------------
+  grist.ready({ requiredAccess: 'full' });
 
-    grist.onRecords(records => {
-      const vals = [];
-      diplomaIdToLabel = {};
+  // Diplômes depuis la table source de la vue (tous les diplômes potentiels)
+  grist.onRecords(records => {
+    const vals = [];
+    diplomaIdToLabel = {};
 
-      for (const rec of records) {
-        const label = rec[COLUMN_CONCAT];
-        if (label != null) vals.push(label);
-        if (rec.id != null && label != null) diplomaIdToLabel[rec.id] = label;
-      }
+    for (const rec of records) {
+      const label = rec[COLUMN_CONCAT];
+      if (label != null) vals.push(label);
+      if (rec.id != null && label != null) diplomaIdToLabel[rec.id] = label;
+    }
 
-      allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
+    allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
 
-      if (!auxTablesLoaded) {
-        auxTablesLoaded = true;
-        loadAuxTables();
-      }
-    });
-  } else {
     if (!auxTablesLoaded) {
       auxTablesLoaded = true;
-      setTimeout(() => loadAuxTables(), 300);
+      loadAuxTables();
     }
-  }
+  });
 
+  // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
   async function loadAuxTables() {
     try {
+      const docApi = grist.docApi;
+      if (!docApi) return;
+
       const [rawTravTable, rawEtabTable] = await Promise.all([
-        fetchGristTableAny(TABLE_TRAVAUX),
-        fetchGristTableAny(TABLE_ETAB)
+        docApi.fetchTable(TABLE_TRAVAUX),
+        docApi.fetchTable(TABLE_ETAB)
       ]);
 
       const travRecs = tableToRows(rawTravTable);
       const etabRecs = tableToRows(rawEtabTable);
 
+      // ===== TRAVAUX =====
       if (travRecs.length) {
         const travSample = travRecs[0].fields || travRecs[0];
-        const travKeys = Object.keys(travSample || {});
+        const travKeys   = Object.keys(travSample || {});
 
         const travColDiplome = guessColumn(travKeys, COL_TRAV_DIPLOME, ["diplome", "formation"]);
-        const travColLib = guessColumn(travKeys, COL_TRAV_LIBELLE, ["tampon_travaux", "travaux", "travail", "intitul"]);
-        const travColCodes = guessColumn(travKeys, COL_TRAV_CODES, ["tampon_intitule", "intitule_travaux", "travaux_code", "code", "couleur"]);
-        const travColEquip = guessColumn(travKeys, null, ["appellation", "designation", "descript", "equip", "materiel", "matériel", "produit", "machine", "outillage", "nom"]);
-        const travColEtab = guessColumn(travKeys, COL_TRAV_ETAB, ["codepaca", "uai", "code_etab", "etab_code", "etablissement", "etab", "etablissements", "tampon_etab"]);
+        const travColLib     = guessColumn(
+          travKeys,
+          COL_TRAV_LIBELLE,
+          ["tampon_travaux", "travaux", "travail", "intitul"]
+        );
+
+        const travColCodes   = guessColumn(
+          travKeys,
+          COL_TRAV_CODES,
+          ["tampon_intitule", "intitule_travaux", "travaux_code", "code", "couleur"]
+        );
+
+        // Colonne d"equipement/produit (pour l"annexe verso)
+        const travColEquip   = guessColumn(
+          travKeys,
+          null,
+          [
+            "appellation",
+            "designation",
+            "descript",
+            "equip",
+            "materiel",
+            "matériel",
+            "produit",
+            "machine",
+            "outillage",
+            "nom"
+          ]
+        );
+
+
+        // Colonne permettant de rattacher une ligne d'équipement à un établissement (code / UAI / nom)
+        const travColEtab = guessColumn(
+          travKeys,
+          COL_TRAV_ETAB,
+          [
+            "codepaca",
+            "uai",
+            "code_etab",
+            "etab_code",
+            "etablissement",
+            "etab",
+            "etablissements",
+            "tampon_etab"
+          ]
+        );
 
         if (travColDiplome && travColLib) {
           const tmp = {};
 
           for (const rec of travRecs) {
             const f = rec.fields || {};
-            const diplText = f[travColDiplome];
-            const libText = f[travColLib];
+            const diplText  = f[travColDiplome];
+            const libText   = f[travColLib];
             const codesText = travColCodes ? f[travColCodes] : null;
             const equipText = travColEquip ? f[travColEquip] : null;
-            const etabRaw = travColEtab ? f[travColEtab] : null;
+            const etabRaw   = travColEtab ? f[travColEtab] : null;
+            // Tampon_Etab peut contenir plusieurs établissements séparés par ';'
             const etabKeys = splitItems(etabRaw).map(x => normalize(x)).filter(Boolean);
 
+            // ✅ Exclusion des matériels non classés : pas de diplôme OU pas de travaux
             if (!diplText || !libText) continue;
+            // ✅ Exclusion des lignes non rattachées à un établissement (dans cette variante)
             if (!etabKeys.length) continue;
 
             const diplomesLigne = splitItems(diplText);
-            const travauxLigne = splitItems(libText);
-            const codesLigne = splitItems(codesText);
+            const travauxLigne  = splitItems(libText);
+            const codesLigne    = splitItems(codesText);
 
             if (!diplomesLigne.length || !travauxLigne.length) continue;
 
+            // On aligne (au mieux) libellés et codes comme dans ton autre fichier.
             const maxLen = Math.max(travauxLigne.length, codesLigne.length);
 
             diplomesLigne.forEach(oneDipl => {
@@ -713,94 +848,194 @@
               etabKeys.forEach(etabKey => {
                 if (!tmp[key][etabKey]) tmp[key][etabKey] = [];
 
-                for (let idx = 0; idx < maxLen; idx++) {
-                  const travailLabel = travauxLigne[idx] || travauxLigne[travauxLigne.length - 1];
-                  if (!travailLabel) continue;
+              for (let idx = 0; idx < maxLen; idx++) {
+                const travailLabel = travauxLigne[idx] || travauxLigne[travauxLigne.length - 1];
+                if (!travailLabel) continue;
 
-                  if (!startsWithTravauxWord(travailLabel)) continue;
+                // 1) On ne garde QUE ce qui commence par Travail / Travaux
+                if (!startsWithTravauxWord(travailLabel)) continue;
 
-                  const code = codesLigne[idx];
-                  const regime = regimeFromColorCode(code);
-                  if (regime !== "derog") continue;
+                // 2) On ne garde QUE les travaux en dérogation (orange),
+                //    pour coller à l’autre fichier et éviter les faux positifs.
+                const code = codesLigne[idx];
+                const regime = regimeFromColorCode(code);
+                if (regime !== "derog") continue;
 
-                  tmp[key][etabKey].push(String(travailLabel).trim());
+                tmp[key][etabKey].push(String(travailLabel).trim());
 
-                  const eq = (equipText == null) ? "" : String(equipText).trim();
-                  if (eq) {
-                    if (!equipByDiplomeEtabTrav[key]) equipByDiplomeEtabTrav[key] = {};
-                    if (!equipByDiplomeEtabTrav[key][etabKey]) equipByDiplomeEtabTrav[key][etabKey] = {};
-                    if (!equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()]) {
-                      equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()] = new Set();
-                    }
-                    equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()].add(eq);
+                // Verso : rattacher les equipements/produits au travail
+                const eq = (equipText == null) ? "" : String(equipText).trim();
+                if (eq) {
+                  if (!equipByDiplomeEtabTrav[key]) equipByDiplomeEtabTrav[key] = {};
+                  if (!equipByDiplomeEtabTrav[key][etabKey]) equipByDiplomeEtabTrav[key][etabKey] = {};
+                  if (!equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()]) {
+                    equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()] = new Set();
                   }
+                  equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()].add(eq);
                 }
-              });
-            });
+              }
+
+              });            });
           }
 
+// Déduplication + tri : chaque travail n’apparaît qu’une seule fois par diplôme ET par établissement
           for (const dKey of Object.keys(tmp)) {
             const byEtab = tmp[dKey] || {};
             for (const eKey of Object.keys(byEtab)) {
-              byEtab[eKey] = Array.from(new Set(byEtab[eKey])).sort((a, b) => a.localeCompare(b, "fr"));
+              byEtab[eKey] = Array.from(new Set(byEtab[eKey]))
+                .sort((a, b) => a.localeCompare(b, "fr"));
             }
           }
           travauxByDiplomeEtab = tmp;
         }
       }
 
-      if (etabRecs.length) {
-        const sample = etabRecs[0].fields || etabRecs[0];
-        const keys = Object.keys(sample || {});
+      // ===== ETABLISSEMENTS + MAPPING CODE → DIPLÔMES =====
+      if (!etabRecs.length) {
+        etabsLoaded = true;
+        return;
+      }
 
-        const colEtabNom = guessColumn(keys, HINT_ETAB_NOM, ["appel", "nom"]);
-        const colEtabAdr1 = guessColumn(keys, HINT_ETAB_ADR1, ["adr", "adresse"]);
-        const colEtabCP = guessColumn(keys, HINT_ETAB_CP, ["code_postal", "cp"]);
-        const colEtabVille = guessColumn(keys, HINT_ETAB_VILLE, ["ville", "commune"]);
-        const colEtabMail = guessColumn(keys, HINT_ETAB_MAIL, ["mail", "mel", "email", "courriel"]);
-        const colEtabCode = guessColumn(keys, HINT_ETAB_CODE, ["codepaca", "uai", "code"]);
-        const colEtabDiplomes = guessColumn(keys, HINT_ETAB_DIPLOMES, ["diplome"]);
+      const sample = etabRecs[0].fields || etabRecs[0];
+      const keys = Object.keys(sample || {});
 
-        const etabs = [];
-        diplomeByEtabCode = {};
+      colEtabNom       = guessColumn(keys, HINT_ETAB_NOM,      ["appel", "nom"]);
+      colEtabAdr1      = guessColumn(keys, HINT_ETAB_ADR1,     ["adr", "adresse"]);
+      colEtabCP        = guessColumn(keys, HINT_ETAB_CP,       ["code_postal", "cp"]);
+      colEtabVille     = guessColumn(keys, HINT_ETAB_VILLE,    ["ville", "commune"]);
+      colEtabMail      = guessColumn(keys, HINT_ETAB_MAIL,     ["mail", "mel", "email", "courriel"]);
+      colEtabCode      = guessColumn(keys, HINT_ETAB_CODE,     ["codepaca", "uai", "code"]);
+      colEtabDiplomes  = guessColumn(keys, HINT_ETAB_DIPLOMES, ["diplome"]);
 
-        for (const rec of etabRecs) {
-          const f = rec.fields || rec;
-          const nom = colEtabNom ? (f[colEtabNom] || "") : "";
-          const adr1 = colEtabAdr1 ? (f[colEtabAdr1] || "") : "";
-          const cp = colEtabCP ? (f[colEtabCP] || "") : "";
-          const ville = colEtabVille ? (f[colEtabVille] || "") : "";
-          const mail = colEtabMail ? (f[colEtabMail] || "") : "";
-          const code = colEtabCode ? (f[colEtabCode] || "") : "";
-          const dipl = colEtabDiplomes ? (f[colEtabDiplomes] || "") : "";
+      const etabs = [];
+      diplomeByEtabCode = {};
 
-          if (!nom) continue;
+      for (const rec of etabRecs) {
+        const f = rec.fields || rec;
+        const nom   = colEtabNom      ? (f[colEtabNom]      || "") : "";
+        const adr1  = colEtabAdr1     ? (f[colEtabAdr1]     || "") : "";
+        const cp    = colEtabCP       ? (f[colEtabCP]       || "") : "";
+        const ville = colEtabVille    ? (f[colEtabVille]    || "") : "";
+        const mail  = colEtabMail     ? (f[colEtabMail]     || "") : "";
+        const code  = colEtabCode     ? (f[colEtabCode]     || "") : "";
+        const dipl  = colEtabDiplomes ? (f[colEtabDiplomes] || "") : "";
 
-          const labelParts = [nom, ville || cp].filter(Boolean);
-          const label = labelParts.join(" – ");
-          etabs.push({ label, nom, adresse: adr1, cp, ville, mail, code });
+        if (!nom) continue;
 
-          const codeNorm = normalize(code);
-          if (codeNorm && dipl) {
-            const diplList = splitItems(dipl);
-            if (diplList.length) {
-              if (!diplomeByEtabCode[codeNorm]) diplomeByEtabCode[codeNorm] = new Set();
-              diplList.forEach(dlbl => { if (dlbl) diplomeByEtabCode[codeNorm].add(dlbl); });
-            }
+        const labelParts = [nom, ville || cp].filter(Boolean);
+        const label = labelParts.join(" – ");
+        etabs.push({ label, nom, adresse: adr1, cp, ville, mail, code });
+
+        // Construction du mapping code établissement → diplômes déclarés
+        const codeNorm = normalize(code);
+        if (codeNorm && dipl) {
+          const diplList = splitItems(dipl);
+          if (diplList.length) {
+            if (!diplomeByEtabCode[codeNorm]) diplomeByEtabCode[codeNorm] = new Set();
+            diplList.forEach(dlbl => { if (dlbl) diplomeByEtabCode[codeNorm].add(dlbl); });
           }
         }
-
-        etabs.sort((a, b) => a.label.localeCompare(b, "fr"));
-        etablissements = etabs;
       }
+
+      etabs.sort((a, b) => a.label.localeCompare(b.label, "fr"));
+      etablissements = etabs;
+      etabsLoaded = true;
 
     } catch (e) {
       console.error(e);
+      etabsLoaded = true;
     }
   }
 
+  // -----------------------------
+  // LIGHTBOX CODE ÉTABLISSEMENT
+  // -----------------------------
+  function redirectHome() {
+    window.location.href = 'https://preventionpaca.github.io/guide/#home';
+  }
+
+  function lockEtablissement(e) {
+    if (!e) return;
+    selectedEtabCodeNorm = normalize(e.code || "");
+
+    // Pour filtrer Liste_des_equipements.Tampon_Etab (qui peut contenir des noms multiples)
+    selectedEtabNameNorm = normalize(e.nom || e.label || "");
+    selectedEtabNameLoose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+
+    inputEtab.value = e.label;
+    inputEtab.readOnly = true;
+    inputEtab.classList.add("locked");
+    updateEtabInfo(e);
+
+    // Meta verso (annexe)
+    currentEtabName = e.nom || e.label || "";
+    if (versoEtabEl) versoEtabEl.textContent = currentEtabName;
+    renderVerso();
+
+    inputDiplome.value = "";
+    formationText.textContent = "";
+    travauxListEl.innerHTML = "";
+  }
+
+  function validateCode() {
+    if (!etabsLoaded) {
+      codeError.textContent = "Chargement des établissements, veuillez réessayer dans un instant.";
+      return;
+    }
+
+    const raw = (codeInput.value || "").trim();
+    if (!raw) {
+      codeError.textContent = "Merci de saisir un code établissement.";
+      return;
+    }
+
+    const codeNorm = normalize(raw);
+    const match = etablissements.find(e => normalize(e.code || "") === codeNorm);
+
+    if (match) {
+      lockEtablissement(match);
+      codeError.textContent = "";
+      if (codeModal) codeModal.style.display = "none";
+      return;
+    }
+
+    codeAttempts++;
+    if (codeAttempts >= 3) {
+      redirectHome();
+      return;
+    }
+    codeError.textContent = "Code inconnu. Tentative " + codeAttempts + " / 3.";
+    codeInput.focus();
+  }
+
+  if (codeValidateBtn) codeValidateBtn.addEventListener("click", validateCode);
+  if (codeCancelBtn) {
+    codeCancelBtn.addEventListener("click", () => {
+      redirectHome();
+    });
+  }
+  if (codeInput) {
+    codeInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        validateCode();
+      }
+    });
+  }
+
+  window.addEventListener("load", () => {
+    if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
+    if (codeModal && codeInput) {
+      codeModal.style.display = "flex";
+      setTimeout(() => codeInput.focus(), 50);
+    }
+  });
+
+  // -----------------------------
+  // DATE + EXPORT PDF
+  // -----------------------------
   const tatInput = document.getElementById("tat-input");
-  const tatBtn = document.getElementById("tat-today-btn");
+  const tatBtn   = document.getElementById("tat-today-btn");
   if (tatBtn && tatInput) {
     tatBtn.addEventListener("click", () => {
       const d = new Date();
@@ -818,77 +1053,27 @@
     if (!dropDiplome.contains(evt.target) && evt.target !== inputDiplome) {
       dropDiplome.style.display = "none";
     }
-  });
-
-  window.addEventListener("load", () => {
-    if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
-  });
-
-  // ✅ Fonction appelée après authentification réussie
-  window.startPage = async function() {
-    try {
-      // Récupérer l'état d'authentification
-      const authState = window.PP_AUTH ? window.PP_AUTH.get() : null;
-      if (authState && authState.etabName) {
-        currentEtabName = authState.etabName;
-        
-        // ✅ CORRECTION : Définir selectedEtabCodeNorm pour filtrer les diplômes
-        selectedEtabCodeNorm = normalize(authState.codepaca || "");
-        selectedEtabNameNorm = normalize(authState.etabName || "");
-        selectedEtabNameLoose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
-        
-        if (versoEtabEl) versoEtabEl.textContent = currentEtabName;
-        if (etabText) etabText.innerHTML = `<strong>${currentEtabName}</strong>`;
-        
-        console.log("✅ Établissement défini:", {
-          nom: currentEtabName,
-          code: authState.codepaca,
-          normalized: selectedEtabCodeNorm
-        });
-      }
-      
-      // Charger les données si nécessaire
-      if (!auxTablesLoaded) {
-        auxTablesLoaded = true;
-        await loadAuxTables();
-      }
-      
-      // ✅ Après chargement, vérifier que les diplômes sont bien filtrés
-      if (selectedEtabCodeNorm && diplomeByEtabCode[selectedEtabCodeNorm]) {
-        const dipCount = diplomeByEtabCode[selectedEtabCodeNorm].size;
-        console.log(`✅ ${dipCount} diplôme(s) disponible(s) pour cet établissement`);
-      }
-      
-    } catch (e) {
-      console.error("Erreur startPage:", e);
+    if (!dropEtab.contains(evt.target) && evt.target !== inputEtab) {
+      dropEtab.style.display = "none";
     }
-  };
+  });
 </script>
 
-<!-- ✅ Configuration + authentification centralisée -->
+<!-- ===== JS commun pour le header (thème + liens) ===== -->
 <script>
   window.PP_PAGE = 'ddfpt';
+  window.PP_LINKS = {
+    home:   'https://preventionpaca.github.io/guide/#home',
+    portal: 'https://preventionpaca.github.io/guide/#home',
+    admin:  'https://preventionpaca.github.io/guide/#admin',
+    ddfpt:  'https://preventionpaca.github.io/guide/#ddfpt'
+  };
+  window.PP_HEADER_TEXT = {
+    title: 'PORTAIL PRÉVENTION PACA',
+    subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
+  };
 </script>
-<!-- ⚠️ IMPORTANT : Utilise pp-config_FIXED.js avec le bouton Annuler intégré -->
 <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
-
-<!-- ✅ Verrou au démarrage + lancement startPage -->
-<script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      // Authentification DDFPT requise
-      await window.PP_AUTH.requireDdfpt();
-
-      // Une fois authentifié, lancer la page
-      if (typeof window.startPage === 'function') {
-        await window.startPage();
-      }
-    } catch (e) {
-      console.error("Erreur auth:", e);
-    }
-  });
-</script>
-
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
