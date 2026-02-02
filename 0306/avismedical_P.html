@@ -611,6 +611,9 @@ window.PP_fetchTable = async function(tableName){
   // AUTOCOMPLÉTION DIPLÔMES (filtrée par établissement sélectionné)
   // -----------------------------
   function getCurrentDiplomePool() {
+    console.log("  → getCurrentDiplomePool");
+    console.log("    allDiplomes:", allDiplomes.length);
+    console.log("    selectedEtabCodeNorm:", selectedEtabCodeNorm);
     if (selectedEtabCodeNorm) {
       const set = diplomeByEtabCode[selectedEtabCodeNorm];
       if (set && set.size) {
@@ -621,6 +624,8 @@ window.PP_fetchTable = async function(tableName){
   }
 
   function buildDiplomeDropdown(query) {
+    console.log("🔍 buildDiplomeDropdown:", query);
+    console.log("  allDiplomes.length:", allDiplomes.length);
     dropDiplome.innerHTML = "";
     const q = normalize(query);
     if (!q) { dropDiplome.style.display = "none"; return; }
