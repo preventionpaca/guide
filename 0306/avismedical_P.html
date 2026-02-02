@@ -584,23 +584,10 @@
 
     if (!label) return;
 
-    // ✅ Récupération de l'établissement depuis l'authentification centralisée
-    const authState = window.PP_AUTH ? window.PP_AUTH.get() : null;
-    if (!authState || !authState.codepaca) {
-      console.warn("Aucune authentification : impossible de filtrer par établissement");
+    // ✅ Vérifier que l'établissement est bien défini
+    if (!selectedEtabCodeNorm || !selectedEtabNameNorm) {
+      console.warn("⚠️ Établissement non défini. Attendez l'authentification.");
       return;
-    }
-
-    selectedEtabCodeNorm = normalize(authState.codepaca);
-    selectedEtabNameNorm = normalize(authState.etabName || "");
-    selectedEtabNameLoose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
-    currentEtabName = authState.etabName || "";
-
-    if (versoEtabEl) versoEtabEl.textContent = currentEtabName;
-
-    // Afficher les infos établissement
-    if (etabText) {
-      etabText.innerHTML = `<strong>${authState.etabName || ""}</strong>`;
     }
 
     const byDipl = travauxByDiplomeEtab[q] || {};
@@ -844,8 +831,20 @@
       const authState = window.PP_AUTH ? window.PP_AUTH.get() : null;
       if (authState && authState.etabName) {
         currentEtabName = authState.etabName;
+        
+        // ✅ CORRECTION : Définir selectedEtabCodeNorm pour filtrer les diplômes
+        selectedEtabCodeNorm = normalize(authState.codepaca || "");
+        selectedEtabNameNorm = normalize(authState.etabName || "");
+        selectedEtabNameLoose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+        
         if (versoEtabEl) versoEtabEl.textContent = currentEtabName;
         if (etabText) etabText.innerHTML = `<strong>${currentEtabName}</strong>`;
+        
+        console.log("✅ Établissement défini:", {
+          nom: currentEtabName,
+          code: authState.codepaca,
+          normalized: selectedEtabCodeNorm
+        });
       }
       
       // Charger les données si nécessaire
@@ -853,6 +852,13 @@
         auxTablesLoaded = true;
         await loadAuxTables();
       }
+      
+      // ✅ Après chargement, vérifier que les diplômes sont bien filtrés
+      if (selectedEtabCodeNorm && diplomeByEtabCode[selectedEtabCodeNorm]) {
+        const dipCount = diplomeByEtabCode[selectedEtabCodeNorm].size;
+        console.log(`✅ ${dipCount} diplôme(s) disponible(s) pour cet établissement`);
+      }
+      
     } catch (e) {
       console.error("Erreur startPage:", e);
     }
@@ -863,6 +869,7 @@
 <script>
   window.PP_PAGE = 'ddfpt';
 </script>
+<!-- ⚠️ IMPORTANT : Utilise pp-config_FIXED.js avec le bouton Annuler intégré -->
 <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
 
 <!-- ✅ Verrou au démarrage + lancement startPage -->
