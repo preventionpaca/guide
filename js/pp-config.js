@@ -1,5 +1,5 @@
 // PP_CONFIG — Portail Prévention PACA
-// Version: AUTH-V1-2026-02-01-FIXED
+// Version: AUTH-V1-2026-02-02-FIXED
 // Objectifs :
 // - Centraliser les URLs (routes, liens header)
 // - Centraliser l'auth "code établissement" (DDFPT) + persistance inter-pages (localStorage)
@@ -71,7 +71,7 @@
   };
 
   // Debug
-  window.PP_CONFIG_VERSION = window.PP_CONFIG_VERSION || "AUTH-V1-2026-02-01-FIXED";
+  window.PP_CONFIG_VERSION = window.PP_CONFIG_VERSION || "AUTH-V1-2026-02-02-FIXED";
 
   // -----------------------------
   // 2) AUTH PARTAGÉE (DDFPT)
@@ -85,8 +85,25 @@
   }
 
   function readState() {
-    try { return safeJsonParse(localStorage.getItem(STORE_KEY) || "null"); }
-    catch (e) { return null; }
+    try {
+      const st = safeJsonParse(localStorage.getItem(STORE_KEY) || "null");
+      if (!st) return null;
+
+      // --- migration legacy (tolérance anciens formats) ---
+      if (st.ok === "true") st.ok = true;
+      if (st.ok === "false") st.ok = false;
+
+      if (typeof st.expiresAt === "string") {
+        const n = Number(st.expiresAt);
+        if (!Number.isNaN(n)) st.expiresAt = n;
+      }
+
+      // réécrit une version propre (1 seule fois)
+      writeState(st);
+      return st;
+    } catch (e) {
+      return null;
+    }
   }
 
   function writeState(st) {
@@ -193,7 +210,7 @@
         ok: true,
         role: j.role || "ddfpt",
         token: j.token || null,
-        codepaca: j.codepaca || null,
+        codepaca: j.codepaca || String(code || "").trim() || null,
         etabName: j.etabName || null,
         expiresAt: nowMs() + ttlSec * 1000
       };
