@@ -1,9 +1,10 @@
-// PP_CONFIG – Portail Prévention PACA
-// Version: AUTH-V1-2026-02-01
+// PP_CONFIG — Portail Prévention PACA
+// Version: AUTH-V1-2026-02-01-FIXED
 // Objectifs :
 // - Centraliser les URLs (routes, liens header)
 // - Centraliser l'auth "code établissement" (DDFPT) + persistance inter-pages (localStorage)
 // - Fournir un helper compatible avec les anciennes pages : PP.auth.authWithCode(code)
+// ✅ MODIFICATION : Ajout du bouton Annuler dans la lightbox
 
 (function () {
   // -----------------------------
@@ -70,7 +71,7 @@
   };
 
   // Debug
-  window.PP_CONFIG_VERSION = window.PP_CONFIG_VERSION || "AUTH-V1-2026-02-01";
+  window.PP_CONFIG_VERSION = window.PP_CONFIG_VERSION || "AUTH-V1-2026-02-01-FIXED";
 
   // -----------------------------
   // 2) AUTH PARTAGÉE (DDFPT)
@@ -128,13 +129,17 @@
       ">
         <h2 style="margin:0 0 6px; font-size:1.15rem; font-weight:650;">Accès réservé</h2>
         <p style="margin:0 0 14px; font-size:.85rem; color:#9ca3af;">
-          Saisissez le code établissement (DDFPT). Une fois validé, l’accès restera actif sur les autres pages.
+          Saisissez le code établissement (DDFPT). Une fois validé, l'accès restera actif sur les autres pages.
         </p>
         <input id="ppAuthInput" type="password" autocomplete="off" placeholder="Code établissement"
           style="width:100%; border-radius:999px; border:1px solid #374151; padding:9px 12px;
                  background:#020617; color:#e5f0ff; font-size:.95rem;" />
         <div id="ppAuthError" style="margin:6px 0 0; font-size:.82rem; color:#fecaca; min-height:1.1em; white-space:pre-wrap;"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+          <button id="ppAuthCancel" type="button"
+            style="border-radius:999px; border:1px solid #374151; padding:8px 16px; background:transparent; color:#e5f0ff; font-weight:600; cursor:pointer; font-size:0.9rem;">
+            Annuler
+          </button>
           <button id="ppAuthSubmit" type="button"
             style="border-radius:999px; border:none; padding:8px 16px; background:#f97316; color:#111827; font-weight:700; cursor:pointer;">
             Valider
@@ -148,6 +153,22 @@
     const input  = overlay.querySelector("#ppAuthInput");
     const err    = overlay.querySelector("#ppAuthError");
     const submit = overlay.querySelector("#ppAuthSubmit");
+    const cancel = overlay.querySelector("#ppAuthCancel");
+
+    // ✅ Effet hover pour le bouton Annuler
+    if (cancel) {
+      cancel.addEventListener('mouseenter', () => {
+        cancel.style.background = 'rgba(255, 255, 255, 0.1)';
+      });
+      cancel.addEventListener('mouseleave', () => {
+        cancel.style.background = 'transparent';
+      });
+      
+      // ✅ Action Annuler : rediriger vers l'accueil
+      cancel.addEventListener('click', () => {
+        window.location.href = APP_BASE + 'portail.html#home';
+      });
+    }
 
     async function authWithCode(code) {
       const url = String(window.PP_SB_API_AUTH || "").trim();
