@@ -4096,16 +4096,16 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
     <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par la DREETS</span></div>
     <div class="dreets-product-grid">
 <div class="dreets-field">
+<label class="domains-title" for="dreets-agent">Agent chimique</label>
+<input class="input-pill" id="dreets-agent"/>
+</div>
+<div class="dreets-field">
 <label class="domains-title" for="dreets-type">Type</label>
 <input class="input-pill" id="dreets-type"/>
 </div>
 <div class="dreets-field">
 <label class="domains-title" for="dreets-famille">Famille de produits</label>
 <input class="input-pill" id="dreets-famille"/>
-</div>
-<div class="dreets-field">
-<label class="domains-title" for="dreets-agent">Agent chimique</label>
-<input class="input-pill" id="dreets-agent"/>
 </div>
 <div class="dreets-field">
 <label class="domains-title" for="dreets-clp">Danger CLP</label>
@@ -4772,6 +4772,30 @@ function writeKindToRec(rec, kind) {
 
     try{
       await applyUA([['UpdateRecord', table, rid, { [KIND_COL]: k }]]);
+
+      // ✅ Auto-remplissage demandé : en "Produit", Agent chimique = numéro de l'équipement
+      try{
+        if(kKey === 'produit'){
+          const curVal = (rec && rec[COL_TR_AGENT] != null) ? String(rec[COL_TR_AGENT]).trim() : '';
+          if(!curVal){
+            const fill = String(rid);
+            // MAJ base
+            await applyUA([['UpdateRecord', table, rid, { [COL_TR_AGENT]: fill }]]);
+            // MAJ locale
+            try{ rec[COL_TR_AGENT] = fill; }catch(e){}
+            try{ if(ROW && Number(ROW.id) === Number(rid)) ROW[COL_TR_AGENT] = fill; }catch(e){}
+            try{
+              const cur2 = (MAP && MAP.get(Number(rid))) ? MAP.get(Number(rid)) : null;
+              if(cur2) cur2[COL_TR_AGENT] = fill;
+            }catch(e){}
+            // MAJ UI (si le champ existe déjà)
+            try{
+              const inp = document.getElementById('dreets-agent');
+              if(inp && document.activeElement !== inp) inp.value = fill;
+            }catch(e){}
+          }
+        }
+      }catch(e){ console.warn('[AUTO] Agent chimique auto-fill failed', e); }
 
       // Mise à jour locale (optimiste) pour éviter les effets "ça saute" / "ça n'a pas enregistré"
       try{ rec[KIND_COL] = k; }catch(e){}
@@ -5719,65 +5743,103 @@ function isPlausibleDiplomeLabel(label){
 
 /* index domaines / secteurs / diplômes */
 async function buildDomainSectorIndex(){
-  domainSectorIndex = {};
-  domainValues = new Set();
-  sectorValues = new Set();
-  diplomaValues = new Set();
+  return (async ()=>{
+    domainSectorIndex = {};
+    domainValues = new Set();
+    sectorValues = new Set();
+    diplomaValues = new Set();
 
-  // IMPORTANT : on ne dépend pas de la table Lien_equip_etab_dipl (incomplète chez certains)
-  // On indexe à partir des colonnes Tampon_* de Liste_des_equipements.
-  const rows = (MAP ? Array.from(MAP.values()) : []);
+    // IMPORTANT : on ne dépend pas de la table Lien_equip_etab_dipl (incomplète chez certains)
+    // On indexe à partir des colonnes Tampon_* de Liste_des_equipements (+ un mapping Diplôme -> Secteur).
+    const rows = (MAP ? Array.from(MAP.values()) : []);
 
-  for(const r of rows){
-    const id = r && r.id != null ? Number(r.id) : null;
-    if(id == null) continue;
+    // --- Construire un mapping "Diplôme -> Secteur" depuis Diplomes_EN_OK (si dispo) ---
+    let dipToSect = new Map();
+    try{
+      const drows = await fetchTable('Diplomes_EN_OK');
+      if(Array.isArray(drows) && drows.length){
+        const sample = drows[0] || {};
+        const sectCol = Object.keys(sample).find(c=>norm(c).includes('secteur')) || 'Secteur_activite';
+        const dipCol  = (typeof COL_DIP_CONCAT!=='undefined' && COL_DIP_CONCAT) ? COL_DIP_CONCAT :
+                        (Object.keys(sample).find(c=>norm(c).includes('concat') && norm(c).includes('dipl')) || 'DIPLOME_concat');
+        drows.forEach(dr=>{
+          const dip = (dr && dr[dipCol] != null) ? String(dr[dipCol]).trim() : '';
+          const sect = (dr && dr[sectCol] != null) ? String(dr[sectCol]).trim() : '';
+          if(!dip || !sect) return;
+          // Plusieurs secteurs possibles: on accepte ; ou /
+          const sects = parseTextList(sect);
+          if(!sects.length) return;
+          dipToSect.set(norm(dip), sects);
+        });
+      }
+    }catch(e){
+      // Pas bloquant : on garde l'index Domaine/Diplôme fonctionnel
+      dipToSect = new Map();
+    }
 
-    const doms = parseTextList(r[COL_TMP_DOM] || '');
-    const dips = parseTextList(r[COL_TMP_DIP] || '');
+    for(const r of rows){
+      const id = r && r.id != null ? Number(r.id) : null;
+      if(id == null) continue;
 
-    // Sectors are present in the UI right pane as a synthesized string; we keep them out of the index
-    // unless you later add a dedicated Tampon_Se... column.
+      const doms = parseTextList(r[COL_TMP_DOM] || '');
+      const dips = parseTextList(r[COL_TMP_DIP] || '');
 
-    if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
+      if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
 
-    doms.forEach(d => { if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d);} });
+      doms.forEach(d => { if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d);} });
 
-    dips.forEach(d => {
-      const lbl = String(d||'').trim();
-      if(!lbl) return;
-      if(!isPlausibleDiplomeLabel(lbl)) return;
-      domainSectorIndex[id].diplomes.add(lbl);
-      diplomaValues.add(lbl);
-    });
-  }
+      dips.forEach(d => {
+        const lbl = String(d||'').trim();
+        if(!lbl) return;
+        if(!isPlausibleDiplomeLabel(lbl)) return;
 
-  const dlDom  = document.getElementById('dl-filter-domain');
-  const dlSect = document.getElementById('dl-filter-secteur');
-  const dlDipl = document.getElementById('dl-filter-diplome');
+        domainSectorIndex[id].diplomes.add(lbl);
+        diplomaValues.add(lbl);
 
-  if (dlDom) {
-    dlDom.innerHTML = '';
-    [...domainValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDom.appendChild(o);
-    });
-  }
+        // Secteur via mapping Diplomes_EN_OK
+        try{
+          const sects = dipToSect.get(norm(lbl)) || [];
+          (sects||[]).forEach(s=>{
+            const ss = String(s||'').trim();
+            if(!ss) return;
+            domainSectorIndex[id].sects.add(ss);
+            sectorValues.add(ss);
+          });
+        }catch(e){}
+      });
+    }
 
-  // Secteur: la liste est gardée vide volontairement si on n'a pas de colonne Tampon dédiée
-  // (évite de proposer des suggestions trompeuses). Le filtre 'Secteur' continue de fonctionner via autocomplète.
-  if (dlSect) {
-    dlSect.innerHTML = '';
-  }
+    const dlDom  = document.getElementById('dl-filter-domain');
+    const dlSect = document.getElementById('dl-filter-secteur');
+    const dlDipl = document.getElementById('dl-filter-diplome');
 
-  if (dlDipl) {
-    dlDipl.innerHTML = '';
-    [...diplomaValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDipl.appendChild(o);
-    });
-  }
+    if (dlDom) {
+      dlDom.innerHTML = '';
+      [...domainValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        dlDom.appendChild(o);
+      });
+    }
+
+    if (dlSect) {
+      dlSect.innerHTML = '';
+      [...sectorValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        dlSect.appendChild(o);
+      });
+    }
+
+    if (dlDipl) {
+      dlDipl.innerHTML = '';
+      [...diplomaValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        dlDipl.appendChild(o);
+      });
+    }
+  })();
 }
 
 
@@ -10223,7 +10285,7 @@ function bootOnce(){
 
   // ---- Version visible (utile pour verifier qu'on teste le bon fichier) ----
   try{
-    const v = 'v15.13-FIX';
+    const v = 'v15.13-FIX-A';
     const badge = document.getElementById('ppVersionBadge');
     if(badge){
       badge.textContent = v;
