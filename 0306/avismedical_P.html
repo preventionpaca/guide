@@ -349,7 +349,10 @@ window.PP_fetchTable = async function(tableName){
   // -----------------------------
   // CONSTANTES GRIST
   // -----------------------------
-  const COLUMN_CONCAT = "Concatenation";          // Diplomes_EN_OK
+  const COLUMN_CONCAT = "Concatenation";
+
+  // Protection globale contre les erreurs
+  try {          // Diplomes_EN_OK
 
   const TABLE_TRAVAUX      = "Liste_des_equipements";
   const COL_TRAV_DIPLOME   = "Tampon_Diplomes";            // texte, liste de diplômes séparés par ;
@@ -611,6 +614,10 @@ window.PP_fetchTable = async function(tableName){
   // AUTOCOMPLÉTION DIPLÔMES (filtrée par établissement sélectionné)
   // -----------------------------
   function getCurrentDiplomePool() {
+    console.log("  → getCurrentDiplomePool()");
+    console.log("    allDiplomes total:", allDiplomes.length);
+    console.log("    selectedEtabCodeNorm:", selectedEtabCodeNorm);
+    
     if (selectedEtabCodeNorm) {
       const set = diplomeByEtabCode[selectedEtabCodeNorm];
       if (set && set.size) {
@@ -621,8 +628,14 @@ window.PP_fetchTable = async function(tableName){
   }
 
   function buildDiplomeDropdown(query) {
+    console.log("🔍 buildDiplomeDropdown appelé");
+    console.log("  Query:", query);
+    console.log("  allDiplomes.length:", allDiplomes.length);
+    console.log("  selectedEtabCodeNorm:", selectedEtabCodeNorm);
+    
     dropDiplome.innerHTML = "";
     const q = normalize(query);
+    console.log("  Query normalisée:", q);
     if (!q) { dropDiplome.style.display = "none"; return; }
 
     const pool = getCurrentDiplomePool();
