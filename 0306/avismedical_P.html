@@ -1187,65 +1187,72 @@ if (btnChangeEtab) btnChangeEtab.addEventListener("click", () => {
 window.addEventListener("load", async () => {
   if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
 
-  // 1) Auth centralisée (pp-config.js)
-  try {
-    if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
-      await window.PP_AUTH.requireDdfpt();
-    }
-  } catch (e) {
-    // La lightbox centrale est ouverte : on laisse l'utilisateur saisir son code.
-    // La suite (init) se fera via l'évènement pp:auth-changed.
-  }
-
-  // 2) Init données
-  try {
-    await loadAuxTables();
-    await initDiplomesSource();
-  } catch (e) {
-    console.warn("Init tables/diplômes:", e);
-  }
-
-  // 3) Applique l'établissement depuis la session (si disponible)
-  function applyAuthState(st) {
+  // Boot complet une fois qu'on a une session d'auth valide (pp-config.js)
+  async function bootFromAuth(st) {
     if (!st) return;
 
-    const code = String(st.codepaca || "").trim();
-    const name = String(st.etabName || "").trim();
-
-    if (!code && !name) return;
-
-    // Masque la lightbox locale si elle existe encore dans le HTML (legacy)
-    if (codeModal) codeModal.style.display = "none";
-
-    // On tente d'abord de retrouver l'établissement dans la liste chargée
-    let match = null;
-    if (code && Array.isArray(etablissements) && etablissements.length) {
-      match = etablissements.find(e => normalize(e.code || "") === normalize(code));
+    // 1) Charger les tables uniquement APRES authentification (token dispo)
+    try {
+      if (!auxTablesLoaded) {
+        await loadAuxTables();
+        await initDiplomesSource();
+        auxTablesLoaded = true;
+      }
+    } catch (e) {
+      console.warn("Init tables/diplômes:", e);
     }
-    if (!match) {
-      match = { code, name: name || "" };
-    }
-    lockEtablissement(match);
+
+    // 2) Appliquer l'établissement depuis la session (codepaca/etabName)
+    try {
+      const code = String(st.codepaca || "").trim();
+      const name = String(st.etabName || "").trim();
+
+      let match = null;
+      if (code && Array.isArray(etablissements) && etablissements.length) {
+        match = etablissements.find(e => normalize(e.code || "") === normalize(code));
+      }
+      if (!match) {
+        const label = [name || ("Établissement " + code), code].filter(Boolean).join(" — ");
+        match = { code: code || "", nom: name || "", label };
+      }
+      lockEtablissement(match);
+    } catch (e) { console.warn("apply etab from auth:", e); }
+    // 3) Si un diplôme est déjà présent (cas rare), on recalcule les travaux
+    try {
+      const d = (inputDiplome && inputDiplome.value) ? String(inputDiplome.value) : "";
+      if (d) updateTravauxForDiplome(d);
+    } catch (e) {}
   }
 
-  // état initial
-  try {
-    if (window.PP_AUTH && typeof window.PP_AUTH.get === "function") {
-      applyAuthState(window.PP_AUTH.get());
-    }
-  } catch (e) {}
-
-  // écoute les changements (reconnexion / changement d'établissement)
+  // Écoute les changements (reconnexion / changement d'établissement)
   document.addEventListener("pp:auth-changed", (ev) => {
-    const st = ev && ev.detail ? ev.detail : null;
+    const st = (ev && ev.detail) ? ev.detail : null;
     if (!st) {
       clearEtabSession();
       unlockEtablissement();
       return;
     }
-    applyAuthState(st);
+    bootFromAuth(st);
   });
-});
+
+  // État initial : si déjà identifié, on boot; sinon on demande l'auth (lightbox)
+  try {
+    const st0 = (window.PP_AUTH && typeof window.PP_AUTH.get === "function") ? window.PP_AUTH.get() : null;
+    if (st0) {
+      await bootFromAuth(st0);
+      return;
+    }
+  } catch (e) {}
+
+  // Pas de session : ouvre la lightbox centrale et on attend pp:auth-changed
+  try {
+    if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
+      await window.PP_AUTH.requireDdfpt();
+    }
+  } catch (e) {
+    // normal : AUTH_REQUIRED -> lightbox ouverte
+  }
+});});
 // -----------------------------
   // DATE + EXPORT PDF
   // -----------------------------
@@ -1308,7 +1315,7 @@ window.addEventListener("load", async () => {
 
     if (btnRe) {
       btnRe.disabled = false;
-      btnRe.addEventListener("click", function(e){ e.preventDefault(); reopenAuth(); });
+      btnRe.addEventListener("click", function(e){ e.preventDefault(); if (window.PP_AUTH && typeof window.PP_AUTH.logout==="function") window.PP_AUTH.logout(); reopenAuth(); });
     }
     if (btnCh) {
       btnCh.disabled = false;
