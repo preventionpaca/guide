@@ -4527,6 +4527,33 @@ const COL_TMP_DIP='Tampon_Diplomes';
 const COL_TMP_ETB='Tampon_Etab';
 const COL_TMP_TR ='Tampon_Travaux';
 const COL_TMP_INTI_TR='Tampon_intitule_travaux';
+
+// --- Colonnes "runtime" (tolérance aux variations de noms côté lecture Supabase) ---
+let COL_REG_RUNTIME = COL_TMP_REG;
+let COL_DOM_RUNTIME = COL_TMP_DOM;
+let COL_DIP_RUNTIME = COL_TMP_DIP;
+
+function detectRuntimeCols(sample){
+  if(!sample) return;
+  const keys = Object.keys(sample);
+  const pick = (preds, fallback) => {
+    for(const k of keys){
+      const nk = norm(k);
+      if(preds.some(p=>nk.includes(p))) return k;
+    }
+    return fallback;
+  };
+  // Tampons (priorité aux colonnes "Tampon_*" si elles existent)
+  COL_REG_RUNTIME = pick(['tampon_regime','tamponregime','tampon_reg','regime'], COL_TMP_REG);
+  COL_DOM_RUNTIME = pick(['tampon_domaines','tampon_domaine','tampondomaine','domaines','domaine'], COL_TMP_DOM);
+  COL_DIP_RUNTIME = pick(['tampon_diplomes','tampon_diplome','tampondiplome','diplomes','diplome'], COL_TMP_DIP);
+}
+
+function getRegimeText(rec){ return String((rec && rec[COL_REG_RUNTIME]) ?? '').trim(); }
+function getDomText(rec){ return String((rec && rec[COL_DOM_RUNTIME]) ?? '').trim(); }
+function getDipText(rec){ return String((rec && rec[COL_DIP_RUNTIME]) ?? '').trim(); }
+
+
 const COL_TMP_ART='Tampon_Articles';
 
 const COL_TMP_SIT   ='Tampon_situation';
@@ -5114,7 +5141,42 @@ async function sbWrite(id, fields){
   });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Écriture impossible (Supabase)');
+  
+async function sbAdd(fields){
+  const token = localStorage.getItem('pp_token') || '';
+  if(!token) throw new Error('Non authentifié (token absent).');
+  const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer ' + token
+    },
+    body: JSON.stringify({ op:'add', table: SB_TABLE_MAIN, fields: fields || {} })
+  });
+  const j = await r.json().catch(()=>null);
+  if(!j || !j.ok) throw new Error(j?.error || 'Création impossible (Supabase)');
+  // id peut être dans j.id, j.newId, j.retValues[0], etc.
+  const newId = (j.id ?? j.newId ?? (Array.isArray(j.retValues)?j.retValues[0]:null));
+  return { ok:true, id: (newId!=null?Number(newId):null), raw:j };
+}
+
+async function sbRemove(id){
+  const token = localStorage.getItem('pp_token') || '';
+  if(!token) throw new Error('Non authentifié (token absent).');
+  const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer ' + token
+    },
+    body: JSON.stringify({ op:'remove', table: SB_TABLE_MAIN, id: Number(id) })
+  });
+  const j = await r.json().catch(()=>null);
+  if(!j || !j.ok) throw new Error(j?.error || 'Suppression impossible (Supabase)');
   return j;
+}
+
+return j;
 }
 
 async function sbAuth(code){
@@ -5155,6 +5217,7 @@ async function fetchTable(tbl){
 async function loadFull(){
   const rows=await fetchTable(TBL_MAIN);
   try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
+  try{ detectRuntimeCols(rows && rows[0] ? rows[0] : null); }catch(e){}
   try{ console.log('[LIST] label col:', COL_LIB_RUNTIME, 'legacy:', COL_LIB, 'sample keys:', Object.keys(rows[0]||{}).slice(0,20)); }catch(e){}
   MAP=new Map(rows.map(r=>[Number(r.id),r]));
 }
@@ -5190,6 +5253,7 @@ async function runQuick(fn){
 /* user actions avec verrou (et MAJ du cache local) */
 async function applyUA(actions){
   selectionLocked = true;
+  let __applyUA_result = null;
 
   const hasGristWrite = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.applyUserActions === 'function');
 
@@ -5200,35 +5264,50 @@ async function applyUA(actions){
 
   try{
     if(hasGristWrite){
-      await window.grist.docApi.applyUserActions(actions);
+      __applyUA_result = await window.grist.docApi.applyUserActions(actions);
     }else{
-      // Mode public : on ne supporte ici que UpdateRecord sur la table principale.
-      const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-      const byId = new Map(); // rid -> fields merged
 
-      (actions || []).forEach(a=>{
-        if(!Array.isArray(a)) return;
+      // Mode public : support UpdateRecord + AddRecord + RemoveRecord sur la table principale (via write-app)
+      const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
+
+      const retValues = [];
+      const byId = new Map(); // rid -> fields merged (UpdateRecord)
+
+      for(const a of (actions || [])){
+        if(!Array.isArray(a) || !a.length) continue;
         const typ = a[0];
-        if(typ !== 'UpdateRecord'){
+        const tbl = a[1];
+        if(String(tbl) !== String(mainTbl)) continue; // on ignore autres tables en mode public
+
+        if(typ === 'UpdateRecord'){
+          const rid = Number(a[2]);
+          const upd = a[3] || {};
+          if(!rid) continue;
+          const cur = byId.get(rid) || {};
+          Object.assign(cur, upd);
+          byId.set(rid, cur);
+        }else if(typ === 'AddRecord'){
+          const fields = (a[3] || {});
+          const res = await sbAdd(fields);
+          retValues.push(res.id);
+        }else if(typ === 'RemoveRecord'){
+          const rid = Number(a[2]);
+          if(!rid) continue;
+          await sbRemove(rid);
+          retValues.push(rid);
+        }else{
           throw new Error('Action non supportée en mode public: ' + typ);
         }
-        const tbl = a[1];
-        const rid = Number(a[2]);
-        const upd = a[3] || {};
-        if(String(tbl) !== String(mainTbl)) return; // ignore autres tables
-        if(!rid) return;
-        const cur = byId.get(rid) || {};
-        Object.assign(cur, upd);
-        byId.set(rid, cur);
-      });
-
-      if(byId.size === 0){
-        throw new Error('Aucune mise à jour applicable (mode public).');
       }
 
-      // Écritures séquentielles (sécurité + simplicité)
+      // UpdateRecord : écritures séquentielles (sécurité + simplicité)
       for(const [rid, fields] of byId.entries()){
         await sbWrite(rid, fields);
+      }
+
+      // Mimique partielle du retour Grist (utile pour Create -> retValues[0])
+      if(retValues.length){
+        __applyUA_result = { ok:true, retValues };
       }
     }
 
@@ -5255,6 +5334,7 @@ async function applyUA(actions){
     }
 
     try{ ppToast('Modification enregistrée'); }catch(e){}
+    return __applyUA_result || { ok:true };
   } finally {
     selectionLocked = false;
   }
@@ -5397,7 +5477,7 @@ function renderList(){
 
   if(colorFilter!=='none'){
     rows=rows.filter(r=>{
-      const c=colorFromLabel((r[COL_TMP_REG]??'').toString().trim());
+      const c=colorFromLabel(getRegimeText(r));
       if(!c) return false;
       if(colorFilter==='red')   return c===colorFromLabel('Interdiction absolue');
       if(colorFilter==='orange')return c===colorFromLabel("Déclaration de dérogation à l'inspection du travail");
@@ -5412,7 +5492,7 @@ function renderList(){
   for(const r of rows){
     const el=document.createElement('div');
     el.className='item'+(Number(r.id)===Number(selectedId)?' selected':'');
-    const color=colorFromLabel((r[COL_TMP_REG]??'').toString().trim()) || 'var(--stripe-default)';
+    const color=colorFromLabel(getRegimeText(r)) || 'var(--stripe-default)';
     el.style.setProperty('--stripe',color);
     el.innerHTML=`<strong>${(libOf(r) ?? '').toString()}</strong>`;
     el.onclick=()=>selectRow(r.id,true);
@@ -5748,16 +5828,15 @@ async function buildDomainSectorIndex(){
     if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
 
     // 1) Domaines depuis Tampon_Domaines
-    parseTextList(r[COL_TMP_DOM] || '').forEach(d => {
+    parseTextList(getDomText(r)).forEach(d => {
       if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d); }
     });
 
     // 2) Diplômes depuis Tampon_Diplomes + enrichissement Domaine/Secteur via Diplomes_EN_OK
-    const dips = parseTextList(r[COL_TMP_DIP] || '');
+    const dips = parseTextList(getDipText(r));
     for(const d of dips){
       const lbl = String(d||'').trim();
       if(!lbl) continue;
-      if(!isPlausibleDiplomeLabel(lbl)) continue;
       domainSectorIndex[id].diplomes.add(lbl);
       diplomaValues.add(lbl);
 
@@ -7626,7 +7705,7 @@ qs('#addBtn').onclick = async () => {
   let newId = null;
 
   await runQuick(async () => {
-    const r = await window.grist.docApi.applyUserActions([
+    const r = await applyUA([
       ['AddRecord', TBL_MAIN, null, { [COL_LIB_RUNTIME]: val, [KIND_COL]: 'Equipement' }]
     ]);
     newId = r?.retValues?.[0] ?? null;
