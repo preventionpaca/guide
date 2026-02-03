@@ -1,132 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  
-  <script>
-    window.PP_APP_NAME = "site";
-  </script>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Avis médical – Travaux réglementés</title>
 
-  <!-- API GRIST -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-  
-
-
-  <script>window.PP_REQUIRE_DDFPT=true;</script>
+  <!-- App + Supabase -->
+  <script>window.PP_APP_NAME = "equipements";</script>
+  <script>window.PP_REQUIRE_DDFPT = true;</script>
   <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
-<script>
-  // ===============================
-  // PPP Data Layer (GitHub + Grist)
-  // - Lecture: PP_fetchTable(table)
-  // - En dehors de Grist: utilise Supabase Edge Function read-app
-  // ===============================
-  (function () {
-    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
-    const SB_ROOT = sbBase + "/functions/v1";
-
-    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
-    window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
-
-    window.PP_SB_ROOT = SB_ROOT;
-    window.PP_SB_API_READ = SB_ROOT + "/read-app";
-    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
-    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
-
-    window.PP_IS_GRIST = !!(
-      window.grist &&
-      window.grist.docApi &&
-      typeof window.grist.docApi.fetchTable === "function" &&
-      window.parent !== window
-    );
-
-    function rowsToGristTable(rows) {
-      if (!Array.isArray(rows) || !rows.length) return { id: [] };
-      const cols = new Set();
-      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
-      cols.delete("id");
-      const t = { id: [] };
-      for (const c of cols) t[c] = [];
-      for (const r of rows) {
-        t.id.push(r.id);
-        for (const c of cols) t[c].push(r[c]);
-      }
-      return t;
-    }
-
-    async function sbFetchTable(tableName) {
-      const url = window.PP_SB_API_READ +
-        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
-        "&table=" + encodeURIComponent(tableName);
-
-      const r = await fetch(url, { credentials: "omit" });
-      const j = await r.json().catch(() => null);
-
-      if (!r.ok || !j || !j.ok) {
-        throw new Error(j?.error || "Lecture Supabase impossible");
-      }
-
-      // ✅ Support formats possibles:
-      // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
-
-      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
-      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
-
-      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
-      if (Array.isArray(j.records)) {
-        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
-        return rowsToGristTable(rows);
-      }
-
-      // 4) { tables: {TableName: {id:[], ...}} }
-      if (j.tables && j.tables[tableName]) return j.tables[tableName];
-
-      return j;
-    }
-
-    window.PP_fetchTable = async function (tableName) {
-      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-      return sbFetchTable(tableName);
-    };
-
-    // ✅ Shim: pour éviter de retoucher 50 scripts existants
-    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
-    // En mode GitHub, on "simule" juste ces fonctions.
-    if (!window.PP_IS_GRIST) {
-      window.grist = window.grist || {};
-      window.grist.docApi = window.grist.docApi || {};
-      window.grist.docApi.fetchTable = window.PP_fetchTable;
-
-      if (typeof window.grist.rowsToRecords !== "function") {
-        window.grist.rowsToRecords = function (table) {
-          const ids = table.id || [];
-          const records = [];
-          let cols = {};
-
-          if (table.fields && typeof table.fields === "object") cols = table.fields;
-          else {
-            for (const [k, v] of Object.entries(table)) {
-              if (k === "id") continue;
-              if (Array.isArray(v)) cols[k] = v;
-            }
-          }
-
-          for (let i = 0; i < ids.length; i++) {
-            const rec = { id: ids[i] };
-            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
-            records.push(rec);
-          }
-          return records;
-        };
-      }
-    }
-  })();
-</script>
 
 <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
@@ -134,79 +16,58 @@
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-avis.css" />
 
-  <!-- CSS lightbox code établissement -->
+<script>
+(function(){
+const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/,'');
+const SB_ROOT = sbBase + "/functions/v1";
+window.PP_SB_ROOT = SB_ROOT;
+window.PP_SB_API_READ  = SB_ROOT + "/read-app";
+window.PP_SB_API_AUTH  = SB_ROOT + "/auth-code";
+window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+function getAppName(){ return (window.PP_APP_DEFAULT || window.PP_APP_NAME || "equipements"); }
+function getToken(){
+  try {
+    const st = (window.PP_AUTH && typeof window.PP_AUTH.get === "function") ? window.PP_AUTH.get() : null;
+    return (st && st.token) ? String(st.token) : (localStorage.getItem("pp_token") || "");
+  } catch(e) { return (localStorage.getItem("pp_token") || ""); }
+}
+function rowsToTable(rows){
+  if(!Array.isArray(rows) || !rows.length) return {id:[]};
+  const cols = new Set();
+  for(const r of rows) Object.keys(r||{}).forEach(k=>cols.add(k));
+  cols.delete('id');
+  const t={id:[]};
+  for(const c of cols) t[c]=[];
+  for(const r of rows){ t.id.push(r.id); for(const c of cols) t[c].push(r[c]); }
+  return t;
+}
+async function sbFetchTable(tableName){
+  const url1 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName()) + "&table=" + encodeURIComponent(tableName);
+  let r = await fetch(url1, {credentials:'omit', headers: (getToken()? {Authorization: 'Bearer ' + getToken()} : {})});
+  let j = await r.json().catch(()=>null);
+  if(j && j.ok){
+    if (Array.isArray(j.records)) {
+      const rows = j.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
+      return rowsToTable(rows);
+    }
+    if(j.table) return j.table;
+    if(Array.isArray(j.rows)) return rowsToTable(j.rows);
+    if(j.tables && j.tables[tableName]) return j.tables[tableName];
+  }
+  const url2 = window.PP_SB_API_READ + "?app=" + encodeURIComponent(getAppName());
+  r = await fetch(url2, {credentials:'omit', headers: (getToken()? {Authorization: 'Bearer ' + getToken()} : {})});
+  j = await r.json().catch(()=>null);
+  if(j && j.ok && j.tables && j.tables[tableName]) return j.tables[tableName];
+  throw new Error(j?.error || "Lecture Supabase impossible");
+}
+window.PP_fetchTable = async function(tableName){
+  return sbFetchTable(tableName);
+};
+})();
+</script>
+
   <style>
-    .code-modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    .code-modal {
-      background: #ffffff;
-      max-width: 420px;
-      width: 90%;
-      padding: 20px 22px;
-      border-radius: 10px;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .code-modal h2 {
-      margin-top: 0;
-      margin-bottom: 8px;
-      font-size: 20px;
-      font-weight: 600;
-      color: #111827;
-    }
-    .code-modal p {
-      margin: 4px 0;
-      font-size: 14px;
-      line-height: 1.4;
-      color: #374151;
-    }
-    .code-modal-input {
-      width: 100%;
-      margin-top: 10px;
-      padding: 8px 10px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      box-sizing: border-box;
-    }
-    .code-modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 14px;
-    }
-    .code-btn {
-      padding: 6px 14px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid transparent;
-      cursor: pointer;
-    }
-    .code-btn-cancel {
-      background: #e5e7eb;
-      color: #111827;
-    }
-    .code-btn-validate {
-      background: #1b396a;
-      color: #ffffff;
-    }
-    .code-error {
-      margin-top: 8px;
-      font-size: 13px;
-      color: #b91c1c;
-      min-height: 1em;
-    }
-    .search-input.locked {
-      background: #e5e7eb;
-      cursor: not-allowed;
-    }
   
 
     /* ===== IMPRESSION : FORCER UN VERSO (PAGE 2) ===== */
@@ -278,23 +139,6 @@
       text-align: right;
     }
 
-  
-    .pp-etab-change-btn{
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      z-index: 9998;
-      border: 1px solid rgba(27,57,106,.35);
-      background: rgba(255,255,255,.95);
-      color: #1b396a;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 13px;
-      box-shadow: 0 8px 18px rgba(0,0,0,.12);
-      cursor: pointer;
-    }
-    .pp-etab-change-btn:hover{ filter: brightness(.98); }
-
   </style>
 </head>
 
@@ -310,6 +154,10 @@
       <!-- RECHERCHE (diplôme + établissement) – non imprimée -->
       <div class="search-card non-printable">
         <h3>Recherche</h3>
+        <div class="non-printable" style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="pp-reconnect-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Reconnexion établissement</button>
+          <button type="button" id="pp-change-etab-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Changer d’établissement</button>
+        </div>
         <p>
           1. Choisissez une <strong>formation</strong> (diplôme).<br>
           2. Choisissez un <strong>établissement</strong>.<br>
@@ -503,30 +351,16 @@
   </main>
 </div><!-- /.page-wrap -->
 
-<!-- ===== LIGHTBOX CODE ÉTABLISSEMENT ===== -->
-<div id="code-modal" class="code-modal-overlay">
-  <div class="code-modal">
-    <h2>Accès réservé</h2>
-    <p>Merci de saisir le code de l'établissement</p>
 
-    <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
-      <input id="code-input" class="code-modal-input" type="password" autocomplete="off" style="margin-top:0; flex:1;" />
-      <button id="code-toggle-visibility" type="button" class="code-btn code-btn-cancel" style="padding:6px 10px; white-space:nowrap;">👁</button>
-    </div>
-    <div class="code-modal-actions">
-      <button id="code-cancel" type="button" class="code-btn code-btn-cancel">Annuler</button>
-      <button id="code-validate" type="button" class="code-btn code-btn-validate">Valider</button>
-    </div>
-    <div id="code-error" class="code-error"></div>
-  </div>
 </div>
 
-<!-- ================== SCRIPT GRIST + LOGIQUE FORMULAIRE ================== -->
+<!-- ================== SCRIPTS + LOGIQUE FORMULAIRE ================== -->
 <script>
   // -----------------------------
-  // CONSTANTES GRIST
+  // CONSTANTES DONNÉES
   // -----------------------------
   const COLUMN_CONCAT = "Concatenation";          // Diplomes_EN_OK
+  const TABLE_DIPLOMES   = "Diplomes_EN_OK";        // table utilisée  (GitHub)
 
   const TABLE_TRAVAUX      = "Liste_des_equipements";
   const COL_TRAV_DIPLOME   = "Tampon_Diplomes";            // texte, liste de diplômes séparés par ;
@@ -534,6 +368,7 @@
   // Source des libellés de travaux (OK)
   const COL_TRAV_LIBELLE   = "Tampon_Travaux";
   const COL_TRAV_CODES    = "Tampon_intitule_travaux";  // ex: "22|red;31|orange"
+  const COL_TRAV_ETAB     = "Tampon_Etab"; // ✅ rattachement établissement (colonne verrouillée)
 
   const TABLE_ETAB         = "Etablissements_edi";
 
@@ -550,8 +385,9 @@
   // VARIABLES GLOBALES
   // -----------------------------
   let allDiplomes = [];
-  let travauxByDiplome = {};// travaux (derog/orange)
-  let equipByDiplomeTrav = {}; // { diplomeNorm: { travailLabel: Set(equipements) } }
+  // Dans cette variante, on filtre par diplome ET par etablissement (code)
+  let travauxByDiplomeEtab = {}; // { diplomeNorm: { etabCodeNorm: [travaux...] } }
+  let equipByDiplomeEtabTrav = {}; // { diplomeNorm: { etabCodeNorm: { travailLabel: Set(equipements) } } }
   let etablissements = [];
   let auxTablesLoaded = false;
 
@@ -569,6 +405,8 @@
   // key = code établissement normalisé, value = Set de libellés de diplômes (texte)
   let diplomeByEtabCode = {};
   let selectedEtabCodeNorm = null;  // code établissement normalisé choisi via lightbox
+  let selectedEtabNameNorm = null;  // nom établissement normalisé (pour Tampon_Etab)
+  let selectedEtabNameLoose = null; // nom établissement normalisé sans ponctuation
 
   let codeAttempts = 0;
   let etabsLoaded = false;
@@ -583,6 +421,12 @@
   const versoFormEl      = document.getElementById("verso-formation");
   const versoContentEl   = document.getElementById("verso-content");
   const docEditedDateEl  = document.getElementById("doc-edited-date");
+
+  function setFormation(label) {
+    const v = String(label || "").trim();
+    if (formationText) formationText.textContent = v;
+    if (versoFormEl) versoFormEl.textContent = v;
+  }
 
   let currentEtabName = "";
 
@@ -654,6 +498,14 @@
     const diplLbl = (formationText && formationText.textContent) ? formationText.textContent.trim() : "";
     const k = normalize(diplLbl);
 
+    if (!selectedEtabCodeNorm) {
+      const p = document.createElement("p");
+      p.className = "equip-empty";
+      p.textContent = "Sélectionnez un établissement pour générer le verso.";
+      versoContentEl.appendChild(p);
+      return;
+    }
+
     if (!k) {
       const p = document.createElement("p");
       p.className = "equip-empty";
@@ -662,7 +514,16 @@
       return;
     }
 
-    const travaux = travauxByDiplome[k] ? [...travauxByDiplome[k]] : [];
+    const travaux = (function(){
+      const byDipl = travauxByDiplomeEtab[k] || {};
+      if (!selectedEtabCodeNorm) return [];
+      if (byDipl[selectedEtabNameNorm]) return [...byDipl[selectedEtabNameNorm]];
+      const looseSel = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+      for (const key of Object.keys(byDipl)) {
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) return [...byDipl[key]];
+      }
+      return [];
+    })();
     if (!travaux.length) {
       const p = document.createElement("p");
       p.className = "equip-empty";
@@ -671,7 +532,17 @@
       return;
     }
 
-    const mapTrav = equipByDiplomeTrav[k] || {};
+    const mapTrav = (function(){
+      const byDipl = equipByDiplomeEtabTrav[k] || {};
+      if (!selectedEtabCodeNorm) return {};
+      if (byDipl[selectedEtabNameNorm]) return byDipl[selectedEtabNameNorm];
+      // fallback "loose" (codes avec tirets/espaces)
+      const looseSel = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+      for (const key of Object.keys(byDipl)) {
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) return byDipl[key];
+      }
+      return {};
+    })();
 
     travaux.forEach(trav => {
       const card = document.createElement("div");
@@ -734,46 +605,6 @@
     return rows;
   }
 
-  // Convertit la réponse REST Grist (records) en format "colonnaire"
-  // compatible avec tableToRows (raw.id + raw[col][])
-  function gristRecordsToColumnar(json) {
-    const recs = (json && Array.isArray(json.records)) ? json.records : [];
-    const ids = recs.map(r => r.id);
-    const colSet = new Set();
-    recs.forEach(r => {
-      const f = (r && r.fields) ? r.fields : {};
-      Object.keys(f).forEach(k => colSet.add(k));
-    });
-    const cols = Array.from(colSet);
-    const out = { id: ids };
-    cols.forEach(col => {
-      out[col] = recs.map(r => (r && r.fields) ? r.fields[col] : undefined);
-    });
-    return out;
-  }
-
-  // Récupère une table Grist soit via l'API plugin (dans Grist),
-  // soit via rpcFetch (sur GitHub Pages / wrapper).
-  async function fetchGristTableAny(tableId) {
-    // Mode Grist (widget)
-    if (window.grist && grist.docApi && typeof grist.docApi.fetchTable === "function") {
-      return await grist.docApi.fetchTable(tableId);
-    }
-    // Mode GitHub (pp-config + rpcFetch)
-    if (typeof window.rpcFetch === "function" && window.PP_GRIST_DOC_ID) {
-      const base = "https://docs.getgrist.com/api/docs/" + encodeURIComponent(window.PP_GRIST_DOC_ID);
-      const url  = base + "/tables/" + encodeURIComponent(tableId) + "/records";
-      const resp = await window.rpcFetch(url, { method: "GET" });
-      if (!resp || !resp.ok) {
-        const status = resp ? (resp.status + " " + resp.statusText) : "no response";
-        throw new Error("Grist API error: " + status);
-      }
-      const json = await resp.json();
-      return gristRecordsToColumnar(json);
-    }
-    throw new Error("Aucune API Grist disponible (widget/rpcFetch)");
-  }
-
   // Devine une colonne à partir d’un nom préféré + motifs
   function guessColumn(keys, preferred, patterns) {
     if (!keys || !keys.length) return null;
@@ -797,6 +628,9 @@
   // AUTOCOMPLÉTION DIPLÔMES (filtrée par établissement sélectionné)
   // -----------------------------
   function getCurrentDiplomePool() {
+    console.log("  → getCurrentDiplomePool");
+    console.log("    allDiplomes:", allDiplomes.length);
+    console.log("    selectedEtabCodeNorm:", selectedEtabCodeNorm);
     if (selectedEtabCodeNorm) {
       const set = diplomeByEtabCode[selectedEtabCodeNorm];
       if (set && set.size) {
@@ -807,6 +641,8 @@
   }
 
   function buildDiplomeDropdown(query) {
+    console.log("🔍 buildDiplomeDropdown:", query);
+    console.log("  allDiplomes.length:", allDiplomes.length);
     dropDiplome.innerHTML = "";
     const q = normalize(query);
     if (!q) { dropDiplome.style.display = "none"; return; }
@@ -822,7 +658,7 @@
       item.addEventListener("mousedown", () => {
         inputDiplome.value = lbl;
         dropDiplome.style.display = "none";
-        formationText.textContent = lbl;
+        setFormation(lbl);
         updateTravauxForDiplome(lbl);
       });
       dropDiplome.appendChild(item);
@@ -833,7 +669,7 @@
   inputDiplome.addEventListener("input", () => buildDiplomeDropdown(inputDiplome.value));
   inputDiplome.addEventListener("change", () => {
     const lbl = inputDiplome.value || "";
-    formationText.textContent = lbl;
+    setFormation(lbl);
     updateTravauxForDiplome(lbl);
   });
 
@@ -905,19 +741,32 @@
 
   function updateTravauxForDiplome(lbl) {
     const label = (lbl || "").trim();
+    if (formationText) setFormation(label);
     const q = normalize(label);
     travauxListEl.innerHTML = "";
     if (versoContentEl) versoContentEl.innerHTML = "";
 
     if (!label) return;
 
-    // 1) correspondance exacte sur la clé normalisée
-    let travaux = travauxByDiplome[q] ? [...travauxByDiplome[q]] : [];
+    // 1) correspondance exacte (priorité: code établissement, puis nom)
+
+    const byDipl = travauxByDiplomeEtab[q] || {};
+    let travaux = [];
+    const tryKeys = [selectedEtabCodeNorm, selectedEtabNameNorm, '__all__'].filter(Boolean);
+    for (const k of tryKeys) {
+      if (byDipl[k]) { travaux = [...byDipl[k]]; break; }
+    }
+    if (!travaux.length) {
+      const looseSel = String(selectedEtabCodeNorm || selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+      for (const key of Object.keys(byDipl)) {
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) { travaux = [...byDipl[key]]; break; }
+      }
+    }
 
     // 2) si rien trouvé, correspondance « floue » : contient / contenu dans
     if (!travaux.length) {
       const vus = new Set();
-      for (const [k, arr] of Object.entries(travauxByDiplome)) {
+      for (const [k, arr] of Object.entries(byDipl)) {
         if (!k) continue;
         if (k.includes(q) || q.includes(k)) {
           for (const t of arr) {
@@ -929,14 +778,6 @@
         }
       }
     }
-
-    if (!travaux.length) return;
-
-    // ✅ Filtre demandé : ne garder que les intitulés qui commencent par "Travail" / "Travaux"
-    travaux = travaux
-      .map(t => String(t || "").trim())
-      .filter(Boolean)
-      .filter(keepOnlyTravailItems);
 
     if (!travaux.length) return;
 
@@ -955,58 +796,42 @@
   }
 
   // -----------------------------
-  // INTÉGRATION GRIST (widget) / FALLBACK GitHub (rpcFetch)
-  // -----------------------------
-  if (window.grist && typeof grist.ready === "function" && typeof grist.onRecords === "function") {
-    grist.ready({ requiredAccess: 'full' });
-
-    // Diplômes depuis la table source de la vue (tous les diplômes potentiels)
-    grist.onRecords(records => {
-      const vals = [];
-      diplomaIdToLabel = {};
-
-      for (const rec of records) {
-        const label = rec[COLUMN_CONCAT];
-        if (label != null) vals.push(label);
-        if (rec.id != null && label != null) diplomaIdToLabel[rec.id] = label;
-      }
-
-      allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
-
-      if (!auxTablesLoaded) {
-        auxTablesLoaded = true;
-        loadAuxTables();
-      }
-    });
-  } else {
-    // Hors Grist (GitHub Pages) : on charge quand même les tables auxiliaires
-    if (!auxTablesLoaded) {
-      auxTablesLoaded = true;
-      // petit délai pour laisser pp-config initialiser rpcFetch
-      (function waitRpcThenLoad(){
-      const t0 = Date.now();
-      (function tick(){
-        const ok = (typeof window.rpcFetch === "function" && !!window.PP_GRIST_DOC_ID);
-        if (ok) return loadAuxTables();
-        if (Date.now() - t0 > 9000) {
-          return loadAuxTables();
-        }
-        setTimeout(tick, 150);
-      })();
-    })();
+// INTÉGRATION GITHUB
+// -----------------------------
+async function initDiplomesSource() {
+  try {
+    const raw = await window.PP_fetchTable(TABLE_DIPLOMES);
+    const rows = tableToRows(raw);
+    const vals = [];
+    diplomaIdToLabel = {};
+    for (const r of rows) {
+      const f = r.fields || r;
+      const label = f[COLUMN_CONCAT];
+      if (label != null) vals.push(label);
+      if (r.id != null && label != null) diplomaIdToLabel[r.id] = label;
     }
+    allDiplomes = Array.from(new Set(vals.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b), 'fr'));
+  } catch (e) {
+    console.warn("initDiplomesSource: impossible de charger Diplomes_EN_OK", e);
+    allDiplomes = [];
   }
+}
 
   // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
-  async function loadAuxTables() {
-    try {
-      const [rawTravTable, rawEtabTable] = await Promise.all([
-        fetchGristTableAny(TABLE_TRAVAUX),
-        fetchGristTableAny(TABLE_ETAB)
-      ]);
+// Chargement des travaux + établissements (dont mapping code ↔ diplômes)
+  
+async function loadAuxTables() {
+  try {
+    // ✅ Important : ce fichier tourne dans 2 contextes
+    // - Dans  window.PP_fetchTable(...)
+    // - Sur GitHub : PP_fetchTable(...) (Supabase Edge)
+    const [rawTravTable, rawEtabTable] = await Promise.all([
+      window.PP_fetchTable(TABLE_TRAVAUX),
+      window.PP_fetchTable(TABLE_ETAB)
+    ]);
 
-      const travRecs = tableToRows(rawTravTable);
-      const etabRecs = tableToRows(rawEtabTable);
+    const travRecs = tableToRows(rawTravTable);
+    const etabRecs = tableToRows(rawEtabTable);
 
       // ===== TRAVAUX =====
       if (travRecs.length) {
@@ -1045,6 +870,22 @@
         );
 
 
+        // Colonne permettant de rattacher une ligne d'équipement à un établissement (code / UAI / nom)
+        const travColEtab = guessColumn(
+          travKeys,
+          COL_TRAV_ETAB,
+          [
+            "codepaca",
+            "uai",
+            "code_etab",
+            "etab_code",
+            "etablissement",
+            "etab",
+            "etablissements",
+            "tampon_etab"
+          ]
+        );
+
         if (travColDiplome && travColLib) {
           const tmp = {};
 
@@ -1054,6 +895,10 @@
             const libText   = f[travColLib];
             const codesText = travColCodes ? f[travColCodes] : null;
             const equipText = travColEquip ? f[travColEquip] : null;
+            const etabRaw   = travColEtab ? f[travColEtab] : null;
+            // Tampon_Etab peut contenir plusieurs établissements séparés par ';'
+            let etabKeys = splitItems(etabRaw).map(x => normalize(x)).filter(Boolean);
+            if (!etabKeys.length) etabKeys = ['__all__'];
 
             // ✅ Exclusion des matériels non classés : pas de diplôme OU pas de travaux
             if (!diplText || !libText) continue;
@@ -1070,41 +915,43 @@
             diplomesLigne.forEach(oneDipl => {
               const key = normalize(oneDipl);
               if (!key) return;
-              if (!tmp[key]) tmp[key] = [];
+              if (!tmp[key]) tmp[key] = {};
+
+              etabKeys.forEach(etabKey => {
+                if (!tmp[key][etabKey]) tmp[key][etabKey] = [];
 
               for (let idx = 0; idx < maxLen; idx++) {
                 const travailLabel = travauxLigne[idx] || travauxLigne[travauxLigne.length - 1];
                 if (!travailLabel) continue;
 
-                // 1) On ne garde QUE ce qui commence par Travail / Travaux
-                if (!startsWithTravauxWord(travailLabel)) continue;
-
-                // 2) On ne garde QUE les travaux en dérogation (orange),
-                //    pour coller à l’autre fichier et éviter les faux positifs.
-                const code = codesLigne[idx];
-                const regime = regimeFromColorCode(code);
-                if (regime !== "derog") continue;
-
-                tmp[key].push(String(travailLabel).trim());
+                tmp[key][etabKey].push(String(travailLabel).trim());
 
                 // Verso : rattacher les equipements/produits au travail
                 const eq = (equipText == null) ? "" : String(equipText).trim();
                 if (eq) {
-                  if (!equipByDiplomeTrav[key]) equipByDiplomeTrav[key] = {};
-                  if (!equipByDiplomeTrav[key][String(travailLabel).trim()]) {
-                    equipByDiplomeTrav[key][String(travailLabel).trim()] = new Set();
+                  if (!equipByDiplomeEtabTrav[key]) equipByDiplomeEtabTrav[key] = {};
+                  if (!equipByDiplomeEtabTrav[key][etabKey]) equipByDiplomeEtabTrav[key][etabKey] = {};
+                  if (!equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()]) {
+                    equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()] = new Set();
                   }
-                  equipByDiplomeTrav[key][String(travailLabel).trim()].add(eq);
+                  equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()].add(eq);
                 }
               }
-            });
+
+              });            });
           }
 
-// Déduplication + tri : chaque travail n’apparaît qu’une seule fois par diplôme
-          for (const k of Object.keys(tmp)) {
-            tmp[k] = Array.from(new Set(tmp[k])).sort((a, b) => a.localeCompare(b, "fr"));
+// Déduplication + tri : chaque travail n’apparaît qu’une seule fois par diplôme ET par établissement
+          for (const dKey of Object.keys(tmp)) {
+            const byEtab = tmp[dKey] || {};
+            for (const eKey of Object.keys(byEtab)) {
+              byEtab[eKey] = Array.from(new Set(byEtab[eKey]))
+                .sort((a, b) => a.localeCompare(b, "fr"));
+            }
           }
-          travauxByDiplome = tmp;
+          travauxByDiplomeEtab = tmp;
+        console.log('[TRAVAUX] colonnes détectées:', {travColDiplome, travColLib, travColCodes, travColEquip, travColEtab});
+        console.log('[TRAVAUX] diplômes indexés:', Object.keys(tmp).length);
         }
       }
 
@@ -1166,35 +1013,63 @@
   }
 
   // -----------------------------
+// PERSISTENCE "SESSION" ÉTABLISSEMENT (navigateur)
+// -----------------------------
+// Objectif : si tu fermes l’onglet puis tu reviens, on retrouve automatiquement l’établissement
+// (sans réafficher la lightbox) tant que la durée n’est pas dépassée.
+const PP_ETAB_SESSION_KEY = "pp_etab_session_v1";
+const PP_ETAB_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function saveEtabSession(codeNorm) {
+  try {
+    if (!codeNorm) return;
+    const payload = { code: String(codeNorm), ts: Date.now() };
+    localStorage.setItem(PP_ETAB_SESSION_KEY, JSON.stringify(payload));
+  } catch (e) { /* stockage indisponible (mode privé, etc.) */ }
+}
+
+function clearEtabSession() {
+  try { localStorage.removeItem(PP_ETAB_SESSION_KEY); } catch (e) {}
+}
+
+function loadEtabSession() {
+  try {
+    const raw = localStorage.getItem(PP_ETAB_SESSION_KEY);
+    if (!raw) return null;
+    const j = JSON.parse(raw);
+    if (!j || !j.code || !j.ts) return null;
+    if ((Date.now() - Number(j.ts)) > PP_ETAB_SESSION_TTL_MS) return null;
+    return { codeNorm: normalize(j.code) };
+  } catch (e) { return null; }
+}
+
+// Tentative de restauration : on attend que les établissements soient chargés.
+function tryRestoreEtabSession() {
+  const s = loadEtabSession();
+  if (!s || !s.codeNorm) return false;
+  const match = etablissements.find(e => normalize(e.code || "") === s.codeNorm);
+  if (!match) return false;
+  lockEtablissement(match);
+  return true;
+}
+
+// -----------------------------
   // LIGHTBOX CODE ÉTABLISSEMENT
   // -----------------------------
   function redirectHome() {
     window.location.href = 'https://preventionpaca.github.io/guide/#home';
   }
 
-  // --- Persistance du code établissement (comme PDFT) ---
-  const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
-  function getStoredEtabCode() {
-    try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; }
-  }
-  function setStoredEtabCode(code) {
-    try {
-      const v = (code || '').toString().trim().toUpperCase();
-      if (v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
-    } catch {}
-  }
-  function clearStoredEtabCode() {
-    try { localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); } catch {}
-  }
-
-  function openEtabModal() {
-    if (codeModal) codeModal.style.display = "flex";
-    setTimeout(() => codeInput && codeInput.focus(), 50);
-  }
-
   function lockEtablissement(e) {
     if (!e) return;
     selectedEtabCodeNorm = normalize(e.code || "");
+
+    // Persistance (30 min) pour éviter l’établissement vide après fermeture d’onglet
+    saveEtabSession(selectedEtabCodeNorm);
+
+    // Pour filtrer Liste_des_equipements.Tampon_Etab (qui peut contenir des noms multiples)
+    selectedEtabNameNorm = normalize(e.nom || e.label || "");
+    selectedEtabNameLoose = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
 
     inputEtab.value = e.label;
     inputEtab.readOnly = true;
@@ -1211,19 +1086,16 @@
     travauxListEl.innerHTML = "";
   }
 
-  function validateCode(opts = {}) {
-    const silent = !!opts.silent;
-    const remember = opts.remember !== false;
-
+  function validateCode() {
     if (!etabsLoaded) {
-      if (!silent) codeError.textContent = "Les établissements ne sont pas encore chargés (connexion Grist). Réessayez dans quelques secondes.";
-      return false;
+      codeError.textContent = "Chargement des établissements, veuillez réessayer dans un instant.";
+      return;
     }
 
     const raw = (codeInput.value || "").trim();
     if (!raw) {
-      if (!silent) codeError.textContent = "Merci de saisir un code établissement.";
-      return false;
+      codeError.textContent = "Merci de saisir un code établissement.";
+      return;
     }
 
     const codeNorm = normalize(raw);
@@ -1231,24 +1103,18 @@
 
     if (match) {
       lockEtablissement(match);
-      if (remember) setStoredEtabCode(raw);
       codeError.textContent = "";
       if (codeModal) codeModal.style.display = "none";
-      return true;
+      return;
     }
 
     codeAttempts++;
     if (codeAttempts >= 3) {
       redirectHome();
-      return false;
-    }
-    if (silent) {
-      clearStoredEtabCode();
-      return false;
+      return;
     }
     codeError.textContent = "Code inconnu. Tentative " + codeAttempts + " / 3.";
     codeInput.focus();
-    return false;
   }
 
   if (codeValidateBtn) codeValidateBtn.addEventListener("click", validateCode);
@@ -1264,68 +1130,117 @@
         validateCode();
       }
     });
+
+}
+
+// Boutons : (re)connexion / changement d'établissement
+const btnReconnect = document.getElementById("pp-reconnect-btn");
+const btnChangeEtab = document.getElementById("pp-change-etab-btn");
+
+function showCodeModal() {
+  if (codeModal && codeInput) {
+    codeModal.style.display = "flex";
+    setTimeout(() => codeInput.focus(), 50);
+    return true;
   }
+  return false;
+}
 
-
-  const codeToggleBtn = document.getElementById("code-toggle-visibility");
-  if (codeToggleBtn && codeInput) {
-    codeToggleBtn.addEventListener("click", () => {
-      const isPwd = codeInput.type === "password";
-      codeInput.type = isPwd ? "text" : "password";
-      codeToggleBtn.textContent = isPwd ? "🙈" : "👁";
-      codeInput.focus();
-      const v = codeInput.value;
-      codeInput.value = "";
-      codeInput.value = v;
-    });
+function unlockEtablissement() {
+  selectedEtabCodeNorm = null;
+  selectedEtabNameNorm = null;
+  selectedEtabNameLoose = null;
+  currentEtabName = "";
+  if (versoEtabEl) versoEtabEl.textContent = "";
+  if (etabText) etabText.innerHTML = "";
+  if (inputEtab) {
+    inputEtab.readOnly = false;
+    inputEtab.classList.remove("locked");
+    inputEtab.value = "";
   }
+  if (inputDiplome) inputDiplome.value = "";
+  if (formationText) formationText.textContent = "";
+  if (travauxListEl) travauxListEl.innerHTML = "";
+  renderVerso();
+}
 
+if (btnReconnect) btnReconnect.addEventListener("click", () => showCodeModal());
+if (btnChangeEtab) btnChangeEtab.addEventListener("click", () => {
+  clearEtabSession();
+  unlockEtablissement();
+  showCodeModal();
+});
 
-  window.addEventListener("load", () => {
-    const changeBtn = document.getElementById('pp-etab-change-btn');
-    if (changeBtn) {
-      changeBtn.addEventListener('click', () => {
-        clearStoredEtabCode();
-        // On relance la demande de code
-        openEtabModal();
-      });
+window.addEventListener("load", async () => {
+  if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
+
+  // Boot complet une fois qu'on a une session d'auth valide (pp-config.js)
+  async function bootFromAuth(st) {
+    if (!st) return;
+
+    // 1) Charger les tables uniquement APRES authentification (token dispo)
+    try {
+      if (!auxTablesLoaded) {
+        await loadAuxTables();
+        await initDiplomesSource();
+        auxTablesLoaded = true;
+      }
+    } catch (e) {
+      console.warn("Init tables/diplômes:", e);
     }
-    if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
 
-    const stored = getStoredEtabCode();
-    if (stored) {
-      // tentative d’auto-connexion silencieuse
-      if (codeInput) codeInput.value = stored;
-      if (codeModal) codeModal.style.display = "none";
+    // 2) Appliquer l'établissement depuis la session (codepaca/etabName)
+    try {
+      const code = String(st.codepaca || "").trim();
+      const name = String(st.etabName || "").trim();
 
-      const t0 = Date.now();
-      const timer = setInterval(() => {
-        if (etabsLoaded) {
-          clearInterval(timer);
-          const ok = validateCode({ silent: true, remember: true });
-          if (!ok) {
-            // code mémorisé invalide → on redemande
-            if (codeModal) codeModal.style.display = "flex";
-            setTimeout(() => codeInput && codeInput.focus(), 50);
-          }
-        } else if (Date.now() - t0 > 9000) {
-          clearInterval(timer);
-          // Tables trop lentes : on reste en mode "auto", sans forcer l'ouverture de la lightbox
-          // (même logique que DDFPT : on ne redemande que si l'utilisateur n'est pas identifié).
-          codeError.textContent = "Chargement des établissements… Si cela persiste, rechargez la page.";
-        }
-      }, 150);
+      let match = null;
+      if (code && Array.isArray(etablissements) && etablissements.length) {
+        match = etablissements.find(e => normalize(e.code || "") === normalize(code));
+      }
+      if (!match) {
+        const label = [name || ("Établissement " + code), code].filter(Boolean).join(" — ");
+        match = { code: code || "", nom: name || "", label };
+      }
+      lockEtablissement(match);
+    } catch (e) { console.warn("apply etab from auth:", e); }
+    // 3) Si un diplôme est déjà présent (cas rare), on recalcule les travaux
+    try {
+      const d = (inputDiplome && inputDiplome.value) ? String(inputDiplome.value) : "";
+      if (d) updateTravauxForDiplome(d);
+    } catch (e) {}
+  }
+
+  // Écoute les changements (reconnexion / changement d'établissement)
+  document.addEventListener("pp:auth-changed", (ev) => {
+    const st = (ev && ev.detail) ? ev.detail : null;
+    if (!st) {
+      clearEtabSession();
+      unlockEtablissement();
       return;
     }
-
-    // première connexion
-    if (codeModal && codeInput) {
-      codeModal.style.display = "flex";
-      setTimeout(() => codeInput.focus(), 50);
-    }
+    bootFromAuth(st);
   });
 
-  // -----------------------------
+  // État initial : si déjà identifié, on boot; sinon on demande l'auth (lightbox)
+  try {
+    const st0 = (window.PP_AUTH && typeof window.PP_AUTH.get === "function") ? window.PP_AUTH.get() : null;
+    if (st0) {
+      await bootFromAuth(st0);
+      return;
+    }
+  } catch (e) {}
+
+  // Pas de session : ouvre la lightbox centrale et on attend pp:auth-changed
+  try {
+    if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
+      await window.PP_AUTH.requireDdfpt();
+    }
+  } catch (e) {
+    // normal : AUTH_REQUIRED -> lightbox ouverte
+  }
+});
+// -----------------------------
   // DATE + EXPORT PDF
   // -----------------------------
   const tatInput = document.getElementById("tat-input");
@@ -1368,9 +1283,6 @@
   };
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
-
-
-<button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button" title="Changer de code établissement">Changer d’établissement</button>
 
 </body>
 </html>
