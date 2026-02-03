@@ -4096,16 +4096,16 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
     <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par la DREETS</span></div>
     <div class="dreets-product-grid">
 <div class="dreets-field">
-<label class="domains-title" for="dreets-agent">Agent chimique</label>
-<input class="input-pill" id="dreets-agent"/>
-</div>
-<div class="dreets-field">
 <label class="domains-title" for="dreets-type">Type</label>
 <input class="input-pill" id="dreets-type"/>
 </div>
 <div class="dreets-field">
 <label class="domains-title" for="dreets-famille">Famille de produits</label>
 <input class="input-pill" id="dreets-famille"/>
+</div>
+<div class="dreets-field">
+<label class="domains-title" for="dreets-agent">Agent chimique</label>
+<input class="input-pill" id="dreets-agent"/>
 </div>
 <div class="dreets-field">
 <label class="domains-title" for="dreets-clp">Danger CLP</label>
@@ -5116,53 +5116,6 @@ async function sbWrite(id, fields){
   return j;
 }
 
-
-
-async function sbApplyUserActions(actions){
-  const token = localStorage.getItem('pp_token') || '';
-  if(!token) throw new Error('Non authentifié (token absent).');
-
-  // Tentative "native" : envoyer les actions au backend (si write-app le supporte)
-  try{
-    const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Bearer ' + token
-      },
-      body: JSON.stringify({ actions: actions })
-    });
-    const j = await r.json().catch(()=>null);
-    if(j && j.ok) return j;
-    // Si le backend ne comprend pas "actions", on retombe sur le mode compat (UpdateRecord)
-    throw new Error(j?.error || 'write-app: payload actions non supporté');
-  }catch(e){
-    // Fallback compat : uniquement UpdateRecord sur table principale
-    const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-    const byId = new Map();
-
-    (actions || []).forEach(a=>{
-      if(!Array.isArray(a)) return;
-      const typ = a[0];
-      if(typ !== 'UpdateRecord') throw e;
-      const tbl = a[1];
-      const rid = Number(a[2]);
-      const upd = a[3] || {};
-      if(String(tbl) !== String(mainTbl)) return;
-      if(!rid) return;
-      const cur = byId.get(rid) || {};
-      Object.assign(cur, upd);
-      byId.set(rid, cur);
-    });
-
-    if(byId.size === 0) throw e;
-
-    for(const [rid, fields] of byId.entries()){
-      await sbWrite(rid, fields);
-    }
-    return { ok:true, mode:'fallback-update-only' };
-  }
-}
 async function sbAuth(code){
   const r = await fetch(SB_API_AUTH, {
     method:'POST',
@@ -5191,19 +5144,43 @@ async function fetchTable(tbl){
       if(r && typeof r === 'object' && 'id' in r) return { ...r, id: Number(r.id) };
       return r;
     });
-  }ca}else{
-      const hasNonUpdate = (actions || []).some(a => Array.isArray(a) && a[0] !== 'UpdateRecord');
+  }catch(e){
+    console.error('[SB] fetchTable failed', tbl, e);
+    return [];
+  }
+}
 
-      // Mode public : on délègue au backend (write-app) si possible.
-      // Fallback compat : UpdateRecord uniquement (sbWrite).
-      await sbApplyUserActions(actions);
 
-      // Si création/suppression, on recharge le cache local (id inconnus autrement)
-      if(hasNonUpdate){
-        await loadFull();
-        try{ await buildDomainSectorIndex(); }catch(e){}
-      }
-    }ogressEl.classList.remove('active'); }catch(e){}
+async function loadFull(){
+  const rows=await fetchTable(TBL_MAIN);
+  try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
+  try{ console.log('[LIST] label col:', COL_LIB_RUNTIME, 'legacy:', COL_LIB, 'sample keys:', Object.keys(rows[0]||{}).slice(0,20)); }catch(e){}
+  MAP=new Map(rows.map(r=>[Number(r.id),r]));
+}
+
+/* progress */
+const tick=pct=>{pbar.style.width=`${pct}%`;};
+let __ppToastT=null;
+function ppToast(msg){
+  const el=document.getElementById('ppSaveToast');
+  if(!el) return;
+  el.textContent = msg || 'Modification enregistrée';
+  el.classList.add('show');
+  el.setAttribute('aria-hidden','false');
+  if(__ppToastT) clearTimeout(__ppToastT);
+  __ppToastT = setTimeout(()=>{
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden','true');
+  }, 1300);
+}
+
+async function runQuick(fn){
+  try{ progressEl.classList.add('active'); }catch(e){}
+  tick(10);
+  try{ await fn(); } finally{
+    tick(100);
+    setTimeout(()=>{
+      try{ progressEl.classList.remove('active'); }catch(e){}
       tick(0);
     },120);
   }
@@ -5700,7 +5677,48 @@ function setFilterMode(mode){
 
   document.querySelectorAll('.filter-modes label').forEach(l=>l.classList.remove('active'));
   const radio=document.querySelector(`input[name="filterMode"][value="${mode}"]`);
-  if(radio && radio.closest('label')) radio.closest('label').clasync function buildDomainSectorIndex(){
+  if(radio && radio.closest('label')) radio.closest('label').classList.add('active');
+
+  renderList();
+  // Deep-link QR: si l'URL contient #equip=..., on tente de sélectionner l'équipement
+  try{
+    const baseId = _hashBaseId();
+    if(baseId){ selectRow(baseId, true); return; }
+    const h = (window.location.hash||'');
+    const m = h.match(/#equip=([^&]+)/);
+    if(m){
+      const sel = decodeURIComponent(m[1]);
+      // tentative par id numérique puis par code
+      const num = sel.match(/^\d+$/) ? parseInt(sel,10) : null;
+      const foundId = (num && MAP && MAP.has(num)) ? num : null;
+      if(foundId!=null){ selectRow(foundId); }
+      else{
+        const entries = (MAP ? Array.from(MAP.values()) : []);
+        const hit = entries.find(r => norm(String(r[COL_LIB]||'')) === norm(sel));
+        if(hit && hit.id!=null){ selectRow(hit.id); }
+      }
+    }
+  }catch(e){}
+
+}
+
+// Filtre anti "tests" pour la liste déroulante Diplôme (ex: "ce", "aaa", etc.)
+// Objectif : ne proposer que des libellés plausibles.
+function isPlausibleDiplomeLabel(label){
+  const s = String(label || '').trim();
+  if(!s) return false;
+  // Écarte les entrées très courtes (souvent des essais)
+  if(s.length < 6) return false;
+  // Doit contenir au moins une majuscule OU un mot-clé diplôme courant
+  const hasUpper = /[A-ZÀ-ÖØ-Þ]/.test(s);
+  const hasKeyword = /\b(CAP|BAC|BTS|BP|MC|CS|BUT|TP|TITRE|LICENCE|MASTER)\b/i.test(s);
+  // Écarte les chaînes entièrement en minuscules (souvent des tests)
+  const allLower = (s === s.toLowerCase());
+  return (hasUpper || hasKeyword) && !allLower;
+}
+
+/* index domaines / secteurs / diplômes */
+async function buildDomainSectorIndex(){
   domainSectorIndex = {};
   domainValues = new Set();
   sectorValues = new Set();
@@ -5708,81 +5726,52 @@ function setFilterMode(mode){
 
   const rows = (MAP ? Array.from(MAP.values()) : []);
 
-  // --- 1) Base : tampons sur la table principale (rapide, sans dépendances)
+  // --- Charger la table Diplomes_EN_OK pour récupérer Domaine/Secteur à partir des diplômes
+  let dipCfg = null;
+  let dipSectCol = null;
+  let dipDomCol  = null;
+  try{
+    dipCfg = await ensureTable(['Diplomes_EN_OK'], COL_DIP_CONCAT);
+    const sample = (dipCfg.rows && dipCfg.rows[0]) ? dipCfg.rows[0] : null;
+    if(sample){
+      const keys = Object.keys(sample);
+      const pick = (kw) => keys.find(k => norm(k).includes(kw));
+      dipSectCol = pick('secteur');
+      dipDomCol  = pick('domaine');
+    }
+  }catch(e){ dipCfg = null; }
+
   for(const r of rows){
     const id = r && r.id != null ? Number(r.id) : null;
     if(id == null) continue;
-
-    const doms = parseTextList(r[COL_TMP_DOM] || '');
-    const dips = parseTextList(r[COL_TMP_DIP] || '');
-
     if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
 
-    doms.forEach(d => { if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d);} });
+    // 1) Domaines depuis Tampon_Domaines
+    parseTextList(r[COL_TMP_DOM] || '').forEach(d => {
+      if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d); }
+    });
 
-    dips.forEach(d => {
+    // 2) Diplômes depuis Tampon_Diplomes + enrichissement Domaine/Secteur via Diplomes_EN_OK
+    const dips = parseTextList(r[COL_TMP_DIP] || '');
+    for(const d of dips){
       const lbl = String(d||'').trim();
-      if(!lbl) return;
-      if(!isPlausibleDiplomeLabel(lbl)) return;
+      if(!lbl) continue;
+      if(!isPlausibleDiplomeLabel(lbl)) continue;
       domainSectorIndex[id].diplomes.add(lbl);
       diplomaValues.add(lbl);
-    });
-  }
 
-  // --- 2) Enrichissement : secteurs (et éventuellement domaines) depuis Diplomes_EN_OK + Lien_equip_etab_dipl
-  // Objectif : rendre les filtres Domaine/Secteur/Diplôme fiables même si les tampons sont incomplets.
-  try{
-    const linkRows = await fetchTable(TBL_LINK);
-    const dipRows  = await fetchTable('Diplomes_EN_OK');
-
-    const pickKey = (obj, needles) => {
-      if(!obj) return null;
-      const keys = Object.keys(obj);
-      for(const n of needles){
-        const k = keys.find(x => norm(x).includes(norm(n)));
-        if(k) return k;
+      if(dipCfg && dipCfg.byNorm){
+        const dr = dipCfg.byNorm.get(norm(lbl));
+        if(dr){
+          if(dipDomCol && dr[dipDomCol]){
+            parseTextList(dr[dipDomCol]).forEach(v=>{ if(v){ domainSectorIndex[id].domains.add(v); domainValues.add(v);} });
+          }
+          if(dipSectCol && dr[dipSectCol]){
+            parseTextList(dr[dipSectCol]).forEach(v=>{ if(v){ domainSectorIndex[id].sects.add(v); sectorValues.add(v);} });
+          }
+        }
       }
-      return null;
-    };
-
-    const kSect = dipRows[0] ? (pickKey(dipRows[0], ['secteur','branche','famille']) || null) : null;
-    const kDom  = dipRows[0] ? (pickKey(dipRows[0], ['domaine']) || null) : null;
-
-    const dipById = new Map((dipRows||[]).map(d => [Number(d.id), d]));
-
-    (linkRows||[]).forEach(l=>{
-      const eId = refId(l[COL_L_EQUIP]);
-      if(eId == null) return;
-
-      const dId = refId(l[COL_L_DIP]);
-      if(dId == null) return;
-
-      const dr = dipById.get(Number(dId));
-      if(!dr) return;
-
-      const lbl = String(dr[COL_DIP_CONCAT] || dr.Concatenation || '').trim();
-      if(lbl){
-        if(!domainSectorIndex[eId]) domainSectorIndex[eId] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
-        domainSectorIndex[eId].diplomes.add(lbl);
-        diplomaValues.add(lbl);
-      }
-
-      const sect = kSect ? String(dr[kSect] || '').trim() : '';
-      if(sect){
-        if(!domainSectorIndex[eId]) domainSectorIndex[eId] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
-        domainSectorIndex[eId].sects.add(sect);
-        sectorValues.add(sect);
-      }
-
-      const dom = kDom ? String(dr[kDom] || '').trim() : '';
-      if(dom){
-        if(!domainSectorIndex[eId]) domainSectorIndex[eId] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
-        domainSectorIndex[eId].domains.add(dom);
-        domainValues.add(dom);
-      }
-    });
-  }catch(e){
-    console.warn('[FILTER] buildDomainSectorIndex enrichment failed', e);
+    }
   }
 
   const dlDom  = document.getElementById('dl-filter-domain');
@@ -5805,52 +5794,6 @@ function setFilterMode(mode){
       o.value = v;
       dlSect.appendChild(o);
     });
-  }
-
-  if (dlDipl) {
-    dlDipl.innerHTML = '';
-    [...diplomaValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDipl.appendChild(o);
-    });
-  }
-}OM] || '');
-    const dips = parseTextList(r[COL_TMP_DIP] || '');
-
-    // Sectors are present in the UI right pane as a synthesized string; we keep them out of the index
-    // unless you later add a dedicated Tampon_Se... column.
-
-    if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
-
-    doms.forEach(d => { if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d);} });
-
-    dips.forEach(d => {
-      const lbl = String(d||'').trim();
-      if(!lbl) return;
-      if(!isPlausibleDiplomeLabel(lbl)) return;
-      domainSectorIndex[id].diplomes.add(lbl);
-      diplomaValues.add(lbl);
-    });
-  }
-
-  const dlDom  = document.getElementById('dl-filter-domain');
-  const dlSect = document.getElementById('dl-filter-secteur');
-  const dlDipl = document.getElementById('dl-filter-diplome');
-
-  if (dlDom) {
-    dlDom.innerHTML = '';
-    [...domainValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDom.appendChild(o);
-    });
-  }
-
-  // Secteur: la liste est gardée vide volontairement si on n'a pas de colonne Tampon dédiée
-  // (évite de proposer des suggestions trompeuses). Le filtre 'Secteur' continue de fonctionner via autocomplète.
-  if (dlSect) {
-    dlSect.innerHTML = '';
   }
 
   if (dlDipl) {
@@ -6438,11 +6381,12 @@ async function uploadSupabase(file){
    TEXTE NATUREL / LISTES
    ========================================================== */
 function parseTextList(text){
-  // Supporte ; / , retour-ligne (tampons Grist souvent en lignes)
   return (text||'').toString()
-    .split(/[;\n,\/]/)
+    // séparateurs fréquents dans les tampons : ; / , retours ligne
+    .split(/[;\/,\\n\\r]+/)
     .map(s=>s.trim())
     .filter(Boolean)
+    // unicité insensible à la casse/accents via norm()
     .filter((v,i,a)=>a.findIndex(x=>norm(x)===norm(v))===i);
 }
 
@@ -7312,20 +7256,13 @@ async function selectRow(id,userClick=false){
   // 1) Essai depuis le cache (liste)
   ROW = MAP.get(Number(id)) || null;
 
-  // 2) Mode public : éviter un aller-retour réseau si la ligne est déjà complète (full=1)
+  // 2) Mode public : charge la fiche complète via Supabase (uniquement si nécessaire)
   if(!IS_GRIST){
     try{
-      const hasEnough =
-        !!ROW &&
-        (
-          (ROW[COL_TMP_REG] != null && String(ROW[COL_TMP_REG]).trim() !== '') ||
-          (ROW[COL_TMP_DOM] != null && String(ROW[COL_TMP_DOM]).trim() !== '') ||
-          (ROW[COL_TMP_DIP] != null && String(ROW[COL_TMP_DIP]).trim() !== '') ||
-          (ROW[COL_PRECI]  != null && String(ROW[COL_PRECI]).trim()  !== '') ||
-          (ROW[COL_TR_TYPE]!= null && String(ROW[COL_TR_TYPE]).trim()!== '')
-        );
-
-      if(!hasEnough){
+      const looksComplete = !!(ROW && (
+        (COL_TR_AGENT in ROW) || (COL_TR_TYPE in ROW) || (COL_TR_FAM in ROW) || (COL_TR_DANGER in ROW) || (COL_TR_EPI in ROW)
+      ));
+      if(!looksComplete){
         const rec = await sbFetchOne(selectedId);
         const full = sbRecToRow(rec);
         if(full){
@@ -10372,15 +10309,11 @@ if(!__ppHasGristApi()){
       try{ initTypeRadios && initTypeRadios(); }catch(e){}
       try{ renderList(); }catch(e){}
       const deepId = _hashBaseId();
-      if(deepId){
-        await selectRow(deepId, true);
-      }else{
-        // Sélection initiale (évite les pastilles grises + affiche la fiche sans clic)
-        try{
-          const rows = [...MAP.values()].sort((a,b)=>String(libOf(a)||'').localeCompare(String(libOf(b)||''),'fr',{sensitivity:'base'}));
-          const first = rows[0];
-          if(first && first.id != null) await selectRow(first.id, false);
-        }catch(e){}
+      if(deepId){ await selectRow(deepId, true); }
+      else {
+        // Sélection par défaut (évite une fiche/pastilles grisées au chargement)
+        const first = (MAP && MAP.size) ? Number([...MAP.keys()][0]) : null;
+        if(first) { await selectRow(first, false); }
       }
     }catch(e){
       console.error('[SB] boot public failed', e);
