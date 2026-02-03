@@ -7,6 +7,9 @@
 
   <!-- App + Supabase -->
   <script>window.PP_APP_NAME = "equipements";</script>
+  <script>window.PP_REQUIRE_DDFPT = true;</script>
+  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+
 <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css">
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css">
   <!-- CSS commun portail + CSS spécifique avis médical -->
@@ -820,7 +823,6 @@ async function initDiplomesSource() {
     allDiplomes = [];
   }
 }
-}
 
   // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
 // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
@@ -1295,40 +1297,6 @@ window.addEventListener("load", async () => {
     subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
   };
 </script>
-<script>window.PP_REQUIRE_DDFPT = true;</script>
-<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
-
-<script>
-(function(){
-  function onReady(fn){ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", fn); else fn(); }
-  onReady(function(){
-    const btnRe = document.getElementById("pp-reconnect-btn");
-    const btnCh = document.getElementById("pp-change-etab-btn");
-
-    function reopenAuth(){ 
-      if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
-        window.PP_AUTH.requireDdfpt().catch(()=>{});
-      } else {
-        console.error("PP_AUTH indisponible (pp-config.js non chargé)");
-      }
-    }
-
-    if (btnRe) {
-      btnRe.disabled = false;
-      btnRe.addEventListener("click", function(e){ e.preventDefault(); if (window.PP_AUTH && typeof window.PP_AUTH.logout==="function") window.PP_AUTH.logout(); reopenAuth(); });
-    }
-    if (btnCh) {
-      btnCh.disabled = false;
-      btnCh.addEventListener("click", function(e){
-        e.preventDefault();
-        if (window.PP_AUTH && typeof window.PP_AUTH.logout === "function") window.PP_AUTH.logout();
-        reopenAuth();
-      });
-    }
-  });
-})();
-</script>
-
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
