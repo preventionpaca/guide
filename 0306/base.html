@@ -3290,6 +3290,9 @@ html.fp-exporting-doc #fpWrapper #fpMachineName{
   min-height:100px !important;  /* Ajusté pour alignement avec Régime */
 }
 
+
+/* FIX v15.17: éviter les césures au milieu des mots dans les pastilles */
+.chip, .tag, .pill, .token, .sel-chip { word-break: normal !important; overflow-wrap: anywhere; hyphens: none; }
 </style>
 <style>
 /* ===== PATCH SAFE OVERLAYS (no click-block when closed) ===== */
@@ -5029,25 +5032,13 @@ async function sbFetchTable(table){
   const t = String(table||'').trim();
   const wantsFull = (t === SB_TABLE_MAIN) || (typeof TBL_MAIN !== 'undefined' && t === String(TBL_MAIN)) ||
                     /dipl|dom|sect|admin|dreets|etab/i.test(t);
-
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
             + '&table=' + encodeURIComponent(t)
             + (wantsFull ? '&full=1' : '')
-            + '&v=3';
-
-  // Headers: certains projets Supabase refusent ou brident les Edge Functions sans apikey/Authorization
-  const anon  = (window.PP_SUPABASE_ANON_KEY || '').trim();
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  const authBearer = token || anon;
-
-  const headers = {};
-  if(anon) headers['apikey'] = anon;
-  if(authBearer) headers['Authorization'] = 'Bearer ' + authBearer;
-
-  const r = await fetch(url, { credentials:'omit', headers });
+            + '&v=2';
+  const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Lecture impossible (Supabase)');
-
   // Compat: records[{id,fields}] ou items[{...}] ou rows[{...}]
   const raw = j.records || j.items || j.rows || [];
   const rows = (raw || []).map(rec=>{
@@ -5064,20 +5055,36 @@ async function sbFetchTable(table){
 
 
 async function sbFetchRow(table, id){
-  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(String(table||''))
-            + '&id=' + encodeURIComponent(String(id));
-  const r = await fetch(url, { credentials:'omit' });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + table));
+  const t = String(table||'').trim();
+  const wantsFull = (t === SB_TABLE_MAIN) || (typeof TBL_MAIN !== 'undefined' && t === String(TBL_MAIN)) ||
+                    /dipl|dom|sect|admin|dreets|etab/i.test(t);
 
-  if(j.item) return j.item; // ancien format possible
+  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
+            + '&table=' + encodeURIComponent(t)
+            + '&id=' + encodeURIComponent(String(id))
+            + (wantsFull ? '&full=1' : '')
+            + '&v=3';
+
+  const anon  = (window.PP_SUPABASE_ANON_KEY || '').trim();
+  const token = (localStorage.getItem('pp_token') || '').trim();
+  const authBearer = token || anon;
+
+  const headers = {};
+  if(anon) headers['apikey'] = anon;
+  if(authBearer) headers['Authorization'] = 'Bearer ' + authBearer;
+
+  const r = await fetch(url, { credentials:'omit', headers });
+  const j = await r.json().catch(()=>null);
+  if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + t));
+
+  if(j.item) return j.item;
   if(j.record) return { id: j.record.id, ...(j.record.fields||{}) };
-  // parfois la function renvoie {items:[...]} même pour un id
   if(Array.isArray(j.items) && j.items[0]) return j.items[0];
   if(Array.isArray(j.records) && j.records[0]) return { id: j.records[0].id, ...(j.records[0].fields||{}) };
   return null;
 }
+
+
 
 async function sbFetchList(){
   return sbFetchTable(SB_TABLE_MAIN);
@@ -5130,11 +5137,17 @@ async function sbWrite(id, fields){
     body: JSON.stringify({ id: Number(id), fields: fields || {} })
   });
   const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Écriture impossible (Supabase)');
+  if(!j || !j.ok){
+    console.error('[SB write-app] payload=', {id:Number(id), fields}, 'resp=', j);
+    throw new Error(j?.error || ('Écriture impossible (HTTP ' + r.status + ')'));
+  }
   return j;
 }
 
-async function sbOp(opPayload){
+
+
+
+async function sbApplyUserActions(actions){
   const anon  = (window.PP_SUPABASE_ANON_KEY || '').trim();
   const token = (localStorage.getItem('pp_token') || '').trim();
   if(!token) throw new Error('Non authentifié (token absent).');
@@ -5145,27 +5158,36 @@ async function sbOp(opPayload){
   };
   if(anon) headers['apikey'] = anon;
 
-  const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
+  // 1) Format "actions" (proche Grist) — le plus probable
+  let r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
     method:'POST',
     headers,
-    body: JSON.stringify(opPayload || {})
+    body: JSON.stringify({ actions: actions || [] })
   });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Écriture impossible (Supabase)');
+  let j = await r.json().catch(()=>null);
+
+  // 2) Fallback "userActions" si ton write-app attend ce nom
+  if(!j || !j.ok){
+    console.warn('[SB write-app] actions rejected, trying userActions. resp=', j);
+    r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
+      method:'POST',
+      headers,
+      body: JSON.stringify({ userActions: actions || [] })
+    });
+    j = await r.json().catch(()=>null);
+  }
+
+  if(!j || !j.ok){
+    console.error('[SB write-app] userActions failed. payload=', actions, 'resp=', j);
+    throw new Error(j?.error || ('Écriture impossible (HTTP ' + r.status + ')'));
+  }
   return j;
 }
 
-
 async function sbAuth(code){
-  const anon  = (window.PP_SUPABASE_ANON_KEY || '').trim();
-  const headers = { 'Content-Type':'application/json' };
-  if(anon){
-    headers['apikey'] = anon;
-    headers['Authorization'] = 'Bearer ' + anon;
-  }
   const r = await fetch(SB_API_AUTH, {
     method:'POST',
-    headers,
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ code: String(code||'').trim() })
   });
   const j = await r.json().catch(()=>null);
@@ -5237,101 +5259,48 @@ async function applyUA(actions){
   selectionLocked = true;
 
   const hasGristWrite = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.applyUserActions === 'function');
-
-  console.log('[applyUA HYBRID] Tentative d\'écriture:', {
-    hasGristWrite,
-    actions: actions
-  });
+  console.log('[applyUA] write:', { hasGristWrite, actions });
 
   try{
-    const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-
     if(hasGristWrite){
-      await window.grist.docApi.applyUserActions(actions);
-    }else{
-      // Mode public : UpdateRecord + AddRecord + RemoveRecord sur la table principale.
-      const byId = new Map(); // rid -> fields merged
-      const adds = [];        // fields
-      const removes = [];     // rid
-
-      (actions || []).forEach(a=>{
-        if(!Array.isArray(a)) return;
-        const typ = a[0];
-        const tbl = a[1];
-
-        if(String(tbl) !== String(mainTbl)) return; // ignore autres tables
-
-        if(typ === 'UpdateRecord'){
-          const rid = Number(a[2]);
-          const upd = a[3] || {};
-          if(!rid) return;
-          const cur = byId.get(rid) || {};
-          Object.assign(cur, upd);
-          byId.set(rid, cur);
-          return;
-        }
-
-        if(typ === 'AddRecord'){
-          const fields = a[3] || {};
-          adds.push(fields);
-          return;
-        }
-
-        if(typ === 'RemoveRecord'){
-          const rid = Number(a[2]);
-          if(rid) removes.push(rid);
-          return;
-        }
-
-        throw new Error('Action non supportée en mode public: ' + typ);
-      });
-
-      // 1) AddRecord(s)
-      for(const fields of adds){
-        // Format attendu côté write-app : on tente d'abord {op:'add', table, fields}
-        let res = null;
-        try{
-          res = await sbOp({ op:'add', table: mainTbl, fields: fields || {} });
-        }catch(e1){
-          // Compat éventuelle : { action:'AddRecord', table, fields }
-          res = await sbOp({ action:'AddRecord', table: mainTbl, fields: fields || {} });
-        }
-        const newId = Number(res?.id ?? res?.recordId ?? res?.rid ?? res?.data?.id ?? NaN);
-        if(newId && MAP){
-          const row = { id: newId, ...(fields||{}) };
-          MAP.set(newId, row);
-        }
-      }
-
-      // 2) UpdateRecord(s)
-      for(const [rid, fields] of byId.entries()){
-        await sbWrite(rid, fields);
-        const cur = MAP && MAP.get(rid) ? MAP.get(rid) : null;
-        if(cur){ Object.assign(cur, fields); MAP.set(rid, cur); }
-      }
-
-      // 3) RemoveRecord(s)
-      for(const rid of removes){
-        try{
-          await sbOp({ op:'remove', table: mainTbl, id: Number(rid) });
-        }catch(e2){
-          // Compat éventuelle : { action:'RemoveRecord', table, id }
-          await sbOp({ action:'RemoveRecord', table: mainTbl, id: Number(rid) });
-        }
-        try{ MAP && MAP.delete(Number(rid)); }catch(e){}
-        if(Number(selectedId) === Number(rid)){ selectedId = null; }
-      }
+      const r = await window.grist.docApi.applyUserActions(actions);
+      try{ ppToast('Modification enregistrée'); }catch(e){}
+      return r;
     }
 
+    const j = await sbApplyUserActions(actions);
+
+    // Recharger pour restaurer couleurs + filtres et rester cohérent
+    await loadFull();
+  renderList();
+  try{
+    if(!selectedId){
+      const first = MAP && MAP.size ? Array.from(MAP.keys())[0] : null;
+      if(first) await selectRow(Number(first));
+    } else {
+      await selectRow(Number(selectedId));
+    }
+  }catch(e){}
+    try{
+      if(!selectedId){
+        const first = MAP && MAP.size ? Array.from(MAP.keys())[0] : null;
+        if(first) await selectRow(Number(first));
+      } else {
+        await selectRow(Number(selectedId));
+      }
+    }catch(e){}
+
     try{ ppToast('Modification enregistrée'); }catch(e){}
+    return j;
   }catch(e){
-    console.error('[applyUA HYBRID] Erreur:', e);
+    console.error('[applyUA] failed:', e);
     try{ ppToast('Erreur: ' + (e?.message || e)); }catch(_){}
     throw e;
   }finally{
     selectionLocked = false;
   }
 }
+
 
 function keepCursor(){
   try{ if(selectedId!=null) window.grist.setCursorPos({rowId:Number(selectedId)});}catch{}
@@ -7699,17 +7668,21 @@ qs('#addBtn').onclick = async () => {
   let newId = null;
 
   await runQuick(async () => {
-    const r = await window.grist.docApi.applyUserActions([
-      ['AddRecord', TBL_MAIN, null, { [COL_LIB_RUNTIME]: val, [KIND_COL]: 'Equipement' }]
-    ]);
-    newId = r?.retValues?.[0] ?? null;
-    qs('#newName').value = '';
-    await loadFull();
-    if (newId != null) {
-      await selectRow(newId, true);
+    const fields = { [COL_LIB_RUNTIME]: val, [KIND_COL]: 'Equipement' };
+
+    if (window.grist && window.grist.docApi && typeof window.grist.docApi.applyUserActions === 'function') {
+      const r = await window.grist.docApi.applyUserActions([['AddRecord', TBL_MAIN, null, fields]]);
+      try { newId = Number((Array.isArray(r) && r[0]) ? r[0] : null); } catch(e){}
     } else {
-      renderList();
+      const j = await sbApplyUserActions([['AddRecord', TBL_MAIN, null, fields]]);
+      try {
+        newId = Number(j?.id ?? j?.recordId ?? j?.rid ?? (Array.isArray(j?.ids) ? j.ids[0] : null) ??
+                       (Array.isArray(j?.results) ? j.results[0] : null));
+      } catch(e){}
     }
+
+    await loadFull();
+    renderList();
   });
 
   await logHistory('Création équipement', {
@@ -8728,54 +8701,8 @@ function initThemeToggle() {
 /* ==========================================================
    SUPPRESSION ADMINISTRATEUR
    ========================================================== */
-
-function __ppIsAdminAuthed(){
-  try{
-    const role = (localStorage.getItem('pp_role')||'').toLowerCase();
-    const tok  = (localStorage.getItem('pp_token')||'').trim();
-    return role === 'admin' && !!tok;
-  }catch(e){ return false; }
-}
-
-async function __ppAdminDeleteWithoutPrompt(){
-  if(!ROW) return;
-  const equipId = Number(ROW.id);
-  const equipName = (ROW[COL_LIB_RUNTIME] || ROW[COL_LIB] || '').toString();
-  const etabName = (ADD_MODE_ETAB_NAME || '').toString();
-
-  await runQuick(async () => {
-    await applyUA([['RemoveRecord', TBL_MAIN, equipId]]);
-    await loadFull();
-    selectedId = null;
-    ROW = null;
-    renderList();
-    qs('#currentEquipName').textContent = '—';
-    qs('#delName').textContent = '—';
-  });
-
-  try{
-    await logHistory('Suppression équipement', {
-      equipId,
-      equipName,
-      etabName,
-      user: '(admin session)',
-      details: `Supprimé via session admin déjà validée`
-    });
-  }catch(e){}
-}
-
 function openAdminDeleteDialog() {
   if (!ROW) return;
-
-  // Si on est déjà authentifié admin, on ne ré-affiche pas une 2e lightbox : on supprime directement.
-  if(__ppIsAdminAuthed()){
-    __ppAdminDeleteWithoutPrompt().catch(err=>{
-      console.error('[ADMIN DELETE] failed', err);
-      try{ ppToast('Suppression impossible: ' + (err?.message||err)); }catch(e){}
-    });
-    return;
-  }
-
   const dlg = document.getElementById('dlgAdminDelete');
   if (!dlg) return;
 
@@ -8783,7 +8710,7 @@ function openAdminDeleteDialog() {
   const inp = document.getElementById('adm-del-code');
   const err = document.getElementById('adm-del-error');
 
-  if (lbl) lbl.textContent = (ROW[COL_LIB_RUNTIME] || ROW[COL_LIB] || '—');
+  if (lbl) lbl.textContent = ROW[COL_LIB] || '—';
   if (inp) inp.value = '';
   if (err) err.textContent = '';
 
