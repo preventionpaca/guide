@@ -735,30 +735,25 @@ window.PP_fetchTable = async function(tableName){
 
   function updateTravauxForDiplome(lbl) {
     const label = (lbl || "").trim();
+    if (formationText) formationText.textContent = label;
     const q = normalize(label);
     travauxListEl.innerHTML = "";
     if (versoContentEl) versoContentEl.innerHTML = "";
 
     if (!label) return;
 
-    // 1) correspondance exacte (filtrée par établissement verrouillé)
-    if (!selectedEtabCodeNorm) {
-      // pas d'établissement → on n'affiche rien dans cette variante
-      renderVerso();
-      return;
-    }
+    // 1) correspondance exacte (priorité: code établissement, puis nom)
 
     const byDipl = travauxByDiplomeEtab[q] || {};
     let travaux = [];
-    if (byDipl[selectedEtabNameNorm]) {
-      travaux = [...byDipl[selectedEtabNameNorm]];
-    } else {
-      const looseSel = String(selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
+    const tryKeys = [selectedEtabCodeNorm, selectedEtabNameNorm].filter(Boolean);
+    for (const k of tryKeys) {
+      if (byDipl[k]) { travaux = [...byDipl[k]]; break; }
+    }
+    if (!travaux.length) {
+      const looseSel = String(selectedEtabCodeNorm || selectedEtabNameNorm || "").replace(/[^a-z0-9]/g, "");
       for (const key of Object.keys(byDipl)) {
-        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) {
-          travaux = [...byDipl[key]];
-          break;
-        }
+        if (String(key).replace(/[^a-z0-9]/g, "") === looseSel) { travaux = [...byDipl[key]]; break; }
       }
     }
 
