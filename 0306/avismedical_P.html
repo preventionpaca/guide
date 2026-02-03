@@ -137,11 +137,6 @@ window.PP_fetchTable = async function(tableName){
     }
 
   </style>
-  <script>
-    // Force la lightbox centralisée (pp-config) si aucune session valide
-    window.PP_REQUIRE_DDFPT = true;
-  </script>
-  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
 </head>
 
 <body>
@@ -825,8 +820,10 @@ async function initDiplomesSource() {
     allDiplomes = [];
   }
 }
+}
 
   // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
+// Chargement des travaux + établissements (dont mapping code ↔ diplômes)
   
 async function loadAuxTables() {
   try {
@@ -1291,14 +1288,40 @@ window.addEventListener("load", async () => {
     subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
   };
 </script>
-<script>
-  // Force la lightbox centralisée (pp-config) si aucune session valide
-  window.PP_REQUIRE_DDFPT = true;
-</script>
+<script>window.PP_REQUIRE_DDFPT = true;</script>
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+
 <script>
 (function(){
-  function qs(id){ return document.getElementById(id); }
-  function wireButtons(){
+  function onReady(fn){ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", fn); else fn(); }
+  onReady(function(){
+    const btnRe = document.getElementById("pp-reconnect-btn");
+    const btnCh = document.getElementById("pp-change-etab-btn");
+
+    function reopenAuth(){ 
+      if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
+        window.PP_AUTH.requireDdfpt().catch(()=>{});
+      } else {
+        console.error("PP_AUTH indisponible (pp-config.js non chargé)");
+      }
+    }
+
+    if (btnRe) {
+      btnRe.disabled = false;
+      btnRe.addEventListener("click", function(e){ e.preventDefault(); reopenAuth(); });
+    }
+    if (btnCh) {
+      btnCh.disabled = false;
+      btnCh.addEventListener("click", function(e){
+        e.preventDefault();
+        if (window.PP_AUTH && typeof window.PP_AUTH.logout === "function") window.PP_AUTH.logout();
+        reopenAuth();
+      });
+    }
+  });
+})();
+</script>
+
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
