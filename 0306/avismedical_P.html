@@ -137,6 +137,11 @@ window.PP_fetchTable = async function(tableName){
     }
 
   </style>
+  <script>
+    // Force la lightbox centralisée (pp-config) si aucune session valide
+    window.PP_REQUIRE_DDFPT = true;
+  </script>
+  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
 </head>
 
 <body>
@@ -820,10 +825,8 @@ async function initDiplomesSource() {
     allDiplomes = [];
   }
 }
-}
 
   // Chargement des travaux + établissements (dont mapping code ↔ diplômes)
-// Chargement des travaux + établissements (dont mapping code ↔ diplômes)
   
 async function loadAuxTables() {
   try {
@@ -1288,7 +1291,14 @@ window.addEventListener("load", async () => {
     subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
   };
 </script>
-<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+<script>
+  // Force la lightbox centralisée (pp-config) si aucune session valide
+  window.PP_REQUIRE_DDFPT = true;
+</script>
+<script>
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function wireButtons(){
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 </body>
