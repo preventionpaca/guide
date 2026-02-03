@@ -4095,6 +4095,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   <div class="block dreets-overlap-block" id="dreetsProductBlock">
     <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par la DREETS</span></div>
     <div class="dreets-product-grid">
+
 <div class="dreets-field">
 <label class="domains-title" for="dreets-agent">Agent chimique</label>
 <input class="input-pill" id="dreets-agent"/>
@@ -4115,6 +4116,82 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <label class="domains-title" for="dreets-epi">EPI recommandé</label>
 <input class="input-pill" id="dreets-epi"/>
 </div>
+</div><!-- /.dreets-product-grid -->
+  </div><!-- /#dreetsProductBlock -->
+  
+</div><!-- /.photo-product-row -->
+</div>
+<!-- fin bloc PHOTO/VGP -->
+
+</div><!-- fin panel DDFPT -->
+
+<!-- ================== PANEL DREETS (cadre vert) ================== -->
+<div class="panel panel-dreets panel-dreets-overlap">
+<div class="panel-title-bar">
+<div class="panel-title">
+<span>▸</span>
+<span>DREETS</span>
+</div>
+<div class="panel-actions">
+<button class="theme-toggle" id="dreetsAddModeBtn" type="button">MODE AJOUT DREETS</button>
+</div>
+</div>
+<!-- Le reste du panneau DREETS (sous la zone imbriquée) -->
+<div class="dreets-layout">
+  <div class="dreets-left">
+<div class="block">
+<div class="block-title">Travaux réglementés</div>
+<div class="trav-buttons">
+<button class="btn btn-small" id="tr-choose" type="button">Sélectionner</button>
+<button class="btn btn-small" id="tr-clear" type="button">Tout effacer</button>
+</div>
+<div class="trav-list" id="tr-lines"></div>
+</div>
+<div class="block" id="regimeBlock">
+<div class="block-title">Régime d'interdiction / dérogation</div>
+<select class="input-pill" id="f-regime"></select>
+</div>
+</div>
+  <div class="dreets-right">
+<!-- Précisions et Observations à droite avec hauteurs ajustées pour équilibrer avec Travaux + Régime -->
+<div class="block">
+<div class="block-title">Précisions sur le régime d'interdiction / dérogation</div>
+<textarea class="input-pill input-area full-width-area dreets-tall-textarea" id="precisions" rows="6"></textarea>
+</div>
+<div class="block">
+<div class="block-title">Observations</div>
+<textarea class="input-pill input-area full-width-area dreets-tall-textarea" id="observations" rows="5"></textarea>
+</div>
+  </div><!-- /.dreets-right -->
+</div><!-- /.dreets-layout -->
+</div><!-- fin panel DREETS -->
+</div><!-- fin panel DREETS -->
+<!-- ================== /PANEL DREETS ================== -->
+
+
+
+
+</div><!-- /rightPane -->
+</div><!-- /layout -->
+</div><!-- /wrap -->
+<!-- Lightbox image -->
+<div aria-hidden="true" id="lightbox">
+<span aria-label="Fermer" class="close">✕</span>
+<img alt="Aperçu" id="lightboxImg"/>
+</div>
+<!-- Lightbox diplômes -->
+<div aria-hidden="true" id="dlgDiplomes">
+<div class="modal-inner">
+<div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+<div class="modal-title">Diplômes préparés — <span id="dlg-etab-name"></span></div>
+<button aria-label="Fermer" class="modal-close" type="button">✕</button>
+</div>
+<div class="modal-body">
+<div id="dlg-di-list"></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-small" id="dlg-di-cancel" type="button">Annuler</button>
+<button class="btn btn-small" id="dlg-di-ok" type="button">Valider</button>
 </div>
 </div>
 </div>
@@ -4956,7 +5033,7 @@ async function sbFetchTable(table){
             + '&table=' + encodeURIComponent(t)
             + (wantsFull ? '&full=1' : '')
             + '&v=2';
-  const r = await fetch(url, { credentials:'omit', headers:{ 'apikey':SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + SUPABASE_ANON_KEY } });
+  const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Lecture impossible (Supabase)');
   // Compat: records[{id,fields}] ou items[{...}] ou rows[{...}]
@@ -4978,7 +5055,7 @@ async function sbFetchRow(table, id){
   const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
             + '&table=' + encodeURIComponent(String(table||''))
             + '&id=' + encodeURIComponent(String(id));
-  const r = await fetch(url, { credentials:'omit', headers:{ 'apikey':SUPABASE_ANON_KEY, 'Authorization':'Bearer ' + SUPABASE_ANON_KEY } });
+  const r = await fetch(url, { credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + table));
 
@@ -5031,7 +5108,6 @@ async function sbWrite(id, fields){
     method:'POST',
     headers:{
       'Content-Type':'application/json',
-      'apikey':SUPABASE_ANON_KEY,
       'Authorization':'Bearer ' + token
     },
     body: JSON.stringify({ id: Number(id), fields: fields || {} })
@@ -5044,7 +5120,7 @@ async function sbWrite(id, fields){
 async function sbAuth(code){
   const r = await fetch(SB_API_AUTH, {
     method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY},
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ code: String(code||'').trim() })
   });
   const j = await r.json().catch(()=>null);
@@ -6308,7 +6384,7 @@ async function uploadSupabase(file){
 function parseTextList(text){
   return (text||'').toString()
     // séparateurs fréquents dans les tampons : ; / , retours ligne
-    .split(/[;\/,\r\n]+/)
+    .split(/[;\/,\n\r]+/)
     .map(s=>s.trim())
     .filter(Boolean)
     // unicité insensible à la casse/accents via norm()
@@ -10048,7 +10124,7 @@ Please find the detailed information below.`,
 
     const resp = await fetch(WEB3FORMS_ENDPOINT, {
       method: 'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
