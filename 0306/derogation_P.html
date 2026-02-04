@@ -10,7 +10,9 @@
   <title>Dérogation travaux réglementés – établissement / diplômes / travaux</title>
 
   <!-- API Grist -->
-  
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+
 
   <script>window.PP_REQUIRE_DDFPT=true;</script>
   <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
@@ -134,37 +136,61 @@
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-derogation.css" />
 
 
+  <!-- CSS lightbox code établissement -->
   <style>
-  .pp-etab-change-btn{
-    position: fixed;
-    right: 14px;
-    bottom: 14px;
-    z-index: 9998;
-    border: 1px solid rgba(27,57,106,.35);
-    background: rgba(255,255,255,.95);
-    color: #1b396a;
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-size: 13px;
-    box-shadow: 0 8px 18px rgba(0,0,0,.12);
-    cursor: pointer;
-  }
-  .pp-etab-change-btn:hover{ filter: brightness(.98); }
-  .pp-etab-reconnect-btn{
-    position: fixed;
-    right: 14px;
-    bottom: 56px;
-    z-index: 9998;
-    border: 1px solid rgba(27,57,106,.35);
-    background: rgba(255,255,255,.95);
-    color: #1b396a;
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-size: 13px;
-    box-shadow: 0 8px 18px rgba(0,0,0,.12);
-    cursor: pointer;
-  }
-  .pp-etab-reconnect-btn:hover{ filter: brightness(.98); }
+    #code-modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15,23,42,0.75);
+      z-index: 1000;
+    }
+    #code-modal.hidden {
+      display: none;
+    }
+    .code-modal-box {
+      background: #ffffff;
+      color: #111827;
+      padding: 20px 24px;
+      border-radius: 12px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(15,23,42,0.45);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .code-modal-title {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    .code-modal-text {
+      margin: 0 0 12px;
+      font-size: 0.9rem;
+    }
+    .code-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+  
+    .pp-etab-change-btn{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9998;
+      border: 1px solid rgba(27,57,106,.35);
+      background: rgba(255,255,255,.95);
+      color: #1b396a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .pp-etab-change-btn:hover{ filter: brightness(.98); }
 </style>
 </head>
 
@@ -178,10 +204,26 @@
     <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
   </div>
 
+  <!-- ===== LIGHTBOX CODE ETABLISSEMENT ===== -->
+  <div id="code-modal" class="hidden">
+    <div class="code-modal-box">
+      <h2 class="code-modal-title">Code établissement</h2>
+      <p class="code-modal-text">
+        Merci de saisir le code de l’établissement pour charger automatiquement sa fiche.
+      </p>
+      <input id="code-etab-input" type="password" class="input" autocomplete="off"
+             placeholder="Saisir le code établissement…">
+      <div class="code-modal-actions">
+  <button id="code-etab-annuler" type="button" class="btn btn-secondary">Annuler</button>
+  <button id="code-etab-valider" type="button" class="btn btn-primary">Valider</button>
+</div>
+
+    </div>
   </div>
 
   <!-- ========= FORMULAIRE DÉROGATION ========= -->
   <div class="wrap">
+<div id="header-container"></div>
     <div class="card small-title">
       <div class="main-title">
         Demande d’autorisation de dérogation aux travaux réglementés en vue d’accueillir des jeunes mineurs âgés d’au moins 15 ans et de moins de 18 ans en formation professionnelle ou technologique
@@ -477,6 +519,12 @@
   const $btnPdf = $('btnPdf');
   const peopleBody = $('people-body');
   const emailRedacteur = $('email_redacteur');
+
+   // Lightbox code établissement
+  const $codeModal   = $('code-modal');
+  const $codeInput   = $('code-etab-input');
+  const $codeBtn     = $('code-etab-valider');
+  const $codeCancel  = $('code-etab-annuler');
 
 
   /* ===== Connexion Data Layer (Grist OU GitHub) ===== */
@@ -1299,89 +1347,81 @@ try{
     window.print();
   });
 
+    // ===== AUTH CENTRALISÉE (pp-config.js) : établissement via PP_AUTH =====
+  // Ici, on ne gère plus de lightbox locale : tout passe par PP_AUTH (lightbox commune).
 
-  // ===== AUTH PP_CONFIG (centralisé) =====
-async function applyAuthEtabOrPrompt() {
-  try {
-    // 1) Si pas d’auth, on déclenche la lightbox centralisée
-    const auth = window.PP_AUTH?.get?.();
-    if (!auth || !auth.ok) {
-      if (window.PP_AUTH?.requireDdfpt) {
-        await window.PP_AUTH.requireDdfpt();
-      }
+  function normalizeCodepaca(v){
+    const s = String(v ?? '').trim().toUpperCase();
+    if(!s) return '';
+    // ex: "0060082G-667" -> "0060082G"
+    return s.split('-')[0].trim();
+  }
+
+  async function forceAuthPrompt(){
+    if(window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
+      try{ window.PP_AUTH.logout(); }catch(e){}
+    }
+    if(window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt==='function'){
+      try{ await window.PP_AUTH.requireDdfpt(); }catch(e){ /* AUTH_REQUIRED = normal */ }
+    }
+  }
+
+  function applyEtabFromAuth(){
+    const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
+    if(!st || !st.ok) return false;
+
+    const code = normalizeCodepaca(st.codepaca || st.code || '');
+    if(!code) return false;
+
+    if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
+      // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
+      $q.readOnly = false;
       return false;
     }
 
-    // 2) Récupérer le code établissement (priorité codepaca)
-    let code = (auth.codepaca || auth.code || auth.etabCode || "").toString().trim().toUpperCase();
-    if (!code) {
-      // Pas de code => on force la lightbox
-      if (window.PP_AUTH?.logout) window.PP_AUTH.logout();
-      if (window.PP_AUTH?.requireDdfpt) await window.PP_AUTH.requireDdfpt();
+    const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
+    if(!rec){
+      // si le code ne match pas, on laisse la lightbox faire une nouvelle saisie
+      $hint.textContent = 'Code établissement non reconnu : ' + code;
+      $hint.classList.remove('ok');
+      $hint.classList.add('err');
       return false;
     }
 
-    // Certains codes arrivent avec suffixe (ex: 0060082G-667)
-    const candidates = [code];
-    if (code.includes("-")) candidates.push(code.split("-")[0]);
-
-    let rec = null;
-    for (const c of candidates) {
-      if (etabCodeToObj.has(c)) { rec = etabCodeToObj.get(c); break; }
-    }
-
-    if (!rec) {
-      // Code inconnu dans Etablissements_edi => on force la lightbox
-      if (window.PP_AUTH?.logout) window.PP_AUTH.logout();
-      if (window.PP_AUTH?.requireDdfpt) await window.PP_AUTH.requireDdfpt();
-      return false;
-    }
-
-    // Appliquer l’établissement (champ + fiche + diplômes + travaux)
-    $q.value = rec.label;
+    // ✅ Dans ce formulaire, on affiche le CODE dans le champ, et les infos dans la carte établissement
+    $q.value = code;
     $q.readOnly = true;
+
+    // onSelectEtab déclenche : fillEtab + diplômes + travaux + équipements
     onSelectEtab(rec.label);
     return true;
-  } catch (e) {
-    const msg = (e && e.message) ? String(e.message) : String(e || "");
-    // AUTH_REQUIRED est "normal" : la lightbox PP_CONFIG est déjà ouverte.
-    if (msg.includes("AUTH_REQUIRED")) return false;
-    console.error("[DEROGATION] applyAuthEtabOrPrompt Error:", e);
-    return false;
   }
-}
 
-// Écoute les changements d’auth (après validation de la lightbox)
-window.addEventListener("pp:auth-changed", () => {
-  applyAuthEtabOrPrompt();
-});
+  // Boutons flottants (si présents)
+  const $btnReconnect = document.getElementById('pp-etab-reconnect-btn');
+  const $btnChange    = document.getElementById('pp-etab-change-btn');
 
-// Boutons flottants (changer / reconnecter)
-const btnChange = document.getElementById("pp-etab-change-btn");
-if (btnChange) {
-  btnChange.addEventListener("click", async () => {
-    try {
-      if (window.PP_AUTH?.logout) window.PP_AUTH.logout();
-      if (window.PP_AUTH?.requireDdfpt) await window.PP_AUTH.requireDdfpt();
-    } catch (e) { console.error(e); }
-  });
-}
+  if($btnReconnect){
+    $btnReconnect.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt(); });
+  }
+  if($btnChange){
+    $btnChange.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt(); });
+  }
 
-const btnReconnect = document.getElementById("pp-etab-reconnect-btn");
-if (btnReconnect) {
-  btnReconnect.addEventListener("click", async () => {
-    try {
-      // Reconnexion = on purge et on redemande
-      if (window.PP_AUTH?.logout) window.PP_AUTH.logout();
-      if (window.PP_AUTH?.requireDdfpt) await window.PP_AUTH.requireDdfpt();
-    } catch (e) { console.error(e); }
-  });
-}
+  // Au chargement :
+  // - si déjà authentifié : on applique immédiatement l'établissement
+  // - sinon : PP_AUTH.requireDdfpt ouvrira la lightbox, et pp:auth-changed fera le reste
+  (async ()=>{
+    if(window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt==='function'){
+      try{ await window.PP_AUTH.requireDdfpt(); }catch(e){ /* AUTH_REQUIRED = normal */ }
+    }
+    applyEtabFromAuth();
+  })();
 
-// Au chargement : applique l’auth (ou ouvre la lightbox)
-await applyAuthEtabOrPrompt();
+  // Quand la lightbox est validée :
+  window.addEventListener('pp:auth-changed', ()=>{ applyEtabFromAuth(); });
 
-$overlay.classList.add('hidden');
+  $overlay.classList.add('hidden');
 
 })();
 </script>
