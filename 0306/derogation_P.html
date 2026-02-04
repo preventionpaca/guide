@@ -1376,6 +1376,28 @@ function normalizeCodepaca(v){
       $q.readOnly = false;
       return false;
     }
+    // ✅ Rattrapage : si l'event pp:auth-changed a été raté (timing), on retente quelques secondes.
+function applyEtabFromAuthRetry(){
+  let tries = 0;
+  const maxTries = 40;      // 40 * 250ms = 10s
+  const timer = setInterval(() => {
+    tries++;
+    if (applyEtabFromAuth()) {
+      clearInterval(timer);
+      return;
+    }
+    if (tries >= maxTries) clearInterval(timer);
+  }, 250);
+}
+
+// Au chargement : tentative + rattrapage
+applyEtabFromAuthRetry();
+
+// Quand la lightbox est validée : tentative + rattrapage
+window.addEventListener('pp:auth-changed', () => {
+  applyEtabFromAuthRetry();
+});
+
 
     const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
     if(!rec){
