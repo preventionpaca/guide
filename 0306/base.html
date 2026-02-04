@@ -5324,22 +5324,36 @@ const removes = [];        // [rid]
 
 // 1) Remove
 for(const rid of removes){
-  await sbWriteAppTry([
-    { op:'remove', table: mainTbl, id: rid },
-    { action:'remove', table: mainTbl, id: rid },
-    { userActions: [['RemoveRecord', mainTbl, rid]] },
-    { actions: [['RemoveRecord', mainTbl, rid]] }
-  ]);
+  // En écriture publique, la suppression est réservée aux comptes authentifiés (token).
+  // write-app de ce portail attend généralement l'opération via querystring ?op=remove et un body {id}.
+  try{
+    await sbWriteOp('remove', { id: rid });
+  }catch(e){
+    // Fallbacks (anciens formats)
+    await sbWriteAppTry([
+      { id: rid, op: 'remove' },
+      { op: 'remove', id: rid },
+      { action: 'remove', id: rid },
+      { userActions: [['RemoveRecord', mainTbl, rid]] },
+      { actions: [['RemoveRecord', mainTbl, rid]] }
+    ]);
+  }
 }
 
 // 2) Add
 for(const it of adds){
-  await sbWriteAppTry([
-    { op:'add', table: mainTbl, id: it.id, fields: it.fields },
-    { action:'add', table: mainTbl, id: it.id, fields: it.fields },
-    { userActions: [['AddRecord', mainTbl, it.id, it.fields]] },
-    { actions: [['AddRecord', mainTbl, it.id, it.fields]] }
-  ]);
+  // write-app attend souvent ?op=add et body {id, fields}
+  try{
+    await sbWriteOp('add', { id: it.id, fields: it.fields });
+  }catch(e){
+    await sbWriteAppTry([
+      { id: it.id, fields: it.fields, op: 'add' },
+      { op: 'add', id: it.id, fields: it.fields },
+      { action: 'add', id: it.id, fields: it.fields },
+      { userActions: [['AddRecord', mainTbl, it.id, it.fields]] },
+      { actions: [['AddRecord', mainTbl, it.id, it.fields]] }
+    ]);
+  }
 }
 
 // 3) Update
