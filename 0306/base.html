@@ -8,7 +8,7 @@
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
   <!-- grist-plugin-api removed for public GitHub page -->
 <script>
-  console.log('[PP-TR] LOADED v15.13-FIX-CURRENTREC-FALLBACK');
+  console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -5055,6 +5055,8 @@ async function sbWriteAppTry(payloadVariants){
       }
       last = { status: r.status, resp: js, payload };
       console.warn('[SB write-app] rejected payload', last);
+      try{ console.warn('[SB write-app] resp.json', JSON.stringify(js)); }catch(_){ }
+      try{ console.warn('[SB write-app] payload.json', JSON.stringify(payload)); }catch(_){ }
     }catch(e){
       last = { error: String(e), payload };
       console.warn('[SB write-app] error payload', last);
@@ -5192,14 +5194,22 @@ async function sbWriteOp(op, payload){
   const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
   // Certains backends attendent aussi la table dans l'URL ou le body.
   const tbl = (payload && payload.table) ? String(payload.table) : (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? String(TBL_MAIN) : 'Liste_des_equipements';
-  const url = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
+  const urlBase = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
             + '&op=' + encodeURIComponent(String(op||''))
             + '&table=' + encodeURIComponent(tbl);
+  // Certains backends (proxy Grist) lisent l'id uniquement dans la querystring.
+  const qId = (payload && (payload.recordId ?? payload.id ?? payload.rid ?? payload.record_id)) ?? null;
+  const url = (qId && Number.isFinite(Number(qId)) && Number(qId) > 0)
+    ? (urlBase + '&id=' + encodeURIComponent(String(Number(qId))))
+    : urlBase;
   const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
   if(anon) headers['apikey'] = anon;
   const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload || {}) });
   const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || ('Écriture op=' + op + ' impossible'));
+  if(!j || !j.ok){
+    console.warn('[SB write-op] rejected', {op, url, payload, resp: j});
+    throw new Error(j?.error || ('Écriture op=' + op + ' impossible'));
+  }
   return j;
 }
 
