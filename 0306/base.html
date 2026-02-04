@@ -4644,6 +4644,18 @@ const COL_ADM_CODE_DREETS = 'Code_dreets';
 const qs = s => document.querySelector(s);
 const qsa = s => Array.from(document.querySelectorAll(s));
 
+function fillDatalist(sel, values){
+  const el = qs(sel);
+  if(!el) return;
+  el.innerHTML = '';
+  for(const v of (values||[])){
+    const opt = document.createElement('option');
+    opt.value = v;
+    el.appendChild(opt);
+  }
+}
+
+
 const norm=s=>(s??'').toString().normalize('NFKD').replace(/\p{Diacritic}/gu,'').replace(/[^\w\s-]/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
 function getFirstField(obj, keys){
@@ -5036,7 +5048,13 @@ async function sbFetchTable(table){
             + '&table=' + encodeURIComponent(t)
             + (wantsFull ? '&full=1' : '')
             + '&v=2';
-  const r = await fetch(url, { credentials:'omit' });
+  const anon = (window.PP_SUPABASE_ANON_KEY || '').trim();
+  const token = (localStorage.getItem('pp_token') || '').trim();
+  const headers = {};
+  if(anon) headers['apikey'] = anon;
+  if(token) headers['Authorization'] = 'Bearer ' + token;
+  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
+  const r = await fetch(url, { method:'GET', headers, credentials:'omit' });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok) throw new Error(j?.error || 'Lecture impossible (Supabase)');
   // Compat: records[{id,fields}] ou items[{...}] ou rows[{...}]
@@ -5152,37 +5170,55 @@ async function sbApplyUserActions(actions){
   const token = (localStorage.getItem('pp_token') || '').trim();
   if(!token) throw new Error('Non authentifié (token absent).');
 
+  // Normalise actions (certaines implémentations n'acceptent pas recordId=null)
+  const normActions = (actions || []).map(a=>{
+    try{
+      if(!Array.isArray(a)) return a;
+      const name = a[0];
+      if(name === 'AddRecord'){
+        // format Grist: ['AddRecord', table, null, fields]
+        if(a.length >= 4 && (a[2] === null || a[2] === undefined)){
+          const b = a.slice();
+          b[2] = 0; // write-app: exige souvent un entier
+          return b;
+        }
+      }
+      return a;
+    }catch{ return a; }
+  });
+
   const headers = {
     'Content-Type':'application/json',
     'Authorization':'Bearer ' + token
   };
   if(anon) headers['apikey'] = anon;
 
-  // 1) Format "actions" (proche Grist) — le plus probable
-  let r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
-    method:'POST',
-    headers,
-    body: JSON.stringify({ actions: actions || [] })
-  });
-  let j = await r.json().catch(()=>null);
+  // Essaie plusieurs formats attendus par write-app (selon versions)
+  const tries = [
+    { body: { actions: normActions }, tag:'actions' },
+    { body: { userActions: normActions }, tag:'userActions' },
+    // AddRecord sans recordId (format compact) : ['AddRecord', table, fields]
+    { body: { actions: normActions.map(a=> (Array.isArray(a) && a[0]==='AddRecord' && a.length>=4) ? ['AddRecord', a[1], a[3]] : a) }, tag:'actions-compact' },
+    { body: { userActions: normActions.map(a=> (Array.isArray(a) && a[0]==='AddRecord' && a.length>=4) ? ['AddRecord', a[1], a[3]] : a) }, tag:'userActions-compact' }
+  ];
 
-  // 2) Fallback "userActions" si ton write-app attend ce nom
-  if(!j || !j.ok){
-    console.warn('[SB write-app] actions rejected, trying userActions. resp=', j);
-    r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
+  let last = null;
+  for(const tr of tries){
+    const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
       method:'POST',
       headers,
-      body: JSON.stringify({ userActions: actions || [] })
+      body: JSON.stringify(tr.body)
     });
-    j = await r.json().catch(()=>null);
+    const j = await r.json().catch(()=>null);
+    last = { r, j, tag: tr.tag, body: tr.body };
+    if(j && j.ok) return j;
+    console.warn('[SB write-app] rejected ('+tr.tag+'), resp=', j);
   }
 
-  if(!j || !j.ok){
-    console.error('[SB write-app] userActions failed. payload=', actions, 'resp=', j);
-    throw new Error(j?.error || ('Écriture impossible (HTTP ' + r.status + ')'));
-  }
-  return j;
+  console.error('[SB write-app] all formats failed. last=', last?.j);
+  throw new Error(last?.j?.error || ('Écriture impossible (HTTP ' + (last?.r?.status || '?') + ')'));
 }
+
 
 async function sbAuth(code){
   const r = await fetch(SB_API_AUTH, {
@@ -5769,85 +5805,29 @@ async function buildDomainSectorIndex(){
 
   const rows = (MAP ? Array.from(MAP.values()) : []);
 
-  // --- Charger la table Diplomes_EN_OK pour récupérer Domaine/Secteur à partir des diplômes
-  let dipCfg = null;
-  let dipSectCol = null;
-  let dipDomCol  = null;
-  try{
-    dipCfg = await ensureTable(['Diplomes_EN_OK'], COL_DIP_CONCAT);
-    const sample = (dipCfg.rows && dipCfg.rows[0]) ? dipCfg.rows[0] : null;
-    if(sample){
-      const keys = Object.keys(sample);
-      const pick = (kw) => keys.find(k => norm(k).includes(kw));
-      dipSectCol = pick('secteur');
-      dipDomCol  = pick('domaine');
-    }
-  }catch(e){ dipCfg = null; }
+  // On se base d'abord sur les colonnes "tampon" de la table principale (comme dans Grist).
+  // Secteurs : si une colonne Tampon_Secteurs existe, on l'utilise ; sinon on laisse vide (pas de split "intelligent" ici).
+  const hasSect = rows.length && Object.prototype.hasOwnProperty.call(rows[0], 'Tampon_Secteurs');
+  const COL_TMP_SECT = hasSect ? 'Tampon_Secteurs' : null;
 
   for(const r of rows){
-    const id = r && r.id != null ? Number(r.id) : null;
+    const id = (r && r.id != null) ? Number(r.id) : null;
     if(id == null) continue;
     if(!domainSectorIndex[id]) domainSectorIndex[id] = { domains:new Set(), sects:new Set(), diplomes:new Set() };
 
-    // 1) Domaines depuis Tampon_Domaines
-    parseTextList(r[COL_TMP_DOM] || '').forEach(d => {
-      if(d){ domainSectorIndex[id].domains.add(d); domainValues.add(d); }
-    });
-
-    // 2) Diplômes depuis Tampon_Diplomes + enrichissement Domaine/Secteur via Diplomes_EN_OK
-    const dips = parseTextList(r[COL_TMP_DIP] || '');
-    for(const d of dips){
-      const lbl = String(d||'').trim();
-      if(!lbl) continue;
-      if(!isPlausibleDiplomeLabel(lbl)) continue;
-      domainSectorIndex[id].diplomes.add(lbl);
-      diplomaValues.add(lbl);
-
-      if(dipCfg && dipCfg.byNorm){
-        const dr = dipCfg.byNorm.get(norm(lbl));
-        if(dr){
-          if(dipDomCol && dr[dipDomCol]){
-            parseTextList(dr[dipDomCol]).forEach(v=>{ if(v){ domainSectorIndex[id].domains.add(v); domainValues.add(v);} });
-          }
-          if(dipSectCol && dr[dipSectCol]){
-            parseTextList(dr[dipSectCol]).forEach(v=>{ if(v){ domainSectorIndex[id].sects.add(v); sectorValues.add(v);} });
-          }
-        }
-      }
+    parseTextList(r[COL_TMP_DOM] || '').forEach(v=>{ if(v){ domainSectorIndex[id].domains.add(v); domainValues.add(v);} });
+    parseTextList(r[COL_TMP_DIP] || '').forEach(v=>{ if(v){ domainSectorIndex[id].diplomes.add(v); diplomaValues.add(v);} });
+    if(COL_TMP_SECT){
+      parseTextList(r[COL_TMP_SECT] || '').forEach(v=>{ if(v){ domainSectorIndex[id].sects.add(v); sectorValues.add(v);} });
     }
   }
 
-  const dlDom  = document.getElementById('dl-filter-domain');
-  const dlSect = document.getElementById('dl-filter-secteur');
-  const dlDipl = document.getElementById('dl-filter-diplome');
-
-  if (dlDom) {
-    dlDom.innerHTML = '';
-    [...domainValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDom.appendChild(o);
-    });
-  }
-
-  if (dlSect) {
-    dlSect.innerHTML = '';
-    [...sectorValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlSect.appendChild(o);
-    });
-  }
-
-  if (dlDipl) {
-    dlDipl.innerHTML = '';
-    [...diplomaValues].sort((a,b)=>a.localeCompare(b,'fr')).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      dlDipl.appendChild(o);
-    });
-  }
+  // Alimente les datalists de filtre
+  fillDatalist('#dl-filter-domain', Array.from(domainValues).sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'})));
+  fillDatalist('#dl-filter-secteur', Array.from(sectorValues).sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'})));
+  fillDatalist('#dl-filter-diplome', Array.from(diplomaValues).sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'})));
 }
+
 
 
 /* ==========================================================
@@ -6426,7 +6406,7 @@ async function uploadSupabase(file){
 function parseTextList(text){
   return (text||'').toString()
     // séparateurs fréquents dans les tampons : ; / , retours ligne
-    .split(/[;\/,\n\r]+/)
+    .split(/[;\/\n\r]+/)
     .map(s=>s.trim())
     .filter(Boolean)
     // unicité insensible à la casse/accents via norm()
