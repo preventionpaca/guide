@@ -5032,6 +5032,52 @@ function _hashBaseId(){
   }catch(e){ return null; }
 }
 
+
+async function sbWriteAppTry(payloadVariants){
+  const token = localStorage.getItem('pp_token') || '';
+  const anon  = (window.PP_SUPABASE_ANON_KEY || window.PP_ANON_KEY || window.PP_SUPABASE_KEY || '').toString();
+  const app   = (window.PP_APP_NAME || 'equipements').toString();
+  const url   = SB_API_WRITE + '?app=' + encodeURIComponent(app);
+
+  const headers = { 'Content-Type': 'application/json' };
+  if(anon) headers['apikey'] = anon;
+  // Pour les Edge Functions Supabase, Authorization est souvent requis (Bearer token user si dispo, sinon anon).
+  if(token) headers['Authorization'] = 'Bearer ' + token;
+  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
+
+  let last = null;
+  for(const payload of (payloadVariants||[])){
+    try{
+      const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
+      const js = await r.json().catch(()=> ({}));
+      if(r.ok && js && js.ok !== false){
+        return js;
+      }
+      last = { status: r.status, resp: js, payload };
+      console.warn('[SB write-app] rejected payload', last);
+    }catch(e){
+      last = { error: String(e), payload };
+      console.warn('[SB write-app] error payload', last);
+    }
+  }
+  const msg = (last && last.resp && (last.resp.error||last.resp.message)) ? (last.resp.error||last.resp.message) : (last && last.error) ? last.error : 'write-app failed';
+  throw new Error(msg);
+}
+
+function getNextLocalId(){
+  try{
+    const ids = [];
+    if(typeof LIST_IDS !== 'undefined' && Array.isArray(LIST_IDS)) LIST_IDS.forEach(x=>ids.push(Number(x)));
+    if(typeof MAP !== 'undefined' && MAP && typeof MAP.keys === 'function'){
+      for(const k of MAP.keys()){ ids.push(Number(k)); }
+    }
+    const maxId = Math.max(0, ...ids.filter(n=>Number.isFinite(n)));
+    return maxId + 1;
+  }catch(e){
+    return Date.now();
+  }
+}
+
 async function sbFetchTable(table){
   const t = String(table||'').trim();
   const wantsFull = (t === SB_TABLE_MAIN) || (typeof TBL_MAIN !== 'undefined' && t === String(TBL_MAIN)) ||
@@ -5243,34 +5289,79 @@ async function applyUA(actions){
     if(hasGristWrite){
       await window.grist.docApi.applyUserActions(actions);
     }else{
-      // Mode public : on ne supporte ici que UpdateRecord sur la table principale.
-      const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-      const byId = new Map(); // rid -> fields merged
+      
+// Mode public (GitHub) : on supporte UpdateRecord + AddRecord + RemoveRecord via write-app.
+const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
 
-      (actions || []).forEach(a=>{
-        if(!Array.isArray(a)) return;
-        const typ = a[0];
-        if(typ !== 'UpdateRecord'){
-          throw new Error('Action non supportée en mode public: ' + typ);
-        }
-        const tbl = a[1];
-        const rid = Number(a[2]);
-        const upd = a[3] || {};
-        if(String(tbl) !== String(mainTbl)) return; // ignore autres tables
-        if(!rid) return;
-        const cur = byId.get(rid) || {};
-        Object.assign(cur, upd);
-        byId.set(rid, cur);
-      });
+const updates = new Map(); // rid -> fields merged
+const adds = [];           // {id, fields}
+const removes = [];        // [rid]
 
-      if(byId.size === 0){
-        throw new Error('Aucune mise à jour applicable (mode public).');
-      }
+(actions || []).forEach(a=>{
+  if(!Array.isArray(a)) return;
+  const typ = a[0];
+  const tbl = a[1];
+  if(String(tbl) !== String(mainTbl)) return; // ignore autres tables en mode public
+  if(typ === 'UpdateRecord'){
+    const rid = Number(a[2]);
+    const upd = a[3] || {};
+    if(!rid) return;
+    const cur = updates.get(rid) || {};
+    Object.assign(cur, upd);
+    updates.set(rid, cur);
+  }else if(typ === 'AddRecord'){
+    // Grist: ['AddRecord', table, null, fields] -> en public on doit fournir un id
+    const rid = Number(a[2]) || getNextLocalId();
+    const fields = a[3] || {};
+    adds.push({ id: rid, fields });
+  }else if(typ === 'RemoveRecord'){
+    const rid = Number(a[2]);
+    if(rid) removes.push(rid);
+  }else{
+    throw new Error('Action non supportée en mode public: ' + typ);
+  }
+});
 
-      // Écritures séquentielles (sécurité + simplicité)
-      for(const [rid, fields] of byId.entries()){
-        await sbWrite(rid, fields);
-      }
+// 1) Remove
+for(const rid of removes){
+  await sbWriteAppTry([
+    { op:'remove', table: mainTbl, id: rid },
+    { action:'remove', table: mainTbl, id: rid },
+    { userActions: [['RemoveRecord', mainTbl, rid]] },
+    { actions: [['RemoveRecord', mainTbl, rid]] }
+  ]);
+}
+
+// 2) Add
+for(const it of adds){
+  await sbWriteAppTry([
+    { op:'add', table: mainTbl, id: it.id, fields: it.fields },
+    { action:'add', table: mainTbl, id: it.id, fields: it.fields },
+    { userActions: [['AddRecord', mainTbl, it.id, it.fields]] },
+    { actions: [['AddRecord', mainTbl, it.id, it.fields]] }
+  ]);
+}
+
+// 3) Update
+if(updates.size){
+  for(const [rid, fields] of updates.entries()){
+    // sbWrite attend un token user (pp_token). Si absent, on tente write-app.
+    try{
+      await sbWrite(rid, fields);
+    }catch(e){
+      await sbWriteAppTry([
+        { op:'update', table: mainTbl, id: rid, fields },
+        { action:'update', table: mainTbl, id: rid, fields },
+        { userActions: [['UpdateRecord', mainTbl, rid, fields]] },
+        { actions: [['UpdateRecord', mainTbl, rid, fields]] }
+      ]);
+    }
+  }
+}
+
+if(!updates.size && !adds.length && !removes.length){
+  throw new Error('Aucune action applicable (mode public).');
+}
     }
 
     // MAJ immédiate du cache local (évite "ça n'a pas enregistré")
@@ -6425,7 +6516,7 @@ async function uploadSupabase(file){
 function parseTextList(text){
   return (text||'').toString()
     // séparateurs fréquents dans les tampons : ; / , retours ligne
-    .split(/[;\/,\n\r]+/)
+    .split(/[;\/\n\r]+/)
     .map(s=>s.trim())
     .filter(Boolean)
     // unicité insensible à la casse/accents via norm()
