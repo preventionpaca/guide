@@ -1343,7 +1343,10 @@ async function applyAuthEtabOrPrompt() {
     onSelectEtab(rec.label);
     return true;
   } catch (e) {
-    console.error("[DEROGATION] applyAuthEtabOrPrompt error:", e);
+    const msg = (e && e.message) ? String(e.message) : String(e || "");
+    // AUTH_REQUIRED est "normal" : la lightbox PP_CONFIG est déjà ouverte.
+    if (msg.includes("AUTH_REQUIRED")) return false;
+    console.error("[DEROGATION] applyAuthEtabOrPrompt Error:", e);
     return false;
   }
 }
