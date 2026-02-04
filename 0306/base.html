@@ -5190,7 +5190,11 @@ async function sbWriteOp(op, payload){
   const token = (localStorage.getItem('pp_token') || '').trim();
   if(!token) throw new Error('Non authentifié (token absent).');
   const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const url = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP) + '&op=' + encodeURIComponent(String(op||''));
+  // Certains backends attendent aussi la table dans l'URL ou le body.
+  const tbl = (payload && payload.table) ? String(payload.table) : (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? String(TBL_MAIN) : 'Liste_des_equipements';
+  const url = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
+            + '&op=' + encodeURIComponent(String(op||''))
+            + '&table=' + encodeURIComponent(tbl);
   const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
   if(anon) headers['apikey'] = anon;
   const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload || {}) });
@@ -5309,11 +5313,14 @@ const removes = [];        // [rid]
     const cur = updates.get(rid) || {};
     Object.assign(cur, upd);
     updates.set(rid, cur);
-  }else if(typ === 'AddRecord'){
-    // Grist: ['AddRecord', table, null, fields] -> en public on doit fournir un id
-    const rid = Number(a[2]) || getNextLocalId();
-    const fields = a[3] || {};
-    adds.push({ id: rid, fields });
+	  }else if(typ === 'AddRecord'){
+	    // Grist: ['AddRecord', table, null, fields]
+	    // En public, certains backends refusent qu'on impose un id.
+	    // On ne force l'id que s'il est explicitement fourni.
+	    const ridNum = Number(a[2]);
+	    const rid = (Number.isFinite(ridNum) && ridNum > 0) ? ridNum : null;
+	    const fields = a[3] || {};
+	    adds.push({ id: rid, fields });
   }else if(typ === 'RemoveRecord'){
     const rid = Number(a[2]);
     if(rid) removes.push(rid);
@@ -5322,39 +5329,42 @@ const removes = [];        // [rid]
   }
 });
 
-// 1) Remove
-for(const rid of removes){
+	// 1) Remove
+	for(const rid of removes){
   // En écriture publique, la suppression est réservée aux comptes authentifiés (token).
   // write-app de ce portail attend généralement l'opération via querystring ?op=remove et un body {id}.
   try{
-    await sbWriteOp('remove', { id: rid });
+	    await sbWriteOp('remove', { table: mainTbl, id: rid, recordId: rid });
   }catch(e){
     // Fallbacks (anciens formats)
     await sbWriteAppTry([
-      { id: rid, op: 'remove' },
-      { op: 'remove', id: rid },
-      { action: 'remove', id: rid },
+	      { table: mainTbl, id: rid, recordId: rid, op: 'remove' },
+	      { op: 'remove', table: mainTbl, id: rid, recordId: rid },
+	      { action: 'remove', table: mainTbl, id: rid, recordId: rid },
       { userActions: [['RemoveRecord', mainTbl, rid]] },
       { actions: [['RemoveRecord', mainTbl, rid]] }
     ]);
   }
 }
 
-// 2) Add
-for(const it of adds){
-  // write-app attend souvent ?op=add et body {id, fields}
-  try{
-    await sbWriteOp('add', { id: it.id, fields: it.fields });
-  }catch(e){
-    await sbWriteAppTry([
-      { id: it.id, fields: it.fields, op: 'add' },
-      { op: 'add', id: it.id, fields: it.fields },
-      { action: 'add', id: it.id, fields: it.fields },
-      { userActions: [['AddRecord', mainTbl, it.id, it.fields]] },
-      { actions: [['AddRecord', mainTbl, it.id, it.fields]] }
-    ]);
-  }
-}
+		// 2) Add
+		for(const it of adds){
+	  // write-app attend souvent ?op=add et body {fields} (id optionnel)
+	  const base = { table: mainTbl, fields: it.fields };
+	  if(it.id){ base.id = it.id; base.recordId = it.id; }
+	  try{
+		    await sbWriteOp('add', base);
+	  }catch(e){
+	    const id = it.id || null;
+	    await sbWriteAppTry([
+		      { ...base, op: 'add' },
+		      { op: 'add', ...base },
+		      { action: 'add', ...base },
+	      { userActions: [['AddRecord', mainTbl, id, it.fields]] },
+	      { actions: [['AddRecord', mainTbl, id, it.fields]] }
+	    ]);
+	  }
+	}
 
 // 3) Update
 if(updates.size){
@@ -5373,9 +5383,12 @@ if(updates.size){
   }
 }
 
-if(!updates.size && !adds.length && !removes.length){
-  throw new Error('Aucune action applicable (mode public).');
-}
+	// En mode public, certaines actions (ex: historique sur une table non exposée)
+	// peuvent être ignorées. On ne bloque pas l'action principale pour autant.
+	if(!updates.size && !adds.length && !removes.length){
+	  console.warn('[applyUA] aucune action applicable (mode public) — ignoré');
+	  return;
+	}
     }
 
     // MAJ immédiate du cache local (évite "ça n'a pas enregistré")
