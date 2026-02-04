@@ -1350,12 +1350,10 @@ try{
     // ===== AUTH CENTRALISÉE (pp-config.js) : établissement via PP_AUTH =====
   // Ici, on ne gère plus de lightbox locale : tout passe par PP_AUTH (lightbox commune).
 
-  function normalizeCodepaca(v){
-    const s = String(v ?? '').trim().toUpperCase();
-    if(!s) return '';
-    // ex: "0060082G-667" -> "0060082G"
-    return s.split('-')[0].trim();
-  }
+function normalizeCodepaca(v){
+  return String(v ?? '').trim().toUpperCase();
+}
+
 
   async function forceAuthPrompt(){
     if(window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
