@@ -6137,26 +6137,8 @@ async function ensurePersoLoaded(force=false){
   });
   
   try{
-    if(!window.grist || !window.grist.docApi) {
-      // Mode public (GitHub) : charger via Supabase read-app
-      console.warn('[PERSO v15.4] Grist API indisponible — mode public');
-      try{
-        const t = await fetchTable(TABLE_PERSO);
-        const ids = (t && t.id) ? t.id : [];
-        for(let i=0;i<ids.length;i++){
-          const rid = Number(ids[i]);
-          const row = rowsToRowObject(t, i);
-          if(!row) continue;
-          const code = String(row[COL_PERSO_CODE] || '').trim();
-          const equip = Number(row[COL_PERSO_EQUIP] || 0);
-          if(!code || !equip) continue;
-          const key = persoKey(code, equip);
-          PERSO_INDEX.set(key, { id: rid, ...row });
-        }
-        PERSO_LOADED = true;
-      }catch(e){
-        console.warn('[PERSO v15.4] Lecture Supabase champs perso impossible:', e);
-      }
+    if(!window.grist || !grist.docApi) {
+      console.warn('[PERSO v15.4] Grist API indisponible');
       return;
     }
     
@@ -6415,38 +6397,36 @@ async function savePersoNow(){
     console.log('[PERSO v15.4] Enregistrement existant:', existing ? `id=${existing.id}` : 'nouveau');
 
     // Écriture Grist (préférer applyUserActions, fallback update/add)
-    const api = (window.grist && window.grist.docApi) ? window.grist.docApi : null;
-
-    // ✅ Mode Grist : on garde l'écriture via docApi
-    if(api){
-      if(typeof api.applyUserActions === 'function'){
-        if(existing && existing.id){
-          console.log('[PERSO v15.4] 🔥 UpdateRecord:', TABLE_PERSO, existing.id);
-          await api.applyUserActions([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
-        }else{
-          console.log('[PERSO v15.4] 🔥 AddRecord:', TABLE_PERSO);
-          await api.applyUserActions([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
-        }
-      }else if(typeof api.updateRecord === 'function' && typeof api.addRecord === 'function'){
-        if(existing && existing.id){
-          await api.updateRecord(TABLE_PERSO, existing.id, payload);
-        }else{
-          await api.addRecord(TABLE_PERSO, payload);
-        }
-      }else{
-        throw new Error("Aucune méthode d'écriture Grist disponible");
-      }
-    }else{
-      // ✅ Mode public (GitHub) : écriture via Supabase write-app (token requis)
-      console.log('[PERSO v15.4] Mode public: écriture via write-app');
-      if(existing && existing.id){
-        await sbWriteOp('patch', { table: TABLE_PERSO, id: Number(existing.id), fields: payload }, { idKey: 'id' });
-      }else{
-        await sbWriteOp('add', { table: TABLE_PERSO, fields: payload }, { forceNoId: true });
-      }
+    const api = (window.grist && grist.docApi) ? grist.docApi : null;
+    if(!api){ 
+      throw new Error('docApi indisponible'); 
     }
 
-await ensurePersoLoaded(true);
+    if(typeof api.applyUserActions === 'function'){
+      if(existing && existing.id){
+        console.log('[PERSO v15.4] 🔥 TENTATIVE UpdateRecord:', TABLE_PERSO, existing.id);
+        await api.applyUserActions([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
+        console.log('[PERSO v15.4] ✅ UpdateRecord réussi !');
+      }else{
+        console.log('[PERSO v15.4] 🔥 TENTATIVE AddRecord:', TABLE_PERSO);
+        await api.applyUserActions([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
+        console.log('[PERSO v15.4] ✅ AddRecord réussi !');
+      }
+    }else if(typeof api.updateRecord === 'function' && typeof api.addRecord === 'function'){
+      if(existing && existing.id){
+        console.log('[PERSO v15.4] 🔥 TENTATIVE updateRecord (fallback):', TABLE_PERSO, existing.id);
+        await api.updateRecord(TABLE_PERSO, existing.id, payload);
+        console.log('[PERSO v15.4] ✅ updateRecord réussi !');
+      }else{
+        console.log('[PERSO v15.4] 🔥 TENTATIVE addRecord (fallback):', TABLE_PERSO);
+        await api.addRecord(TABLE_PERSO, payload);
+        console.log('[PERSO v15.4] ✅ addRecord réussi !');
+      }
+    }else{
+      throw new Error("Aucune méthode d'écriture Grist disponible");
+    }
+
+    await ensurePersoLoaded(true);
     const saved = PERSO_INDEX.get(key);
     if(saved) fillPersoUI(saved);
     if(msg) msg.textContent = 'Enregistré.';
@@ -6522,10 +6502,10 @@ function firstAttachmentId(v){
 }
 async function getAttachmentUrlCompat(attId){
   if(!attId) return null;
-  if(window.grist?.docApi?.getAttachmentUrl){
+  if(grist?.docApi?.getAttachmentUrl){
     try{return await window.grist.docApi.getAttachmentUrl(attId);}catch{}
   }
-  if(typeof window.grist?.getAttachmentUrl==='function'){
+  if(typeof grist?.getAttachmentUrl==='function'){
     try{return window.grist.getAttachmentUrl(attId);}catch{}
   }
   return null;
@@ -9474,7 +9454,7 @@ async function _getPhotoExportUrlForRow(rowId){
     if(Number(window.__FP_CURRENT_ROWID) === Number(rowId) && window.__FP_PHOTO_EXPORT_URL) {
       return String(window.__FP_PHOTO_EXPORT_URL || '').trim();
     }
-    if(window.grist?.docApi?.fetchTable){
+    if(grist?.docApi?.fetchTable){
       const tbl = (typeof TBL_MAIN!=='undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
       const data = await window.grist.docApi.fetchTable(tbl);
       const ids = data.id || data.ID || data.Id;
