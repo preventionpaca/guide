@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
-
   
   <script>
     window.PP_APP_NAME = "equipements";
@@ -199,6 +195,11 @@
     }
     .pp-etab-change-btn:hover{ filter: brightness(.98); }
 </style>
+
+<style>
+  /* Désactivation overlay (demandé) */
+  #overlay-loading{display:none !important;}
+</style>
 </head>
 
 <body>
@@ -206,7 +207,7 @@
 <div id="header-container"></div>
  
   <!-- ===== OVERLAY CHARGEMENT ===== -->
-  <div id="overlay-loading" class="hidden" style="display:none">
+  <div id="overlay-loading">
     <div class="spinner"></div>
     <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
   </div>
@@ -498,7 +499,23 @@
   const C_ETAB_CODE='Codepaca';          // colonne code établissement
   const C_EMAIL_REDACTEUR='email_redacteur';
 
-  const $overlay = $('overlay-loading');
+  
+  // --- DIAG visible ---
+  const __ppDiag = (msg) => {
+    const pre = document.getElementById('pp-diag-pre');
+    if (pre) pre.textContent = String(msg ?? '');
+  };
+  const __ppDiagAppend = (line) => {
+    const pre = document.getElementById('pp-diag-pre');
+    if (pre) pre.textContent = (pre.textContent ? pre.textContent + "\n" : "") + String(line ?? '');
+  };
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'pp-diag-close') {
+      const box = document.getElementById('pp-diag');
+      if (box) box.remove();
+    }
+  });
+const $overlay = $('overlay-loading');
   const $hint = $('hint');
   const $q = $('q'), $sugg = $('sugg');
   const $dipBody = $('dip-body');
@@ -550,7 +567,7 @@ const docApi = (window.PP_IS_GRIST && window.grist?.docApi && typeof window.gris
 if (!fetchTable){
   $hint.textContent = 'Grist non accessible (couche de données absente).';
   $hint.classList.add('err');
-  if($overlay) $overlay.classList.add('hidden');
+  $overlay.classList.add('hidden');
   return;
 }
 
@@ -566,14 +583,23 @@ try{
   console.error(e);
   $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
   $hint.classList.add('err');
-  if($overlay) $overlay.classList.add('hidden');
+  $overlay.classList.add('hidden');
   return;
 }
 
   // === ETABLISSEMENTS statut ON ===
   let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
   let etabCodeToObj=new Map();
-  let hasCodeColumn = !!tE[C_ETAB_CODE];
+  // ✅ Détection robuste de la colonne code PACA (sans modifier le code, suffixe inclus)
+  const __normKey = (k)=>String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const __etabCols = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
+  let ETAB_CODE_COL =
+    __etabCols.find(k=>__normKey(k)==='codepaca') ||
+    __etabCols.find(k=>__normKey(k).includes('codepaca')) ||
+    __etabCols.find(k=>__normKey(k)==='codeetablissement') ||
+    __etabCols.find(k=>__normKey(k).includes('codeetab')) ||
+    null;
+  let hasCodeColumn = !!ETAB_CODE_COL;
 
   (function(){
     const keysE = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
@@ -602,22 +628,20 @@ try{
       etabNormToId.set(normLabel,id);
 
       if(hasCodeColumn){
-        const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
+        const rawCode = fix(ETAB_CODE_COL ? tE[ETAB_CODE_COL]?.[i] : undefined);
         if(rawCode){
           const key = rawCode.toUpperCase();
           if(!etabCodeToObj.has(key)){
-            etabCodeToObjetabCodeToObj.set(key,{id,label:lab,row});
+            etabCodeToObj.set(key,{id,label:lab,row});
           }
         }
       }
     }
     $hint.textContent = `${etabs.length} établissement(s) actif(s) chargé(s).`;
     $hint.classList.add('ok');
+    __ppDiag(`Auth: ${(window.PP_AUTH&&PP_AUTH.get&&PP_AUTH.get())?('ok='+PP_AUTH.get().ok+' role='+PP_AUTH.get().role):'n/a'}\ncodepaca(auth)=${(window.PP_AUTH&&PP_AUTH.get&&PP_AUTH.get())?(PP_AUTH.get().codepaca||''):''}\ncodeColDetected=${ETAB_CODE_COL||'(none)'}\nhasCodeColumn=${hasCodeColumn}\netabCodeToObj.size=${etabCodeToObj.size}`);
   })();
 
-console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE=", C_ETAB_CODE);
-console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.from(etabCodeToObj.keys()).slice(0, 10));
-  
   function padCP(v){
     const s=String(v??'').trim();
     const n=s.replace(/\D/g,'');
@@ -1079,6 +1103,7 @@ console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.f
     currentEtabId=rec?.id ?? null;
     currentEtabRow=rec?.row ?? null;
     currentEtabLabel=rec?.label ?? '';
+    __ppDiagAppend(`has key? ${etabCodeToObj.has(code) ? 'YES' : 'NO'}`);
     if(!rec){
       etabName.textContent='';
       etabAddr.textContent='';
@@ -1360,35 +1385,8 @@ console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.f
     // ===== AUTH CENTRALISÉE (pp-config.js) : établissement via PP_AUTH =====
   // Ici, on ne gère plus de lightbox locale : tout passe par PP_AUTH (lightbox commune).
 
-
-// ===============================
-// ✅ DIAG (affiché à l'écran) pour arrêter les devinettes
-// ===============================
-function ppEnsureDiag(){
-  let el = document.getElementById('pp-diag');
-  if(el) return el;
-  el = document.createElement('div');
-  el.id = 'pp-diag';
-  el.style.cssText = 'position:fixed;right:12px;bottom:52px;z-index:99999;max-width:520px;white-space:pre-wrap;background:#0b1220;color:#e5e7eb;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 12px 10px;font:12px/1.35 system-ui;box-shadow:0 10px 30px rgba(0,0,0,.35)';
-  el.innerHTML = '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px"><strong>DIAG Dérogation</strong><button id="pp-diag-close" style="background:transparent;border:0;color:#93c5fd;cursor:pointer">Fermer</button></div><div id="pp-diag-body"></div>';
-  document.body.appendChild(el);
-  el.querySelector('#pp-diag-close')?.addEventListener('click', ()=> el.remove());
-  return el;
-}
-function ppDiagSet(lines){
-  try{
-    const el = ppEnsureDiag();
-    const body = el.querySelector('#pp-diag-body');
-    if(body) body.textContent = lines.join('\n');
-  }catch(e){}
-}
 function normalizeCodepaca(v){
-  // ✅ Normalisation STRICTE sans modifier la structure du code (suffixe conservé)
-  // On supprime uniquement les espaces / caractères invisibles, puis on met en MAJ.
-  return String(v ?? '')
-    .replace(/[\s\u200B\u200C\u200D\uFEFF]/g,'')
-    .trim()
-    .toUpperCase();
+  return String(v ?? '').trim().toUpperCase();
 }
 
 
@@ -1402,51 +1400,39 @@ function normalizeCodepaca(v){
   }
 
   function applyEtabFromAuth(){
-  const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
-  if(!st || !st.ok) return false;
+    const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
+    if(!st || !st.ok){ __ppDiagAppend('applyEtabFromAuth: no auth'); return false; }
 
-  const code = normalizeCodepaca(st.codepaca || st.code || '');
-  if(!code) return false;
+    const code = normalizeCodepaca(st.codepaca || st.code || '');
+    if(!code){ __ppDiagAppend('applyEtabFromAuth: missing code'); return false; }
 
-  // DIAG visible
-  ppDiagSet([
-    `Auth ok: ${!!st.ok} | role=${st.role ?? ''}`,
-    `codepaca(auth) = ${st.codepaca ?? ''}`,
-    `code(normalized) = ${code}`,
-    `hasCodeColumn = ${hasCodeColumn} | C_ETAB_CODE = ${C_ETAB_CODE ?? ''}`,
-    `etabCodeToObj.size = ${etabCodeToObj?.size ?? 0}`,
-    `has key? ${etabCodeToObj?.has?.(code) ? 'YES' : 'NO'}`,
-    `sample keys: ${(etabCodeToObj && etabCodeToObj.size) ? Array.from(etabCodeToObj.keys()).slice(0,10).join(', ') : '(none)'}`
-  ]);
+    __ppDiagAppend(`code(normalized)=${code}`);
+    __ppDiagAppend(`hasCodeColumn=${hasCodeColumn} codeColDetected=${ETAB_CODE_COL||'(none)'}`);
+    __ppDiagAppend(`etabCodeToObj.size=${etabCodeToObj?etabCodeToObj.size:0}`);
+    if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
+      // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
+      $q.readOnly = false;
+      return false;
+    }
 
-  // Debug utile (sans casser le script)
-  try{
-    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
-    console.log("[AUTH] etabCodeToObj.size=", etabCodeToObj?.size ?? 0, "has key?", etabCodeToObj?.has?.(code));
-  }catch(e){}
+    const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
+    __ppDiagAppend(`has key? ${etabCodeToObj.has(code) ? 'YES' : 'NO'}`);
+    if(!rec){
+      // si le code ne match pas, on laisse la lightbox faire une nouvelle saisie
+      $hint.textContent = 'Code établissement non reconnu : ' + code;
+      $hint.classList.remove('ok');
+      $hint.classList.add('err');
+      return false;
+    }
 
-  if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
-    // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
-    $q.readOnly = false;
-    return false;
+    // ✅ Dans ce formulaire, on affiche le CODE dans le champ, et les infos dans la carte établissement
+    $q.value = code;
+    $q.readOnly = true;
+
+    // onSelectEtab déclenche : fillEtab + diplômes + travaux + équipements
+    onSelectEtab(rec.label);
+    return true;
   }
-
-  const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
-  if(!rec){
-    $hint.textContent = 'Code établissement non reconnu : ' + code;
-    $hint.classList.remove('ok');
-    $hint.classList.add('err');
-    return false;
-  }
-
-  // ✅ Afficher le CODE dans le champ (comme demandé)
-  $q.value = code;
-  $q.readOnly = true;
-
-  // ✅ Et déclencher la logique interne avec le libellé (c’est ça qui alimente la page)
-  onSelectEtab(rec.label);
-  return true;
-}
 
   // Boutons flottants (si présents)
   const $btnReconnect = document.getElementById('pp-etab-reconnect-btn');
@@ -1472,7 +1458,7 @@ function normalizeCodepaca(v){
   // Quand la lightbox est validée :
   window.addEventListener('pp:auth-changed', ()=>{ applyEtabFromAuth(); });
 
-  if($overlay) $overlay.classList.add('hidden');
+  $overlay.classList.add('hidden');
 
 })();
 </script>
@@ -1480,8 +1466,12 @@ function normalizeCodepaca(v){
 
 <button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 
-<div id="pp-version-badge" style="position:fixed;left:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 10px;font:12px/1.3 system-ui;opacity:.85">
-  Dérogation P — FIX v7 (no overlay + diag)
+<div id="pp-diag" style="position:fixed;right:16px;bottom:16px;z-index:99999;max-width:520px;background:#0b1220;color:#e8eefc;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 10px 35px rgba(0,0,0,.35);">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+    <strong style="font-size:12.5px;">DIAG Dérogation</strong>
+    <button type="button" id="pp-diag-close" style="all:unset;cursor:pointer;color:#9fb3d9;">Fermer</button>
+  </div>
+  <pre id="pp-diag-pre" style="margin:0;white-space:pre-wrap;"></pre>
 </div>
 
 </body>
