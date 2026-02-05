@@ -601,8 +601,8 @@ try{
         const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!etabCodeToObj.has(key)){
-            etabCodeToObj.set(key,{id,label:lab,row});
+          if(!.has(key)){
+            .set(key,{id,label:lab,row});
           }
         }
       }
@@ -611,6 +611,9 @@ try{
     $hint.classList.add('ok');
   })();
 
+console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE=", C_ETAB_CODE);
+console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.from(etabCodeToObj.keys()).slice(0, 10));
+  
   function padCP(v){
     const s=String(v??'').trim();
     const n=s.replace(/\D/g,'');
@@ -1368,7 +1371,9 @@ function normalizeCodepaca(v){
   }
 
   function applyEtabFromAuth(){
+    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
     const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
+    console.log("[AUTH] has key? ", etabCodeToObj.has(code), "upper? ", etabCodeToObj.has(code.toUpperCase()));
     if(!st || !st.ok) return false;
 
     const code = normalizeCodepaca(st.codepaca || st.code || '');
