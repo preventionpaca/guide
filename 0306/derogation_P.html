@@ -194,6 +194,9 @@
       cursor: pointer;
     }
     .pp-etab-change-btn:hover{ filter: brightness(.98); }
+
+    /* ✅ OVERLAY DÉSACTIVÉ (debug) */
+    #overlay-loading{display:none !important;}
 </style>
 </head>
 
@@ -495,8 +498,6 @@
   const C_EMAIL_REDACTEUR='email_redacteur';
 
   const $overlay = $('overlay-loading');
-  // ✅ Overlay désactivé (plus de blocage en cas d'erreur)
-  if ($overlay) { $overlay.style.display = 'none'; }
   const $hint = $('hint');
   const $q = $('q'), $sugg = $('sugg');
   const $dipBody = $('dip-body');
@@ -571,16 +572,7 @@ try{
   // === ETABLISSEMENTS statut ON ===
   let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
   let etabCodeToObj=new Map();
-  // ✅ Détection robuste de la colonne Codepaca (sans modifier le code)
-  let _detectedCodeCol = __pp_detectCol(tE, C_ETAB_CODE);
-  if (_detectedCodeCol) C_ETAB_CODE = _detectedCodeCol;
-  \1
-  __pp_diagSet([
-    'Auth pending...',
-    'C_ETAB_CODE='+String(C_ETAB_CODE),
-    'hasCodeColumn='+String(hasCodeColumn),
-    'etabCodeToObj.size='+String(etabCodeToObj.size)
-  ]);
+  let hasCodeColumn = !!tE[C_ETAB_CODE];
 
   (function(){
     const keysE = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
@@ -612,8 +604,8 @@ try{
         const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!.has(key)){
-            .set(key,{id,label:lab,row});
+          if(!etabCodeToObj.has(key)){
+            etabCodeToObj.set(key,{id,label:lab,row});
           }
         }
       }
@@ -622,9 +614,6 @@ try{
     $hint.classList.add('ok');
   })();
 
-console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE=", C_ETAB_CODE);
-console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.from(etabCodeToObj.keys()).slice(0, 10));
-  
   function padCP(v){
     const s=String(v??'').trim();
     const n=s.replace(/\D/g,'');
@@ -1372,23 +1361,7 @@ function normalizeCodepaca(v){
 }
 
 
-  
-
-  function __pp_normKey(k){
-    return String(k ?? '').toLowerCase().replace(/[^a-z0-9]+/g,'');
-  }
-  \1
-
-  const __pp_diagBox = document.getElementById('pp-diag-derog');
-  const __pp_diagPre = document.getElementById('pp-diag-pre');
-  const __pp_diagClose = document.getElementById('pp-diag-close');
-  if (__pp_diagClose) __pp_diagClose.addEventListener('click', ()=>{ if(__pp_diagBox) __pp_diagBox.style.display='none'; });
-  function __pp_diagSet(lines){
-    if(!__pp_diagPre) return;
-    __pp_diagPre.textContent = lines.filter(Boolean).join('
-');
-  }
-async function forceAuthPrompt(){
+  async function forceAuthPrompt(){
     if(window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
       try{ window.PP_AUTH.logout(); }catch(e){}
     }
@@ -1398,9 +1371,7 @@ async function forceAuthPrompt(){
   }
 
   function applyEtabFromAuth(){
-    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
     const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
-    console.log("[AUTH] has key? ", etabCodeToObj.has(code), "upper? ", etabCodeToObj.has(code.toUpperCase()));
     if(!st || !st.ok) return false;
 
     const code = normalizeCodepaca(st.codepaca || st.code || '');
@@ -1462,13 +1433,114 @@ async function forceAuthPrompt(){
 
 <button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 
-<div id="pp-diag-derog" style="position:fixed;right:14px;bottom:14px;z-index:99999;background:rgba(4,12,24,.92);color:#e8f0ff;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;max-width:420px;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-shadow:0 10px 30px rgba(0,0,0,.35);">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-    <strong style="font-size:13px">DIAG Dérogation</strong>
-    <button id="pp-diag-close" type="button" style="background:transparent;color:#b9c7ff;border:0;cursor:pointer">Fermer</button>
-  </div>
-  <pre id="pp-diag-pre" style="white-space:pre-wrap;margin:0"></pre>
-</div>
+<script>
+(function(){
+  // ✅ Supprime l'overlay au cas où (sécurité)
+  function killOverlay(){
+    const ov = document.getElementById('overlay-loading');
+    if (ov) ov.remove();
+  }
+  document.addEventListener('DOMContentLoaded', killOverlay);
+  window.addEventListener('load', killOverlay);
+
+  // ---- DIAG visible ----
+  function ensureDiag(){
+    let box = document.getElementById('pp-diag-derog');
+    if (box) return box;
+    box = document.createElement('div');
+    box.id = 'pp-diag-derog';
+    box.style.position = 'fixed';
+    box.style.right = '14px';
+    box.style.bottom = '14px';
+    box.style.zIndex = '999999';
+    box.style.maxWidth = '520px';
+    box.style.background = '#0b1324';
+    box.style.border = '1px solid rgba(255,255,255,.18)';
+    box.style.borderRadius = '14px';
+    box.style.padding = '12px 14px';
+    box.style.color = 'rgba(255,255,255,.92)';
+    box.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+    box.style.fontSize = '12px';
+    box.style.boxShadow = '0 12px 40px rgba(0,0,0,.35)';
+    box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-weight:800;letter-spacing:.3px">DIAG Dérogation</div>
+      <button id="pp-diag-close" style="background:transparent;border:0;color:rgba(255,255,255,.75);cursor:pointer;font-weight:700">Fermer</button>
+    </div>
+    <pre id="pp-diag-pre" style="margin:0;white-space:pre-wrap;line-height:1.35"></pre>`;
+    document.body.appendChild(box);
+    box.querySelector('#pp-diag-close')?.addEventListener('click', ()=> box.remove());
+    return box;
+  }
+
+  function setDiag(txt){
+    const box = ensureDiag();
+    const pre = box.querySelector('#pp-diag-pre');
+    if (pre) pre.textContent = txt;
+  }
+
+  async function fetchRaw(table){
+    const base = window.PP_SB_API_READ || (window.PP_CONFIG && window.PP_CONFIG.SB_API_READ) || "";
+    const app  = window.PP_APP_NAME || "equipements";
+    if (!base) throw new Error("PP_SB_API_READ manquant");
+    const url = base + "?app=" + encodeURIComponent(app) + "&table=" + encodeURIComponent(table) + "&_ts=" + Date.now();
+    const r = await fetch(url, { credentials: "omit" });
+    const j = await r.json().catch(()=>null);
+    return { url, status: r.status, ok: r.ok, json: j };
+  }
+
+  function keysOfFirstRecord(j){
+    const recs = Array.isArray(j?.records) ? j.records : [];
+    const f = recs[0]?.fields || null;
+    return f ? Object.keys(f) : [];
+  }
+
+  async function runDiag(){
+    try{
+      const st = (window.PP_AUTH && typeof window.PP_AUTH.get === "function") ? window.PP_AUTH.get() : null;
+      const authLine = st ? `auth.ok=${!!st.ok} role=${st.role||''} codepaca=${st.codepaca||''}` : "auth: (none)";
+
+      // 1) RAW Etablissements_edi
+      const rawE = await fetchRaw("Etablissements_edi");
+      const jE = rawE.json;
+      const recCount = Array.isArray(jE?.records) ? jE.records.length : 0;
+      const fieldKeys = keysOfFirstRecord(jE).slice(0, 40);
+
+      // 2) Tentative via sbFetchTable si dispo
+      let hasCodeColumn = "(n/a)";
+      let codeDetected = "(n/a)";
+      let tKeys = [];
+      try{
+        if (typeof window.sbFetchTable === "function") {
+          const t = await window.sbFetchTable("Etablissements_edi");
+          tKeys = t ? Object.keys(t).slice(0, 40) : [];
+          // colonne code attendue
+          const want = "Codepaca";
+          hasCodeColumn = t && Array.isArray(t[want]) ? "true" : "false";
+          codeDetected = hasCodeColumn === "true" ? want : "(none)";
+        }
+      }catch(e){
+        hasCodeColumn = "ERR";
+        codeDetected = "ERR";
+      }
+
+      setDiag(
+        `${authLine}\n`+
+        `RAW Etablissements_edi: http=${rawE.status} ok=${!!rawE.json?.ok} records=${recCount}\n`+
+        `RAW field keys(1st): ${fieldKeys.join(", ") || "(none)"}\n`+
+        `sbFetchTable keys: ${tKeys.join(", ") || "(none / sbFetchTable not global)"}\n`+
+        `hasCodeColumn=${hasCodeColumn} codeDetected=${codeDetected}\n`+
+        `Note: si RAW contient "Codepaca" mais sbFetchTable non => problème de parsing front.\n`
+      );
+    }catch(e){
+      setDiag("DIAG error: " + String(e));
+    }
+  }
+
+  // Run diag after page scripts have likely initialized
+  window.addEventListener('load', ()=> setTimeout(runDiag, 250));
+  window.addEventListener('pp:auth-changed', ()=> setTimeout(runDiag, 250));
+})();
+</script>
 
 </body>
 </html>
