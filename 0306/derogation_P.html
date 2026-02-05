@@ -195,11 +195,6 @@
     }
     .pp-etab-change-btn:hover{ filter: brightness(.98); }
 </style>
-
-<style>
-  /* Désactivation overlay (demandé) */
-  #overlay-loading{display:none !important;}
-</style>
 </head>
 
 <body>
@@ -499,23 +494,9 @@
   const C_ETAB_CODE='Codepaca';          // colonne code établissement
   const C_EMAIL_REDACTEUR='email_redacteur';
 
-  
-  // --- DIAG visible ---
-  const __ppDiag = (msg) => {
-    const pre = document.getElementById('pp-diag-pre');
-    if (pre) pre.textContent = String(msg ?? '');
-  };
-  const __ppDiagAppend = (line) => {
-    const pre = document.getElementById('pp-diag-pre');
-    if (pre) pre.textContent = (pre.textContent ? pre.textContent + "\n" : "") + String(line ?? '');
-  };
-  document.addEventListener('click', (e) => {
-    if (e.target && e.target.id === 'pp-diag-close') {
-      const box = document.getElementById('pp-diag');
-      if (box) box.remove();
-    }
-  });
-const $overlay = $('overlay-loading');
+  const $overlay = $('overlay-loading');
+  // ✅ Overlay désactivé (plus de blocage en cas d'erreur)
+  if ($overlay) { $overlay.style.display = 'none'; }
   const $hint = $('hint');
   const $q = $('q'), $sugg = $('sugg');
   const $dipBody = $('dip-body');
@@ -590,16 +571,16 @@ try{
   // === ETABLISSEMENTS statut ON ===
   let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
   let etabCodeToObj=new Map();
-  // ✅ Détection robuste de la colonne code PACA (sans modifier le code, suffixe inclus)
-  const __normKey = (k)=>String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const __etabCols = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
-  let ETAB_CODE_COL =
-    __etabCols.find(k=>__normKey(k)==='codepaca') ||
-    __etabCols.find(k=>__normKey(k).includes('codepaca')) ||
-    __etabCols.find(k=>__normKey(k)==='codeetablissement') ||
-    __etabCols.find(k=>__normKey(k).includes('codeetab')) ||
-    null;
-  let hasCodeColumn = !!ETAB_CODE_COL;
+  // ✅ Détection robuste de la colonne Codepaca (sans modifier le code)
+  let _detectedCodeCol = __pp_detectCol(tE, C_ETAB_CODE);
+  if (_detectedCodeCol) C_ETAB_CODE = _detectedCodeCol;
+  \1
+  __pp_diagSet([
+    'Auth pending...',
+    'C_ETAB_CODE='+String(C_ETAB_CODE),
+    'hasCodeColumn='+String(hasCodeColumn),
+    'etabCodeToObj.size='+String(etabCodeToObj.size)
+  ]);
 
   (function(){
     const keysE = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
@@ -628,20 +609,22 @@ try{
       etabNormToId.set(normLabel,id);
 
       if(hasCodeColumn){
-        const rawCode = fix(ETAB_CODE_COL ? tE[ETAB_CODE_COL]?.[i] : undefined);
+        const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!etabCodeToObj.has(key)){
-            etabCodeToObj.set(key,{id,label:lab,row});
+          if(!.has(key)){
+            .set(key,{id,label:lab,row});
           }
         }
       }
     }
     $hint.textContent = `${etabs.length} établissement(s) actif(s) chargé(s).`;
     $hint.classList.add('ok');
-    __ppDiag(`Auth: ${(window.PP_AUTH&&PP_AUTH.get&&PP_AUTH.get())?('ok='+PP_AUTH.get().ok+' role='+PP_AUTH.get().role):'n/a'}\ncodepaca(auth)=${(window.PP_AUTH&&PP_AUTH.get&&PP_AUTH.get())?(PP_AUTH.get().codepaca||''):''}\ncodeColDetected=${ETAB_CODE_COL||'(none)'}\nhasCodeColumn=${hasCodeColumn}\netabCodeToObj.size=${etabCodeToObj.size}`);
   })();
 
+console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE=", C_ETAB_CODE);
+console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.from(etabCodeToObj.keys()).slice(0, 10));
+  
   function padCP(v){
     const s=String(v??'').trim();
     const n=s.replace(/\D/g,'');
@@ -1103,7 +1086,6 @@ try{
     currentEtabId=rec?.id ?? null;
     currentEtabRow=rec?.row ?? null;
     currentEtabLabel=rec?.label ?? '';
-    __ppDiagAppend(`has key? ${etabCodeToObj.has(code) ? 'YES' : 'NO'}`);
     if(!rec){
       etabName.textContent='';
       etabAddr.textContent='';
@@ -1390,7 +1372,23 @@ function normalizeCodepaca(v){
 }
 
 
-  async function forceAuthPrompt(){
+  
+
+  function __pp_normKey(k){
+    return String(k ?? '').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  }
+  \1
+
+  const __pp_diagBox = document.getElementById('pp-diag-derog');
+  const __pp_diagPre = document.getElementById('pp-diag-pre');
+  const __pp_diagClose = document.getElementById('pp-diag-close');
+  if (__pp_diagClose) __pp_diagClose.addEventListener('click', ()=>{ if(__pp_diagBox) __pp_diagBox.style.display='none'; });
+  function __pp_diagSet(lines){
+    if(!__pp_diagPre) return;
+    __pp_diagPre.textContent = lines.filter(Boolean).join('
+');
+  }
+async function forceAuthPrompt(){
     if(window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
       try{ window.PP_AUTH.logout(); }catch(e){}
     }
@@ -1400,15 +1398,14 @@ function normalizeCodepaca(v){
   }
 
   function applyEtabFromAuth(){
+    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
     const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
-    if(!st || !st.ok){ __ppDiagAppend('applyEtabFromAuth: no auth'); return false; }
+    console.log("[AUTH] has key? ", etabCodeToObj.has(code), "upper? ", etabCodeToObj.has(code.toUpperCase()));
+    if(!st || !st.ok) return false;
 
     const code = normalizeCodepaca(st.codepaca || st.code || '');
-    if(!code){ __ppDiagAppend('applyEtabFromAuth: missing code'); return false; }
+    if(!code) return false;
 
-    __ppDiagAppend(`code(normalized)=${code}`);
-    __ppDiagAppend(`hasCodeColumn=${hasCodeColumn} codeColDetected=${ETAB_CODE_COL||'(none)'}`);
-    __ppDiagAppend(`etabCodeToObj.size=${etabCodeToObj?etabCodeToObj.size:0}`);
     if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
       // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
       $q.readOnly = false;
@@ -1416,7 +1413,6 @@ function normalizeCodepaca(v){
     }
 
     const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
-    __ppDiagAppend(`has key? ${etabCodeToObj.has(code) ? 'YES' : 'NO'}`);
     if(!rec){
       // si le code ne match pas, on laisse la lightbox faire une nouvelle saisie
       $hint.textContent = 'Code établissement non reconnu : ' + code;
@@ -1466,12 +1462,12 @@ function normalizeCodepaca(v){
 
 <button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 
-<div id="pp-diag" style="position:fixed;right:16px;bottom:16px;z-index:99999;max-width:520px;background:#0b1220;color:#e8eefc;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 10px 35px rgba(0,0,0,.35);">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
-    <strong style="font-size:12.5px;">DIAG Dérogation</strong>
-    <button type="button" id="pp-diag-close" style="all:unset;cursor:pointer;color:#9fb3d9;">Fermer</button>
+<div id="pp-diag-derog" style="position:fixed;right:14px;bottom:14px;z-index:99999;background:rgba(4,12,24,.92);color:#e8f0ff;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 14px;max-width:420px;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-shadow:0 10px 30px rgba(0,0,0,.35);">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+    <strong style="font-size:13px">DIAG Dérogation</strong>
+    <button id="pp-diag-close" type="button" style="background:transparent;color:#b9c7ff;border:0;cursor:pointer">Fermer</button>
   </div>
-  <pre id="pp-diag-pre" style="margin:0;white-space:pre-wrap;"></pre>
+  <pre id="pp-diag-pre" style="white-space:pre-wrap;margin:0"></pre>
 </div>
 
 </body>
