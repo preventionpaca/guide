@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
   
+  <!-- PP VERSION: derogation v16 -->
+  <meta name="pp-version" content="derogation-v16"/>
   <script>
     window.PP_APP_NAME = "equipements";
   </script>
@@ -10,7 +12,7 @@
   <title>Dérogation travaux réglementés – établissement / diplômes / travaux</title>
 
   <!-- API Grist -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  
 
 
 
@@ -468,6 +470,8 @@
 <!-- ===== JS FORMULAIRE (logique Grist, SANS gestion de thème) ===== -->
 <script>
 (async () => {
+  console.log("[DEROGATION] PP v16 loaded", document.querySelector("meta[name=pp-version]")?.content);
+
   const $ = id => document.getElementById(id);
   const fix = s => (s ?? '').toString().replace(/\u00A0/g,' ').trim();
   const baseNorm = s => fix(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -1435,23 +1439,6 @@ function normalizeCodepaca(v){
     return true;
   }
 
-    const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
-    if(!rec){
-      // si le code ne match pas, on laisse la lightbox faire une nouvelle saisie
-      $hint.textContent = 'Code établissement non reconnu : ' + code;
-      $hint.classList.remove('ok');
-      $hint.classList.add('err');
-      return false;
-    }
-
-    // ✅ Dans ce formulaire, on affiche le CODE dans le champ, et les infos dans la carte établissement
-    $q.value = code;
-    $q.readOnly = true;
-
-    // onSelectEtab déclenche : fillEtab + diplômes + travaux + équipements
-    onSelectEtab(rec.label);
-    return true;
-  }
 
   // Boutons flottants (si présents)
   const $btnReconnect = document.getElementById('pp-etab-reconnect-btn');
