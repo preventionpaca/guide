@@ -202,7 +202,7 @@
 <div id="header-container"></div>
  
   <!-- ===== OVERLAY CHARGEMENT ===== -->
-  <div id="overlay-loading">
+  <div id="overlay-loading" class="hidden" style="display:none">
     <div class="spinner"></div>
     <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
   </div>
@@ -546,7 +546,7 @@ const docApi = (window.PP_IS_GRIST && window.grist?.docApi && typeof window.gris
 if (!fetchTable){
   $hint.textContent = 'Grist non accessible (couche de données absente).';
   $hint.classList.add('err');
-  $overlay.classList.add('hidden');
+  if($overlay) $overlay.classList.add('hidden');
   return;
 }
 
@@ -562,7 +562,7 @@ try{
   console.error(e);
   $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
   $hint.classList.add('err');
-  $overlay.classList.add('hidden');
+  if($overlay) $overlay.classList.add('hidden');
   return;
 }
 
@@ -601,8 +601,8 @@ try{
         const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!.has(key)){
-            .set(key,{id,label:lab,row});
+          if(!etabCodeToObj.has(key)){
+            etabCodeToObjetabCodeToObj.set(key,{id,label:lab,row});
           }
         }
       }
@@ -1371,37 +1371,40 @@ function normalizeCodepaca(v){
   }
 
   function applyEtabFromAuth(){
+  const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
+  if(!st || !st.ok) return false;
+
+  const code = normalizeCodepaca(st.codepaca || st.code || '');
+  if(!code) return false;
+
+  // Debug utile (sans casser le script)
+  try{
     console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
-    const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
-    console.log("[AUTH] has key? ", etabCodeToObj.has(code), "upper? ", etabCodeToObj.has(code.toUpperCase()));
-    if(!st || !st.ok) return false;
+    console.log("[AUTH] etabCodeToObj.size=", etabCodeToObj?.size ?? 0, "has key?", etabCodeToObj?.has?.(code));
+  }catch(e){}
 
-    const code = normalizeCodepaca(st.codepaca || st.code || '');
-    if(!code) return false;
-
-    if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
-      // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
-      $q.readOnly = false;
-      return false;
-    }
-
-    const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
-    if(!rec){
-      // si le code ne match pas, on laisse la lightbox faire une nouvelle saisie
-      $hint.textContent = 'Code établissement non reconnu : ' + code;
-      $hint.classList.remove('ok');
-      $hint.classList.add('err');
-      return false;
-    }
-
-    // ✅ Dans ce formulaire, on affiche le CODE dans le champ, et les infos dans la carte établissement
-    $q.value = code;
-    $q.readOnly = true;
-
-    // onSelectEtab déclenche : fillEtab + diplômes + travaux + équipements
-    onSelectEtab(rec.label);
-    return true;
+  if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
+    // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
+    $q.readOnly = false;
+    return false;
   }
+
+  const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
+  if(!rec){
+    $hint.textContent = 'Code établissement non reconnu : ' + code;
+    $hint.classList.remove('ok');
+    $hint.classList.add('err');
+    return false;
+  }
+
+  // ✅ Afficher le CODE dans le champ (comme demandé)
+  $q.value = code;
+  $q.readOnly = true;
+
+  // ✅ Et déclencher la logique interne avec le libellé (c’est ça qui alimente la page)
+  onSelectEtab(rec.label);
+  return true;
+}
 
   // Boutons flottants (si présents)
   const $btnReconnect = document.getElementById('pp-etab-reconnect-btn');
@@ -1427,7 +1430,7 @@ function normalizeCodepaca(v){
   // Quand la lightbox est validée :
   window.addEventListener('pp:auth-changed', ()=>{ applyEtabFromAuth(); });
 
-  $overlay.classList.add('hidden');
+  if($overlay) $overlay.classList.add('hidden');
 
 })();
 </script>
