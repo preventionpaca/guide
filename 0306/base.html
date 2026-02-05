@@ -5194,12 +5194,17 @@ async function sbWriteOp(op, payload){
   const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
   // Certains backends attendent aussi la table dans l'URL ou le body.
   const tbl = (payload && payload.table) ? String(payload.table) : (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? String(TBL_MAIN) : 'Liste_des_equipements';
+    // Normalisation op
+  const _opRaw = String(op||'').toLowerCase();
+  const _op = (_opRaw === 'delete') ? 'remove' : _opRaw;
   const urlBase = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
-            + '&op=' + encodeURIComponent(String(op||''))
+            + '&op=' + encodeURIComponent(_op)
             + '&table=' + encodeURIComponent(tbl);
   // Certains backends (proxy Grist) lisent l'id uniquement dans la querystring.
+  // ATTENTION: pour op=add, on ne DOIT PAS forcer d'id (le backend l'attribue).
   const qId = (payload && (payload.recordId ?? payload.id ?? payload.rid ?? payload.record_id)) ?? null;
-  const url = (qId && Number.isFinite(Number(qId)) && Number(qId) > 0)
+  const hasValidId = (qId && Number.isFinite(Number(qId)) && Number(qId) > 0);
+  const url = (hasValidId && _op !== 'add')
     ? (urlBase + '&id=' + encodeURIComponent(String(Number(qId))))
     : urlBase;
   const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
@@ -5330,7 +5335,7 @@ const removes = [];        // [rid]
 	    const ridNum = Number(a[2]);
 	    const rid = (Number.isFinite(ridNum) && ridNum > 0) ? ridNum : null;
 	    const fields = a[3] || {};
-	    adds.push({ id: rid, fields });
+	    adds.push({ id: null, fields });
   }else if(typ === 'RemoveRecord'){
     const rid = Number(a[2]);
     if(rid) removes.push(rid);
@@ -5361,7 +5366,6 @@ const removes = [];        // [rid]
 		for(const it of adds){
 	  // write-app attend souvent ?op=add et body {fields} (id optionnel)
 	  const base = { table: mainTbl, fields: it.fields };
-	  if(it.id){ base.id = it.id; base.recordId = it.id; }
 	  try{
 		    await sbWriteOp('add', base);
 	  }catch(e){
@@ -7795,7 +7799,7 @@ qs('#delBtn').onclick = async () => {
       if(hasGristWrite){
         await window.grist.docApi.applyUserActions([['RemoveRecord', TBL_MAIN, equipId]]);
       }else{
-        await sbWriteOp('delete', { table: TBL_MAIN, id: equipId });
+        await sbWriteOp('remove', { table: TBL_MAIN, id: equipId, recordId: equipId });
       }
       await loadFull();
       selectedId = null;
