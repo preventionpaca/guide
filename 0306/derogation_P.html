@@ -72,16 +72,19 @@
       // 1) { table: {id:[], ...} }
       if (j.table) return j.table;
 
-      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
+      // 2) { rows: [...] } ou { data:[...] }
       if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
       if (Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
 
-      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
+      // 3) { records: [{id, fields:{...}}] } (format Grist-like)  ✅ PRIORITAIRE
       if (Array.isArray(j.records)) {
         const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
         return rowsToGristTable(rows);
       }
+
+      // 3bis) { items:[...] } (format simplifié)  ⚠️ seulement si pas de records
+      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
+
 
       // 4) { tables: {TableName: {id:[], ...}} }
       if (j.tables && j.tables[tableName]) return j.tables[tableName];
@@ -1355,13 +1358,12 @@ function normalizeCodepaca(v){
 }
 
 
-  async function forceAuthPrompt(mode){
-    if(mode==='change' && window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
+  async function forceAuthPrompt(){
+    if(window.PP_AUTH && typeof window.PP_AUTH.logout==='function'){
       try{ window.PP_AUTH.logout(); }catch(e){}
     }
     if(window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt==='function'){
       try{ await window.PP_AUTH.requireDdfpt(); }catch(e){ /* AUTH_REQUIRED = normal */ }
-      applyEtabFromAuthRetry();
     }
   }
 
@@ -1396,38 +1398,15 @@ function normalizeCodepaca(v){
     return true;
   }
 
-  // ✅ Rattrapage robuste: applique l'établissement dès que
-  // - les établissements (etabCodeToObj) sont chargés
-  // - et que l'auth PP_AUTH est OK
-  function applyEtabFromAuthRetry(){
-    let tries = 0;
-    const maxTries = 80;   // 80 * 250ms = 20s (large, mais non bloquant)
-    const tick = () => {
-      tries++;
-      try {
-        // attend que la map code->étab soit prête
-        if (typeof hasCodeColumn !== 'undefined' && hasCodeColumn && etabCodeToObj && etabCodeToObj.size) {
-          if (applyEtabFromAuth()) return true;
-        }
-      } catch(e) {}
-      return false;
-    };
-    if (tick()) return;
-    const timer = setInterval(() => {
-      if (tick() || tries >= maxTries) clearInterval(timer);
-    }, 250);
-  }
-
-
   // Boutons flottants (si présents)
   const $btnReconnect = document.getElementById('pp-etab-reconnect-btn');
   const $btnChange    = document.getElementById('pp-etab-change-btn');
 
   if($btnReconnect){
-    $btnReconnect.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt('reconnect'); });
+    $btnReconnect.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt(); });
   }
   if($btnChange){
-    $btnChange.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt('change'); });
+    $btnChange.addEventListener('click', (e)=>{ e.preventDefault(); forceAuthPrompt(); });
   }
 
   // Au chargement :
@@ -1436,13 +1415,12 @@ function normalizeCodepaca(v){
   (async ()=>{
     if(window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt==='function'){
       try{ await window.PP_AUTH.requireDdfpt(); }catch(e){ /* AUTH_REQUIRED = normal */ }
-      applyEtabFromAuthRetry();
     }
-    applyEtabFromAuthRetry();
+    applyEtabFromAuth();
   })();
 
   // Quand la lightbox est validée :
-  window.addEventListener('pp:auth-changed', ()=>{ applyEtabFromAuthRetry(); });
+  window.addEventListener('pp:auth-changed', ()=>{ applyEtabFromAuth(); });
 
   $overlay.classList.add('hidden');
 
