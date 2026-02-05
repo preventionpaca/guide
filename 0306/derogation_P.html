@@ -195,8 +195,8 @@
     }
     .pp-etab-change-btn:hover{ filter: brightness(.98); }
 
-    /* ✅ Overlay désactivé (demande Rudy) */
-    #overlay-loading{display:none !important;}
+/* ✅ Overlay désactivé */
+#overlay-loading{display:none !important;}
 </style>
 </head>
 
@@ -534,12 +534,45 @@
 
 
   /* ===== Connexion Data Layer (Grist OU GitHub) ===== */
-const fetchTable =
+const __fetchTableRaw =
   (window.PP_fetchTable && typeof window.PP_fetchTable === "function")
     ? window.PP_fetchTable
     : (window.grist?.docApi?.fetchTable && typeof window.grist.docApi.fetchTable === "function")
       ? window.grist.docApi.fetchTable
       : null;
+
+// ✅ Normalise les retours Grist/Supabase en format "table colonnes" {id:[], Col1:[], ...}
+function normalizeTable(raw){
+  if(!raw) return { id: [] };
+
+  // {table:{id:[],...}}
+  if(raw.table && typeof raw.table === 'object') raw = raw.table;
+
+  // {records:[{id, fields:{...}}]}
+  if(Array.isArray(raw.records)){
+    const rows = raw.records.map(r => ({ id: r.id, ...(r.fields || {}) }));
+    return rowsToGristTable(rows);
+  }
+
+  // {rows:[...]} / {data:[...]} / {items:[...]}
+  if(Array.isArray(raw.rows))  return rowsToGristTable(raw.rows);
+  if(Array.isArray(raw.data))  return rowsToGristTable(raw.data);
+  if(Array.isArray(raw.items)) return rowsToGristTable(raw.items);
+
+  // Déjà au bon format
+  if(Array.isArray(raw.id)) return raw;
+
+  // Tableau de lignes
+  if(Array.isArray(raw)) return rowsToGristTable(raw);
+
+  return raw;
+}
+
+const fetchTable = async (tableName) => {
+  if(!__fetchTableRaw) throw new Error("fetchTable indisponible (PP_fetchTable / grist.docApi.fetchTable)");
+  const raw = await __fetchTableRaw(tableName);
+  return normalizeTable(raw);
+};
 
 // docApi = uniquement si on est vraiment dans Grist (écriture possible)
 const docApi = (window.PP_IS_GRIST && window.grist?.docApi && typeof window.grist.docApi.applyUserActions === "function")
@@ -604,8 +637,8 @@ try{
         const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!etabCodeToObj.has(key)){
-            etabCodeToObj.set(key,{id,label:lab,row});
+          if(!.has(key)){
+            .set(key,{id,label:lab,row});
           }
         }
       }
@@ -1374,19 +1407,33 @@ function normalizeCodepaca(v){
   }
 
   function applyEtabFromAuth(){
-    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
     const st = (window.PP_AUTH && typeof window.PP_AUTH.get==='function') ? window.PP_AUTH.get() : null;
-    console.log("[AUTH] has key? ", etabCodeToObj.has(code), "upper? ", etabCodeToObj.has(code.toUpperCase()));
     if(!st || !st.ok) return false;
 
     const code = normalizeCodepaca(st.codepaca || st.code || '');
+    console.log("[AUTH] st.codepaca=", st.codepaca, "normalized=", code);
+
     if(!code) return false;
 
+    console.log("[AUTH] hasCodeColumn=", hasCodeColumn, "etabCodeToObj.size=", (etabCodeToObj && etabCodeToObj.size) ? etabCodeToObj.size : 0);
+    console.log("[AUTH] has key? ", (etabCodeToObj && typeof etabCodeToObj.has==='function') ? etabCodeToObj.has(code) : false);
+
     if(!hasCodeColumn || !etabCodeToObj || !etabCodeToObj.size){
-      // fallback : si la base ne contient pas la colonne Codepaca, on laisse la sélection manuelle
-      $q.readOnly = false;
+      // fallback : si la base ne contient pas la colonne Codepaca (ou parsing KO), on laisse la saisie manuelle
       return false;
     }
+
+    const rec = etabCodeToObj.get(code);
+    if(!rec){
+      // Pas trouvé : on laisse l'utilisateur saisir / choisir manuellement
+      return false;
+    }
+
+    // On alimente le champ recherche et on déclenche la sélection existante
+    if($q) $q.value = rec.label || code;
+    if(typeof onSelectEtab === 'function') onSelectEtab(rec.label || code);
+    return true;
+  }
 
     const rec = etabCodeToObj.get(code) || etabCodeToObj.get(code.toUpperCase());
     if(!rec){
