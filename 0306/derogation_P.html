@@ -637,8 +637,8 @@ try{
         const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!.has(key)){
-            .set(key,{id,label:lab,row});
+          if(!etabCodeToObj.has(key)){
+            etabCodeToObj.set(key,{id,label:lab,row});
           }
         }
       }
