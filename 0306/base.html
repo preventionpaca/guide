@@ -8,7 +8,7 @@
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
   <!-- grist-plugin-api removed for public GitHub page -->
 <script>
-  console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
+  console.log('[PP-TR] LOADED v15.26-FIX-WRITEOP-ADDREMOVE');
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -5219,9 +5219,28 @@ const forbidId = (opts && opts.forceNoId) ? true : (_op === 'add' || _op === 'in
 const url = (hasValidId && !forbidId)
   ? (urlBase + '&' + encodeURIComponent(idKey) + '=' + encodeURIComponent(String(Number(qId))))
   : urlBase;
+
+  // Construire un body compatible (certains backends sont très stricts)
+  const _minimalBody = !!(opts && opts.minimalBody);
+  const _bodyOnlyFields = !!(opts && opts.bodyOnlyFields);
+  let bodyObj = (payload && typeof payload === 'object') ? JSON.parse(JSON.stringify(payload)) : {};
+  if(_minimalBody) bodyObj = {};
+  // Pour op=add/insert/create: ne jamais passer d'identifiant (ni dans l'URL, ni dans le body)
+  if(forbidId){
+    const kill = ['id','recordId','rowId','rid','record_id','rowid','_id'];
+    kill.forEach(k=>{ try{ if(bodyObj && Object.prototype.hasOwnProperty.call(bodyObj,k)) delete bodyObj[k]; }catch(e){} });
+    if(bodyObj && bodyObj.fields && typeof bodyObj.fields === 'object'){
+      kill.forEach(k=>{ try{ if(Object.prototype.hasOwnProperty.call(bodyObj.fields,k)) delete bodyObj.fields[k]; }catch(e){} });
+    }
+  }
+  if(_bodyOnlyFields){
+    const f = (bodyObj && bodyObj.fields && typeof bodyObj.fields === 'object') ? bodyObj.fields : bodyObj;
+    bodyObj = { fields: f };
+  }
+
   const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
   if(anon) headers['apikey'] = anon;
-  const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload || {}) });
+  const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(bodyObj) });
   const j = await r.json().catch(()=>null);
   if(!j || !j.ok){
     console.warn('[SB write-op] rejected', {op, url, payload, resp: j});
@@ -5358,39 +5377,31 @@ const removes = [];        // [rid]
 
 	// 1) Remove
 	for(const rid of removes){
-  // En écriture publique, la suppression est réservée aux comptes authentifiés (token).
-  // write-app de ce portail attend généralement l'opération via querystring ?op=remove et un body {id}.
-  try{
-	    // Essais: certains backends attendent l'id en query sous des noms différents,
-    // et/ou refusent un body non vide.
-    const basePayload = { table: mainTbl, id: rid, recordId: rid, rowId: rid };
-    // 1) query id
-    await sbWriteOp('remove', basePayload, { idKey:'id', minimalBody:true });
-    // 2) query recordId
-    await sbWriteOp('remove', basePayload, { idKey:'recordId', minimalBody:true });
-    // 3) query rowId
-    await sbWriteOp('remove', basePayload, { idKey:'rowId', minimalBody:true });
-    // 4) certains backends utilisent op=delete
-    await sbWriteOp('delete', basePayload, { idKey:'id', minimalBody:true });
-
-  }catch(e){
-    // Fallbacks (anciens formats)
-    await sbWriteAppTry([
-	      { table: mainTbl, id: rid, recordId: rid, rowId: rid, op: 'remove' },
-	      { op: 'remove', table: mainTbl, id: rid, recordId: rid },
-	      { action: 'remove', table: mainTbl, id: rid, recordId: rid },
-      { userActions: [['RemoveRecord', mainTbl, rid]] },
-      { actions: [['RemoveRecord', mainTbl, rid]] }
-    ]);
+  const basePayload = { table: mainTbl, id: rid, recordId: rid, rowId: rid };
+  let ok = false;
+  let lastErr = null;
+  const idKeys = ['id','recordId','rowId'];
+  for(const k of idKeys){
+    try{
+      await sbWriteOp('remove', basePayload, { idKey: k, minimalBody: true });
+      ok = true; break;
+    }catch(e){ lastErr = e; }
   }
+  if(!ok){
+    try{
+      await sbWriteOp('delete', basePayload, { idKey: 'id', minimalBody: true });
+      ok = true;
+    }catch(e){ lastErr = e; }
+  }
+  if(!ok) throw lastErr || new Error('Suppression impossible');
 }
 
-		// 2) Add
+// 2) Add
 		for(const it of adds){
 	  // write-app attend souvent ?op=add et body {fields} (id optionnel)
-	  const base = { table: mainTbl, fields: it.fields };
+	  const base = { fields: it.fields };
 	  try{
-		    await sbWriteOp('add', base, { forceNoId:true });
+		    await sbWriteOp('add', base, { forceNoId:true, bodyOnlyFields:true });
 	  }catch(e){
 	    const id = it.id || null;
 	    // Certains backends attendent les champs au top-level plutôt que sous 'fields'.
