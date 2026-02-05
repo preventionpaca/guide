@@ -194,6 +194,9 @@
       cursor: pointer;
     }
     .pp-etab-change-btn:hover{ filter: brightness(.98); }
+
+    /* ✅ Overlay désactivé (demande Rudy) */
+    #overlay-loading{display:none !important;}
 </style>
 </head>
 
@@ -202,7 +205,7 @@
 <div id="header-container"></div>
  
   <!-- ===== OVERLAY CHARGEMENT ===== -->
-  <div id="overlay-loading" class="hidden">
+  <div id="overlay-loading">
     <div class="spinner"></div>
     <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
   </div>
@@ -569,13 +572,7 @@ try{
   // === ETABLISSEMENTS statut ON ===
   let etabs=[], etabIdToLabel=new Map(), etabNormToId=new Map();
   let etabCodeToObj=new Map();
-  // Détection robuste du nom de colonne Codepaca (respecte le suffixe, insensible à la casse)
-  let C_ETAB_CODE_ACT = C_ETAB_CODE;
-  const __codeCand = [C_ETAB_CODE, "codepaca", "CODEPACA", "CodePaca", "CODEPaca"];
-  for (const cand of __codeCand) {
-    if (tE && tE[cand]) { C_ETAB_CODE_ACT = cand; break; }
-  }
-  let hasCodeColumn = !!(tE && tE[C_ETAB_CODE_ACT]);
+  let hasCodeColumn = !!tE[C_ETAB_CODE];
 
   (function(){
     const keysE = Object.keys(tE).filter(k=>Array.isArray(tE[k]));
@@ -604,11 +601,11 @@ try{
       etabNormToId.set(normLabel,id);
 
       if(hasCodeColumn){
-        const rawCode = fix(tE[C_ETAB_CODE_ACT]?.[i]);
+        const rawCode = fix(tE[C_ETAB_CODE]?.[i]);
         if(rawCode){
           const key = rawCode.toUpperCase();
-          if(!.has(key)){
-            .set(key,{id,label:lab,row});
+          if(!etabCodeToObj.has(key)){
+            etabCodeToObj.set(key,{id,label:lab,row});
           }
         }
       }
@@ -617,7 +614,7 @@ try{
     $hint.classList.add('ok');
   })();
 
-console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE_ACT=", C_ETAB_CODE_ACT);
+console.log("[ETAB] hasCodeColumn=", hasCodeColumn, "C_ETAB_CODE=", C_ETAB_CODE);
 console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.from(etabCodeToObj.keys()).slice(0, 10));
   
   function padCP(v){
@@ -1363,7 +1360,7 @@ console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.f
   // Ici, on ne gère plus de lightbox locale : tout passe par PP_AUTH (lightbox commune).
 
 function normalizeCodepaca(v){
-  return String(v ?? '').trim().replace(/\s+/g,'').toUpperCase();
+  return String(v ?? '').trim().toUpperCase();
 }
 
 
