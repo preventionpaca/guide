@@ -19,7 +19,7 @@
   /* palette sombre (portail prévention PACA) */
   --dark-bg:#041221;
   --dark-bg-soft:#07192a;
-  --dark-card:#0b2238;a
+  --dark-card:#0b2238;
   --dark-card-soft:#12263f;
   --dark-border:#1f3b63;
   --dark-text:#e5f0ff;
@@ -5046,7 +5046,8 @@ async function sbWriteAppTry(payloadVariants){
   else if(anon) headers['Authorization'] = 'Bearer ' + anon;
 
   let last = null;
-  for(const payload of (payloadVariants||[])){
+  const __pp_variants = Array.isArray(payloadVariants) ? payloadVariants : [payloadVariants];
+  for (const payload of (__pp_variants||[])) {
     try{
       const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
       const js = await r.json().catch(()=> ({}));
@@ -5323,8 +5324,22 @@ async function applyUA(actions){
         return;
       }
 
-      const payload = { userActions: actions };
-      await sbWriteAppTry(payload);
+      // Conversion userActions -> write-op (op=add/patch/remove) pour compatibilité maximale.
+      for (const a of actions) {
+        const t = a && a[0];
+        const table = a && a[1];
+        const rid = a && a[2];
+        const fields = (a && a[3]) || {};
+        if (t === 'AddRecord') {
+          await sbWriteOp('add', table, null, fields);
+        } else if (t === 'UpdateRecord') {
+          await sbWriteOp('patch', table, rid, fields);
+        } else if (t === 'RemoveRecord') {
+          await sbWriteOp('remove', table, rid, null);
+        } else {
+          console.warn('[applyUA] action non supportée (mode public):', a);
+        }
+      }
     }
   }finally{
     selectionLocked = false;
@@ -7256,7 +7271,25 @@ async function renderEtabDiplDom(rec){
   setNaturalTextLines('di-natural',diLabels);
 }
 
-async function selectRow(id,userClick=false){
+async 
+function keepCursor(){
+  try{
+    const el = document.activeElement;
+    if(!el) return;
+    const isText = (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+    const ss = isText && typeof el.selectionStart === 'number' ? el.selectionStart : null;
+    const se = isText && typeof el.selectionEnd === 'number' ? el.selectionEnd : null;
+    // microtask to restore after DOM updates
+    queueMicrotask(() => {
+      try{
+        if(document.activeElement !== el) el.focus?.({preventScroll:true});
+        if(isText && ss!==null && se!==null) el.setSelectionRange?.(ss,se);
+      }catch(_e){}
+    });
+  }catch(_e){}
+}
+
+function selectRow(id,userClick=false){
   if(selectionLocked && !userClick){keepCursor();return;}
   selectedId = Number(id);
 
