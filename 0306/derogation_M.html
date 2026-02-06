@@ -8,13 +8,7 @@
 <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dérogation travaux réglementés – établissement / diplômes / travaux</title>
-
-  <!-- API Grist -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-
-
-
-  <script>window.PP_REQUIRE_DDFPT=true;</script>
+<script>window.PP_REQUIRE_DDFPT=true;</script>
   <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
 <script>
   // ===============================
@@ -70,7 +64,7 @@
 
       // ✅ Support formats possibles:
       // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
+      if (j.table && typeof j.table === 'object' && Array.isArray(j.table.id)) return j.table;
 
       // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
       if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
@@ -133,65 +127,7 @@
   <!-- CSS commun portail + CSS spécifique dérogation -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-derogation.css" />
-
-  <!-- CSS lightbox code établissement -->
-  <style>
-    #code-modal {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(15,23,42,0.75);
-      z-index: 1000;
-    }
-    #code-modal.hidden {
-      display: none;
-    }
-    .code-modal-box {
-      background: #ffffff;
-      color: #111827;
-      padding: 20px 24px;
-      border-radius: 12px;
-      max-width: 420px;
-      width: 90%;
-      box-shadow: 0 20px 40px rgba(15,23,42,0.45);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .code-modal-title {
-      margin: 0 0 8px;
-      font-size: 1.2rem;
-      font-weight: 600;
-    }
-    .code-modal-text {
-      margin: 0 0 12px;
-      font-size: 0.9rem;
-    }
-    .code-modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 12px;
-    }
-  
-    .pp-etab-change-btn{
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      z-index: 9998;
-      border: 1px solid rgba(27,57,106,.35);
-      background: rgba(255,255,255,.95);
-      color: #1b396a;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 13px;
-      box-shadow: 0 8px 18px rgba(0,0,0,.12);
-      cursor: pointer;
-    }
-    .pp-etab-change-btn:hover{ filter: brightness(.98); }
-</style>
-
-  <!-- Masquage du header en mode impression -->
+<!-- Masquage du header en mode impression -->
   <style>
     @media print {
       .ppp-header {
@@ -221,23 +157,6 @@
   <div id="overlay-loading">
     <div class="spinner"></div>
     <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
-  </div>
-
-  <!-- ===== LIGHTBOX CODE ETABLISSEMENT ===== -->
-  <div id="code-modal" class="hidden">
-    <div class="code-modal-box">
-      <h2 class="code-modal-title">Code établissement</h2>
-      <p class="code-modal-text">
-        Merci de saisir le code de l’établissement pour charger automatiquement sa fiche.
-      </p>
-      <input id="code-etab-input" type="password" class="input" autocomplete="off"
-             placeholder="Saisir le code établissement…">
-      <div class="code-modal-actions">
-  <button id="code-etab-annuler" type="button" class="btn btn-secondary">Annuler</button>
-  <button id="code-etab-valider" type="button" class="btn btn-primary">Valider</button>
-</div>
-
-    </div>
   </div>
 
   <!-- ========= FORMULAIRE DÉROGATION ========= -->
@@ -537,14 +456,6 @@
   const $btnPdf = $('btnPdf');
   const peopleBody = $('people-body');
   const emailRedacteur = $('email_redacteur');
-
-  // Lightbox code établissement
-   // Lightbox code établissement
-  const $codeModal   = $('code-modal');
-  const $codeInput   = $('code-etab-input');
-  const $codeBtn     = $('code-etab-valider');
-  const $codeCancel  = $('code-etab-annuler');
-
 
   /* ===== Connexion Data Layer (Grist OU GitHub) ===== */
 const fetchTable =
@@ -1373,107 +1284,64 @@ try{
     window.print();
   });
 
-    // ===== GESTION LIGHTBOX CODE ETABLISSEMENT =====
-  // Persistance du code établissement (comme PDFT) : partagé entre pages
-  const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
-  function getStoredEtabCode(){ try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; } }
-  function setStoredEtabCode(code){
-    try{
-      const v=(code||'').toString().trim().toUpperCase();
-      if(v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
-    }catch{}
-  }
-  function clearStoredEtabCode(){ try{ localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); }catch{} }
+    
+  // ===== Auth centralisée (PP_CONFIG) + application établissement =====
+  // On laisse PP_CONFIG gérer la lightbox d'identification (token partagé entre pages),
+  // et ici on ne fait "que" appliquer l'établissement au formulaire.
+  const normalizeCodepaca = (v) => (v ?? "").toString().trim().toUpperCase();
 
-  function openCodeModal(){
-    if(!$codeModal) return;
-    $codeModal.classList.remove('hidden');
-    setTimeout(()=>{ $codeInput && $codeInput.focus(); },50);
-  }
-  function closeCodeModal(){
-    if(!$codeModal) return;
-    $codeModal.classList.add('hidden');
-  }
+  function applyEtabFromAuth() {
+    const st = window.PP_AUTH?.get?.();
+    const code = normalizeCodepaca(st?.codepaca || "");
+    const name = (st?.etabName || "").toString().trim();
 
-  function handleCodeSubmit(opts={}){
-    const silent = !!opts.silent;
-    const remember = opts.remember !== false;
+    if (!code) return false;
 
-    if(!hasCodeColumn || !etabCodeToObj.size){
-      if(!silent){
-        alert("Colonne de code établissement indisponible dans la base. Sélection manuelle requise.");
+    // 1) Si la table Etablissements_edi a la colonne Codepaca => on mappe code -> établissement
+    if (hasCodeColumn && etabCodeToObj && etabCodeToObj.size) {
+      const rec = etabCodeToObj.get(code);
+      if (rec?.label) {
+        $q.value = rec.label;
+        onSelectEtab(rec.label);
+        return true;
       }
-      closeCodeModal();
-      $q.readOnly = false;
-      return false;
     }
 
-    const code = ($codeInput.value || '').trim().toUpperCase();
-    if(!code){
-      if(!silent) alert("Merci de saisir le code établissement.");
-      return false;
+    // 2) Secours : si on a le nom officiel dans le token, on tente par libellé (approx)
+    if (name) {
+      $q.value = name;
+      onSelectEtab(name);
+      return true;
     }
 
-    const rec = etabCodeToObj.get(code);
-    if(!rec){
-      if(silent){
-        clearStoredEtabCode();
-        return false;
+    return false;
+  }
+
+  async function ensureAuth() {
+    // Déjà authentifié ?
+    if (window.PP_AUTH?.get?.()) return true;
+
+    // Demande d'accès (PP_CONFIG affichera sa lightbox)
+    if (window.PP_AUTH?.requireDdfpt) {
+      try {
+        await window.PP_AUTH.requireDdfpt();
+      } catch (e) {
+        console.warn("[DEROGATION_M] requireDdfpt error:", e);
       }
-      alert("Code établissement non reconnu.\nVérifiez le code et recommencez.");
-      return false;
+      return !!window.PP_AUTH?.get?.();
     }
 
-    // OK
-    $q.value = rec.label;
-    onSelectEtab(rec.label);
-    if(remember) setStoredEtabCode(code);
-    closeCodeModal();
-    return true;
+    return false;
   }
 
-  if($codeBtn){
-    $codeBtn.addEventListener('click', ()=>handleCodeSubmit({silent:false, remember:true}));
-  }
-  if($codeInput){
-    $codeInput.addEventListener('keydown',e=>{
-      if(e.key==='Enter'){
-        e.preventDefault();
-        handleCodeSubmit({silent:false, remember:true});
-      }
-    });
-  }
-  if ($codeCancel) {
-    $codeCancel.addEventListener('click', () => {
-      closeCodeModal();
-      window.location.href = HOMEPAGE_URL;
-    });
-  }
+  // À chaque changement d'auth (connexion / changement d'établissement), on ré-applique.
+  window.addEventListener("pp:auth-changed", () => {
+    try { applyEtabFromAuth(); } catch {}
+  });
 
-  // Au chargement :
-  // - si un code est déjà mémorisé : tentative d’auto-connexion silencieuse
-  // - sinon : première connexion → lightbox
-  if(hasCodeColumn && etabCodeToObj.size){
-    $q.readOnly = true;
-
-    const stored = getStoredEtabCode();
-    if(stored){
-      if($codeInput) $codeInput.value = stored;
-      closeCodeModal();
-
-      const ok = handleCodeSubmit({silent:true, remember:true});
-      if(!ok){
-        openCodeModal();
-      }
-    }else{
-      openCodeModal();
-    }
-  }else{
-    // fallback : sélection manuelle possible
-    $q.readOnly = false;
-    if($codeModal) $codeModal.classList.add('hidden');
-  }
-
+  // Au chargement, on s'assure qu'on est identifié puis on applique l'établissement.
+  await ensureAuth();
+  applyEtabFromAuth();
 
 
   $overlay.classList.add('hidden');
@@ -1481,6 +1349,5 @@ try{
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
-<button id="pp-etab-change-btn" class="pp-etab-change-btn" type="button">Changer d’établissement</button>
 </body>
 </html>
