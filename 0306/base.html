@@ -7271,8 +7271,7 @@ async function renderEtabDiplDom(rec){
   setNaturalTextLines('di-natural',diLabels);
 }
 
-async 
-function keepCursor(){
+async function keepCursor(){
   try{
     const el = document.activeElement;
     if(!el) return;
@@ -7289,7 +7288,7 @@ function keepCursor(){
   }catch(_e){}
 }
 
-function selectRow(id,userClick=false){
+async function selectRow(id,userClick=false){
   if(selectionLocked && !userClick){keepCursor();return;}
   selectedId = Number(id);
 
