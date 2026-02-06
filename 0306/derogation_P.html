@@ -72,7 +72,9 @@
 
       // ✅ Support formats possibles:
       // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
+      // 1) { table: {id:[], ...} }  (⚠️ dans notre read-app, j.table est souvent un STRING : le nom de la table)
+      if (j.table && typeof j.table === "object" && Array.isArray(j.table.id)) return j.table;
+
 
       // 2) { rows: [...] } ou { data:[...] }
       if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
@@ -181,6 +183,9 @@
       margin-top: 12px;
     }
   
+    /* ✅ Overlay désactivé */
+    #overlay-loading{display:none !important;}
+
     .pp-etab-change-btn{
       position: fixed;
       right: 14px;
