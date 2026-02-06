@@ -19,7 +19,7 @@
   /* palette sombre (portail prévention PACA) */
   --dark-bg:#041221;
   --dark-bg-soft:#07192a;
-  --dark-card:#0b2238;
+  --dark-card:#0b2238;a
   --dark-card-soft:#12263f;
   --dark-border:#1f3b63;
   --dark-text:#e5f0ff;
@@ -5311,161 +5311,26 @@ async function applyUA(actions){
 
   const hasGristWrite = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.applyUserActions === 'function');
 
-  console.log('[applyUA HYBRID] Tentative d\'écriture:', {
-    hasGristWrite,
-    actions: actions
-  });
+  console.log('[applyUA] write attempt', { hasGristWrite, count: Array.isArray(actions) ? actions.length : 0 });
 
   try{
     if(hasGristWrite){
       await window.grist.docApi.applyUserActions(actions);
     }else{
-      
-// Mode public (GitHub) : on supporte UpdateRecord + AddRecord + RemoveRecord via write-app.
-const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
+      // Mode "public" (GitHub Pages) : on passe par l'Edge Function write-app.
+      if(!Array.isArray(actions) || actions.length === 0){
+        console.log('[applyUA] no actions -> skip');
+        return;
+      }
 
-const updates = new Map(); // rid -> fields merged
-const adds = [];           // {id, fields}
-const removes = [];        // [rid]
-
-(actions || []).forEach(a=>{
-  if(!Array.isArray(a)) return;
-  const typ = a[0];
-  const tbl = a[1];
-  if(String(tbl) !== String(mainTbl)) return; // ignore autres tables en mode public
-  if(typ === 'UpdateRecord'){
-    const rid = Number(a[2]);
-    const upd = a[3] || {};
-    if(!rid) return;
-    const cur = updates.get(rid) || {};
-    Object.assign(cur, upd);
-    updates.set(rid, cur);
-	  }else if(typ === 'AddRecord'){
-	    // Grist: ['AddRecord', table, null, fields]
-	    // En public, certains backends refusent qu'on impose un id.
-	    // On ne force l'id que s'il est explicitement fourni.
-	    const ridNum = Number(a[2]);
-	    const rid = (Number.isFinite(ridNum) && ridNum > 0) ? ridNum : null;
-	    const fields = a[3] || {};
-	    adds.push({ id: null, fields });
-  }else if(typ === 'RemoveRecord'){
-    const rid = Number(a[2]);
-    if(rid) removes.push(rid);
-  }else{
-    throw new Error('Action non supportée en mode public: ' + typ);
-  }
-});
-
-	// 1) Remove
-	for(const rid of removes){
-  // En écriture publique, la suppression est réservée aux comptes authentifiés (token).
-  // write-app de ce portail attend généralement l'opération via querystring ?op=remove et un body {id}.
-  try{
-	    // Essais: certains backends attendent l'id en query sous des noms différents,
-    // et/ou refusent un body non vide.
-    const basePayload = { table: mainTbl, id: rid, recordId: rid, rowId: rid };
-    // 1) query id
-    await sbWriteOp('remove', basePayload, { idKey:'id', minimalBody:true });
-    // 2) query recordId
-    await sbWriteOp('remove', basePayload, { idKey:'recordId', minimalBody:true });
-    // 3) query rowId
-    await sbWriteOp('remove', basePayload, { idKey:'rowId', minimalBody:true });
-    // 4) certains backends utilisent op=delete
-    await sbWriteOp('delete', basePayload, { idKey:'id', minimalBody:true });
-
-  }catch(e){
-    // Fallbacks (anciens formats)
-    await sbWriteAppTry([
-	      { table: mainTbl, id: rid, recordId: rid, rowId: rid, op: 'remove' },
-	      { op: 'remove', table: mainTbl, id: rid, recordId: rid },
-	      { action: 'remove', table: mainTbl, id: rid, recordId: rid },
-      { userActions: [['RemoveRecord', mainTbl, rid]] },
-      { actions: [['RemoveRecord', mainTbl, rid]] }
-    ]);
-  }
-}
-
-		// 2) Add
-		for(const it of adds){
-	  // write-app attend souvent ?op=add et body {fields} (id optionnel)
-	  const base = { table: mainTbl, fields: it.fields };
-	  try{
-		    await sbWriteOp('add', base, { forceNoId:true });
-	  }catch(e){
-	    const id = it.id || null;
-	    // Certains backends attendent les champs au top-level plutôt que sous 'fields'.
-	    const flat = { table: mainTbl, ...it.fields };
-	    await sbWriteAppTry([
-		      { ...base, op: 'add' },
-		      { ...flat, op: 'add' },
-		      { op: 'add', ...base },
-		      { action: 'add', ...base },
-	      { userActions: [['AddRecord', mainTbl, id, it.fields]] },
-	      { actions: [['AddRecord', mainTbl, id, it.fields]] }
-	    ]);
-	  }
-	}
-
-// 3) Update
-if(updates.size){
-  for(const [rid, fields] of updates.entries()){
-    // sbWrite attend un token user (pp_token). Si absent, on tente write-app.
-    try{
-      await sbWrite(rid, fields);
-    }catch(e){
-      await sbWriteAppTry([
-        { op:'update', table: mainTbl, id: rid, fields },
-        { action:'update', table: mainTbl, id: rid, fields },
-        { userActions: [['UpdateRecord', mainTbl, rid, fields]] },
-        { actions: [['UpdateRecord', mainTbl, rid, fields]] }
-      ]);
+      const payload = { userActions: actions };
+      await sbWriteAppTry(payload);
     }
-  }
-}
-
-	// En mode public, certaines actions (ex: historique sur une table non exposée)
-	// peuvent être ignorées. On ne bloque pas l'action principale pour autant.
-	if(!updates.size && !adds.length && !removes.length){
-	  console.warn('[applyUA] aucune action applicable (mode public) — ignoré');
-	  return;
-	}
-    }
-
-    // MAJ immédiate du cache local (évite "ça n'a pas enregistré")
-    try{
-      const mainTbl = (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
-      (actions || []).forEach(a => {
-        if(!Array.isArray(a)) return;
-        const typ = a[0];
-        if(typ !== 'UpdateRecord') return;
-        const tbl = a[1];
-        const rid = Number(a[2]);
-        const upd = a[3] || {};
-        if(String(tbl) !== String(mainTbl) || !rid || !upd) return;
-        const cur = (MAP && MAP.get(rid)) ? MAP.get(rid) : ((window.ROW && Number(window.ROW.id)===rid) ? window.ROW : null);
-        if(cur){
-          Object.assign(cur, upd);
-          try{ MAP && MAP.set(rid, cur); }catch(e){}
-          if(window.ROW && Number(window.ROW.id)===rid){ Object.assign(window.ROW, upd); }
-        }
-      });
-    }catch(e){
-      console.warn('[applyUA HYBRID] Erreur mise à jour cache local:', e);
-    }
-
-    try{ ppToast('Modification enregistrée'); }catch(e){}
-  } finally {
+  }finally{
     selectionLocked = false;
   }
 }
 
-function keepCursor(){
-  try{ if(selectedId!=null) window.grist.setCursorPos({rowId:Number(selectedId)});}catch{}
-}
-
-/* ==========================================================
-   HISTORIQUE
-   ========================================================== */
 async function logHistory(action, {
   equipId,
   equipName,
@@ -6334,111 +6199,53 @@ function initPersoAutosave(){
 }
 
 
-async function savePersoNow(){
-  console.log('[PERSO-SAVE] 🔥🔥🔥 savePersoNow() APPELÉE 🔥🔥🔥');
-  const msg = document.getElementById('persoMsg');
-  const code = getEffectivePersoCode();
-  
-  // 🔥 NOUVEAU : Chercher l'équipement actuel dans plusieurs sources
-  let currentEquip = null;
-  
-  if(window.currentRec && (window.currentRec.id || window.currentRec.rowId)){
-    currentEquip = window.currentRec;
-    console.log('[PERSO-SAVE] ✅ Equipement trouvé via window.currentRec');
-  } else if(typeof ROW !== 'undefined' && ROW && (ROW.id || ROW.rowId)){
-    currentEquip = ROW;
-    console.log('[PERSO-SAVE] ✅ Equipement trouvé via ROW (fallback)');
-  } else if(window.grist && window.grist.selectedRecord){
-    currentEquip = window.grist.selectedRecord;
-    console.log('[PERSO-SAVE] ✅ Equipement trouvé via grist.selectedRecord (fallback 2)');
-  }
-  
-  console.log('[PERSO v15.4] savePersoNow appelé:', {
-    code: code,
-    has_currentRec: !!window.currentRec,
-    has_ROW: !!(typeof ROW !== 'undefined' && ROW),
-    has_selectedRecord: !!(window.grist && window.grist.selectedRecord),
-    currentEquip_found: !!currentEquip,
-    currentEquip_id: currentEquip ? (currentEquip.id || currentEquip.rowId) : null,
-    has_grist: !!window.grist,
-    has_docApi: !!(window.grist && window.grist.docApi),
-    has_applyUserActions: !!(window.grist && window.grist.docApi && window.grist.docApi.applyUserActions)
-  });
-  
-  if(!code){ 
-    if(msg) msg.textContent = 'Établissement cible manquant.'; 
-    console.warn('[PERSO v15.4] Code établissement manquant');
-    return; 
-  }
-  if(!currentEquip){ 
-    if(msg) msg.textContent = 'Aucun équipement sélectionné.'; 
-    console.error('[PERSO-SAVE] ❌ Aucun équipement trouvé (ni currentRec, ni ROW, ni selectedRecord)');
-    return; 
-  }
-
-  const equipId = Number(currentEquip.id || currentEquip.rowId || currentEquip);
-
-  const payload = {
-    [COL_PERSO_CODE]: code,
-    [COL_PERSO_EQUIP]: equipId,
-    [COL_PERSO_REF]:  (document.getElementById('perso-reference')?.value || '').trim(),
-    [COL_PERSO_ATEL]: (document.getElementById('perso-atelier')?.value || '').trim(),
-    [COL_PERSO_ANNEE]:(document.getElementById('perso-annee')?.value || '').trim(),
-    [COL_PERSO_NOTES]:(document.getElementById('perso-notes')?.value || '').trim(),
-  };
-
-  console.log('[PERSO v15.4] Payload à sauvegarder:', payload);
-
+async function savePersoNow(opts = {}) {
+  const { force = false } = opts || {};
   try{
-    await ensurePersoLoaded(false);
+    const code = (window.PP_ETAB_CODE || '').trim();
+    const equipId = Number(window.PP_CURRENT_EQUIP_ID || 0);
+    if(!code || !equipId){
+      throw new Error('Contexte incomplet (établissement / équipement)');
+    }
+
+    const ref   = (qs('#perso-reference')?.value || '').trim();
+    const atel  = (qs('#perso-atelier')?.value || '').trim();
+    const annee = (qs('#perso-annee')?.value || '').trim();
+    const notes = (qs('#perso-notes')?.value || '').trim();
+
+    const payload = {
+      Etablissement_code_paca: code,
+      Equipement_id: equipId,
+      Reference: ref,
+      Atelier: atel,
+      Annee: annee,
+      Notes: notes,
+      Derniere_mise_a_jour: new Date().toISOString(),
+    };
+
     const key = persoKey(code, equipId);
     const existing = PERSO_INDEX.get(key);
-    
-    console.log('[PERSO v15.4] Enregistrement existant:', existing ? `id=${existing.id}` : 'nouveau');
 
-    // Écriture Grist (préférer applyUserActions, fallback update/add)
-    const api = (window.grist && grist.docApi) ? grist.docApi : null;
-    if(!api){ 
-      throw new Error('docApi indisponible'); 
-    }
-
-    if(typeof api.applyUserActions === 'function'){
-      if(existing && existing.id){
-        console.log('[PERSO v15.4] 🔥 TENTATIVE UpdateRecord:', TABLE_PERSO, existing.id);
-        await api.applyUserActions([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
-        console.log('[PERSO v15.4] ✅ UpdateRecord réussi !');
-      }else{
-        console.log('[PERSO v15.4] 🔥 TENTATIVE AddRecord:', TABLE_PERSO);
-        await api.applyUserActions([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
-        console.log('[PERSO v15.4] ✅ AddRecord réussi !');
-      }
-    }else if(typeof api.updateRecord === 'function' && typeof api.addRecord === 'function'){
-      if(existing && existing.id){
-        console.log('[PERSO v15.4] 🔥 TENTATIVE updateRecord (fallback):', TABLE_PERSO, existing.id);
-        await api.updateRecord(TABLE_PERSO, existing.id, payload);
-        console.log('[PERSO v15.4] ✅ updateRecord réussi !');
-      }else{
-        console.log('[PERSO v15.4] 🔥 TENTATIVE addRecord (fallback):', TABLE_PERSO);
-        await api.addRecord(TABLE_PERSO, payload);
-        console.log('[PERSO v15.4] ✅ addRecord réussi !');
-      }
+    if(existing && existing.id){
+      await applyUA([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
     }else{
-      throw new Error("Aucune méthode d'écriture Grist disponible");
+      await applyUA([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
     }
 
-    await ensurePersoLoaded(true);
-    const saved = PERSO_INDEX.get(key);
-    if(saved) fillPersoUI(saved);
-    if(msg) msg.textContent = 'Enregistré.';
-    setTimeout(()=>{ if(msg && msg.textContent==='Enregistré.') msg.textContent=''; }, 1200);
+    // Recharger l'index perso pour refléter la dernière écriture
+    await ensurePersoLoaded({ force: true });
 
-    // Mise à jour de la fiche de poste si elle est ouverte
-    try{ if(document.getElementById('dlgFichePoste')?.getAttribute('aria-hidden')==='false'){ await openFichePosteDialog(); } }catch(e){}
+    // UI feedback
+    const err = qs('#perso-error');
+    if(err) err.textContent = '';
   }catch(e){
-    console.error('[PERSO v15.4] ❌ Erreur sauvegarde:', e);
-    if(msg) msg.textContent = "Erreur d'enregistrement. Vérifiez les droits d'écriture et la console.";
+    console.error('[PERSO] savePersoNow error', e);
+    const err = qs('#perso-error');
+    if(err) err.textContent = "Erreur d'enregistrement. Vérifiez les droits d'écriture et la console.";
+    throw e;
   }
 }
+
 
 async function resolveAdminTargetCodeFromLabel(label){
   const v = (label||'').toString().trim();
@@ -7935,9 +7742,9 @@ qs('#btnUpload').addEventListener('click', async () => {
           [COL_PERSO_PHOTO_THMB]: up.thumb
         };
         if (existing && existing.id) {
-          await grist.docApi.applyUserActions([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
+          await applyUA([[ 'UpdateRecord', TABLE_PERSO, existing.id, payload ]]);
         } else {
-          await grist.docApi.applyUserActions([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
+          await applyUA([[ 'AddRecord', TABLE_PERSO, null, payload ]]);
         }
         await ensurePersoLoaded(true);
         await renderPhoto(MAP.get(Number(ROW.id)) || ROW);
