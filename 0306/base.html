@@ -5033,254 +5033,88 @@ function _hashBaseId(){
 }
 
 
-async function sbWriteAppTry(payloadVariants){
-  const token = localStorage.getItem('pp_token') || '';
-  const anon  = (window.PP_SUPABASE_ANON_KEY || window.PP_ANON_KEY || window.PP_SUPABASE_KEY || '').toString();
-  const app   = (window.PP_APP_NAME || 'equipements').toString();
-  const url   = SB_API_WRITE + '?app=' + encodeURIComponent(app);
+async 
+async function sbWriteAppTry(payloadVariants) {
+  const variants = Array.isArray(payloadVariants) ? payloadVariants : [payloadVariants];
+  const app = (window.PP_APP_NAME || "equipements").toString();
+  const url = `${SUPABASE_URL}/functions/v1/write-app?app=${encodeURIComponent(app)}`;
 
-  const headers = { 'Content-Type': 'application/json' };
-  if(anon) headers['apikey'] = anon;
-  // Pour les Edge Functions Supabase, Authorization est souvent requis (Bearer token user si dispo, sinon anon).
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
+  const token = (localStorage.getItem("pp_token") || "").toString();
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  let last = null;
-  const __pp_variants = Array.isArray(payloadVariants) ? payloadVariants : [payloadVariants];
-  for (const payload of (__pp_variants||[])) {
-    try{
-      const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
-      const js = await r.json().catch(()=> ({}));
-      if(r.ok && js && js.ok !== false){
-        return js;
+  let lastErr = null;
+  for (const variant of (variants || [])) {
+    const bodyObj = Array.isArray(variant) ? { userActions: variant } : (variant || {});
+    try {
+      const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(bodyObj) });
+      const text = await res.text().catch(() => "");
+      let resp;
+      try { resp = text ? JSON.parse(text) : {}; } catch { resp = { raw: text }; }
+
+      if (res.ok && (resp?.ok !== false)) {
+        return { ok: true, status: res.status, resp };
       }
-      last = { status: r.status, resp: js, payload };
-      console.warn('[SB write-app] rejected payload', last);
-      try{ console.warn('[SB write-app] resp.json', JSON.stringify(js)); }catch(_){ }
-      try{ console.warn('[SB write-app] payload.json', JSON.stringify(payload)); }catch(_){ }
-    }catch(e){
-      last = { error: String(e), payload };
-      console.warn('[SB write-app] error payload', last);
-    }
-  }
-  const msg = (last && last.resp && (last.resp.error||last.resp.message)) ? (last.resp.error||last.resp.message) : (last && last.error) ? last.error : 'write-app failed';
-  throw new Error(msg);
-}
 
-function getNextLocalId(){
-  try{
-    const ids = [];
-    if(typeof LIST_IDS !== 'undefined' && Array.isArray(LIST_IDS)) LIST_IDS.forEach(x=>ids.push(Number(x)));
-    if(typeof MAP !== 'undefined' && MAP && typeof MAP.keys === 'function'){
-      for(const k of MAP.keys()){ ids.push(Number(k)); }
-    }
-    const maxId = Math.max(0, ...ids.filter(n=>Number.isFinite(n)));
-    return maxId + 1;
-  }catch(e){
-    return Date.now();
-  }
-}
-
-async function sbFetchTable(table){
-  const t = String(table||'').trim();
-  const wantsFull = (t === SB_TABLE_MAIN) || (typeof TBL_MAIN !== 'undefined' && t === String(TBL_MAIN)) ||
-                    /dipl|dom|sect|admin|dreets|etab/i.test(t);
-  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(t)
-            + (wantsFull ? '&full=1' : '')
-            + '&v=2';
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  const headers = {};
-  if(anon) headers['apikey'] = anon;
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  let r=null, j=null, lastErr=null;
-  for(let attempt=0; attempt<3; attempt++){
-    try{
-      const u = url + (attempt?('&retry=' + attempt + '&ts=' + Date.now()):'');
-      r = await fetch(u, { method:'GET', headers, credentials:'omit', cache:'no-store' });
-      j = await r.json().catch(()=>null);
-      if(j && j.ok) { lastErr=null; break; }
-      lastErr = new Error((j && (j.error||j.message)) ? (j.error||j.message) : ('Lecture impossible (Supabase) HTTP ' + (r?r.status:'?')));
-    }catch(e){
+      console.warn("[SB write-app] rejected payload", { status: res.status, resp, payload: bodyObj });
+      lastErr = new Error(resp?.error || resp?.message || `write-app ${res.status}`);
+      lastErr._status = res.status;
+      lastErr._resp = resp;
+    } catch (e) {
+      console.warn("[SB write-app] fetch failed", e);
       lastErr = e;
     }
   }
-  if(lastErr) throw lastErr;
-  // Compat: records[{id,fields}] ou items[{...}] ou rows[{...}]
-  const raw = j.records || j.items || j.rows || [];
-  const rows = (raw || []).map(rec=>{
-    if(rec && typeof rec === 'object'){
-      if('fields' in rec && rec.fields && typeof rec.fields === 'object'){
-        return { id: Number(rec.id), ...(rec.fields||{}) };
-      }
-      if('id' in rec) return { ...rec, id: Number(rec.id) };
-    }
-    return rec;
-  });
-  return rows;
+
+  throw (lastErr || new Error("write-app failed"));
 }
 
+async function sbWriteOp(op, a, b, c) {
+  const _op = (op || "patch").toString().toLowerCase();
 
-async function sbFetchRow(table, id){
-  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(String(table||''))
-            + '&id=' + encodeURIComponent(String(id));
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  const headers = {};
-  if(anon) headers['apikey'] = anon;
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  const r = await fetch(url, { method:'GET', headers, credentials:'omit' });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + table));
+  // Support both signatures:
+  // 1) sbWriteOp(op, table, id, fields)
+  // 2) sbWriteOp(op, {table, id, fields|payload|data|userActions})
+  let table, id, fields, userActions;
 
-  if(j.item) return j.item; // ancien format possible
-  if(j.record) return { id: j.record.id, ...(j.record.fields||{}) };
-  // parfois la function renvoie {items:[...]} même pour un id
-  if(Array.isArray(j.items) && j.items[0]) return j.items[0];
-  if(Array.isArray(j.records) && j.records[0]) return { id: j.records[0].id, ...(j.records[0].fields||{}) };
-  return null;
-}
-
-async function sbFetchList(){
-  return sbFetchTable(SB_TABLE_MAIN);
-}
-
-async function sbFetchOne(id){
-  return sbFetchRow(SB_TABLE_MAIN, id);
-}
-
-
-function sbRecToRow(rec){
-  try{
-    if(!rec) return null;
-
-    // Compat: rec peut déjà être "flatten" {id, ...cols} OU être {id, fields:{...}}
-    const id = Number(rec.id);
-    let row = null;
-
-    if(rec.fields && typeof rec.fields === 'object'){
-      row = { id, ...(rec.fields||{}) };
-    }else{
-      // déjà aplati
-      row = { ...rec };
-      row.id = id;
-      // au cas où un vieux format traîne
-      if(row.fields){ 
-        try{ Object.assign(row, row.fields||{}); }catch(e){} 
-        delete row.fields;
-      }
-    }
-    return row;
-  }catch(e){ return null; }
-}
-
-
-async function sbWrite(id, fields){
-  const token = localStorage.getItem('pp_token') || '';
-  if(!token) throw new Error('Non authentifié (token absent).');
-  const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
-    method:'POST',
-    headers:(()=>{
-      const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-      const h = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
-      if(anon) h['apikey'] = anon;
-      return h;
-    })(),
-    body: JSON.stringify({ id: Number(id), fields: fields || {} })
-  });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Écriture impossible (Supabase)');
-  return j;
-}
-
-
-// write-app "ops" (certains backends n'acceptent pas les UserActions, mais acceptent op=add/delete)
-async function sbWriteOp(op, payload, opts){
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  if(!token) throw new Error('Non authentifié (token absent).');
-  const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  // Certains backends attendent aussi la table dans l'URL ou le body.
-  const tbl = (payload && payload.table) ? String(payload.table) : (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? String(TBL_MAIN) : 'Liste_des_equipements';
-    // Normalisation op
-  const _opRaw = String(op||'').toLowerCase();
-  const _op = (_opRaw === 'delete') ? 'remove' : _opRaw;
-  const urlBase = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
-            + '&op=' + encodeURIComponent(_op)
-            + '&table=' + encodeURIComponent(tbl);
-  // Certains backends (proxy Grist) lisent l'id uniquement dans la querystring.
-// ATTENTION: pour op=add, on ne DOIT PAS forcer d'id (le backend l'attribue).
-const qId = (payload && (payload.recordId ?? payload.id ?? payload.rid ?? payload.record_id ?? payload.rowId)) ?? null;
-const hasValidId = (qId && Number.isFinite(Number(qId)) && Number(qId) > 0);
-const idKey = (opts && opts.idKey) ? String(opts.idKey) : 'id';
-const forbidId = (opts && opts.forceNoId) ? true : (_op === 'add' || _op === 'insert' || _op === 'create');
-const url = (hasValidId && !forbidId)
-  ? (urlBase + '&' + encodeURIComponent(idKey) + '=' + encodeURIComponent(String(Number(qId))))
-  : urlBase;
-  const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
-  if(anon) headers['apikey'] = anon;
-  const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload || {}) });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok){
-    console.warn('[SB write-op] rejected', {op, url, payload, resp: j});
-    throw new Error(j?.error || ('Écriture op=' + op + ' impossible'));
+  if (a && typeof a === "object" && !Array.isArray(a)) {
+    table = a.table || a.Table || a.t;
+    id = a.id ?? a.recordId ?? a.rowId ?? a.rid ?? b;
+    fields = a.fields || a.payload || a.data || c;
+    userActions = a.userActions;
+  } else {
+    table = a;
+    id = b;
+    fields = c;
   }
-  return j;
-}
 
-async function sbAuth(code){
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const headers = {'Content-Type':'application/json'};
-  // Certaines Edge Functions exigent apikey + Authorization, même pour l'auth
-  if(anon) headers['apikey'] = anon;
-  if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  const r = await fetch(SB_API_AUTH, {
-    method:'POST',
-    headers,
-    body: JSON.stringify({ code: String(code||'').trim() })
-  });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Code invalide');
-  try{
-    localStorage.setItem('pp_token', j.token);
-    localStorage.setItem('pp_role', j.role);
-  }catch(e){}
-  return j;
-}
-
-async function fetchTable(tbl){
-  // Mode Grist (dev / widget) : comportement inchangé
-  if(IS_GRIST && window.grist?.docApi?.fetchTable) return toRows(await window.grist.docApi.fetchTable(tbl));
-  if(IS_GRIST && window.grist?.docApi?.getTable)   return toRows(await window.grist.docApi.getTable(tbl));
-
-  // Mode public : via Supabase Edge Function (read-app)
-  try{
-    const rows = await sbFetchTable(tbl);
-    // Normaliser : s'assurer d'un champ id numérique si possible
-    return rows.map(r=>{
-      if(r && typeof r === 'object' && 'id' in r) return { ...r, id: Number(r.id) };
-      return r;
-    });
-  }catch(e){
-    console.error('[SB] fetchTable failed', tbl, e);
-    return [];
+  if (Array.isArray(userActions)) {
+    return await sbWriteAppTry({ userActions });
   }
+
+  if (!table || typeof table !== "string") {
+    throw new Error("Missing table");
+  }
+
+  if (_op === "add") {
+    return await sbWriteAppTry({ userActions: [["AddRecord", table, null, (fields || {})]] });
+  }
+
+  if (_op === "patch" || _op === "update") {
+    const rid = Number(id);
+    if (!Number.isFinite(rid)) throw new Error("Missing/invalid id");
+    return await sbWriteAppTry({ userActions: [["UpdateRecord", table, rid, (fields || {})]] });
+  }
+
+  if (_op === "remove" || _op === "delete") {
+    const rid = Number(id);
+    if (!Number.isFinite(rid)) throw new Error("Missing/invalid id");
+    return await sbWriteAppTry({ userActions: [["RemoveRecord", table, rid]] });
+  }
+
+  throw new Error(`Unknown op: ${_op}`);
 }
 
-
-async function loadFull(){
-  const rows=await fetchTable(TBL_MAIN);
-  try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
-  try{ console.log('[LIST] label col:', COL_LIB_RUNTIME, 'legacy:', COL_LIB, 'sample keys:', Object.keys(rows[0]||{}).slice(0,20)); }catch(e){}
-  MAP=new Map(rows.map(r=>[Number(r.id),r]));
-}
-
-/* progress */
-const tick=pct=>{pbar.style.width=`${pct}%`;};
-let __ppToastT=null;
 function ppToast(msg){
   const el=document.getElementById('ppSaveToast');
   if(!el) return;
@@ -6220,7 +6054,8 @@ async function savePersoNow(opts = {}) {
     const code = (window.PP_ETAB_CODE || '').trim();
     const equipId = Number(window.PP_CURRENT_EQUIP_ID || 0);
     if(!code || !equipId){
-      throw new Error('Contexte incomplet (établissement / équipement)');
+      console.warn('[PERSO] Contexte incomplet (établissement / équipement) — sauvegarde différée');
+      return { ok:false, skipped:true, reason:'missing_context' };
     }
 
     const ref   = (qs('#perso-reference')?.value || '').trim();
