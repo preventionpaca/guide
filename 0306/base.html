@@ -5015,6 +5015,81 @@ const SB_API_AUTH  = SB_ROOT + '/auth-code';
 const SB_API_WRITE = SB_ROOT + '/write-app';
 const SB_TABLE_MAIN = (typeof TBL_MAIN!=='undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
 
+
+// ----------------------------------------------------------------------------
+// ✅ Fallback public (GitHub Pages) : lecture via Supabase read-app
+//   - Dans Grist: utilise grist.docApi.fetchTable
+//   - Hors Grist: utilise SB_API_READ et transforme {records:[{id,fields}]} -> [{id,...fields}]
+// ----------------------------------------------------------------------------
+async function fetchTable(tableName, opts = {}) {
+  const t = String(tableName || '').trim();
+  if (!t) throw new Error('fetchTable: missing table');
+
+  // --- Grist plugin context ---
+  if (typeof IS_GRIST !== 'undefined' && IS_GRIST && window.grist?.docApi?.fetchTable) {
+    const raw = await window.grist.docApi.fetchTable(t);
+    // Grist retourne un objet colonnes -> arrays, on convertit
+    if (window.grist?.rowsToRecords) return window.grist.rowsToRecords(raw);
+    // fallback ultra simple
+    const ids = (raw?.id || []).map(Number);
+    return ids.map((id, i) => {
+      const row = { id };
+      for (const k of Object.keys(raw || {})) if (k !== 'id') row[k] = raw[k]?.[i];
+      return row;
+    });
+  }
+
+  // --- Public mode (GitHub Pages) ---
+  const app = (window.PP_APP_NAME || 'equipements');
+  const v = opts?.v ?? 2;
+  const full = (opts?.full ?? 1) ? 1 : 0;
+
+  const url = `${SB_API_READ}?app=${encodeURIComponent(app)}&table=${encodeURIComponent(t)}&full=${full}&v=${encodeURIComponent(String(v))}`;
+  const r = await fetch(url, { method: 'GET' });
+  const j = await r.json().catch(() => ({}));
+
+  if (!r.ok || !j?.records) {
+    const msg = j?.error ? String(j.error) : (r.status + ' ' + r.statusText);
+    throw new Error(`[SB] fetchTable failed ${t}: ${msg}`);
+  }
+
+  // j.records: [{id, fields:{...}}]
+  return j.records.map(rec => ({ id: rec.id, ...(rec.fields || {}) }));
+}
+
+// ----------------------------------------------------------------------------
+// ✅ Charge la liste (colonne gauche) + sélection (évite "loadFull is not defined")
+// ----------------------------------------------------------------------------
+async function loadFull(selectId = null) {
+  const rows = await ensureTable(SB_TABLE_MAIN);
+  const libCol = (typeof detectLibCol === 'function') ? detectLibCol(rows) : 'Equipements_ou_produits';
+
+  // MAP: id -> {id,label,row}
+  try { MAP = new Map(); } catch(_) {}
+  if (typeof MAP !== 'undefined') {
+    MAP.clear?.();
+    for (const r of (rows || [])) {
+      const label = (r?.[libCol] ?? '').toString().trim() || '(sans libellé)';
+      MAP.set(r.id, { id: r.id, label, row: r });
+    }
+  }
+
+  if (typeof renderList === 'function') renderList();
+
+  // Détermine l’ID à sélectionner
+  let idToSelect = null;
+  const candidate = (selectId ?? selectedId ?? null);
+
+  if (candidate && MAP?.has?.(candidate)) idToSelect = candidate;
+  if (!idToSelect) {
+    const first = (rows && rows.length) ? rows[0].id : null;
+    if (first != null) idToSelect = first;
+  }
+
+  if (idToSelect != null && typeof selectRow === 'function') {
+    await selectRow(idToSelect);
+  }
+}
 const FORCE_PUBLIC = (new URLSearchParams(location.search).get('forcePublic')==='1') || /github\.io$/i.test(location.hostname);
 const IS_GRIST = !FORCE_PUBLIC && !!(window.grist && window.grist.docApi);
 
