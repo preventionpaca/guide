@@ -149,18 +149,18 @@
         padding-top: 0 !important;
       }
     }
-  </style>
+  
+  /* ✅ Overlay désactivé définitivement */
+  #overlay-loading{display:none !important;}
+  .hidden{display:none !important;}
+</style>
 </head>
 
 <body>
 <div class="page-wrap">
 
  <div id="header-container"></div>
-
-  <!-- ===== OVERLAY CHARGEMENT ===== -->
-  <div id="overlay-loading">
-    <div class="spinner"></div>
-    <div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
+<div>Veuillez patienter (moins de 20&nbsp;secondes), chargement des données…</div>
   </div>
 </div>
   </div>
@@ -435,6 +435,8 @@
   const C_EMAIL_REDACTEUR='email_redacteur';
 
   const $overlay = $('overlay-loading');
+  // ✅ Overlay désactivé (ne bloque jamais)
+  if ($overlay) { try { $overlay.remove(); } catch(e) { $overlay.style.display='none'; } }
   const $hint = $('hint');
   const $q = $('q'), $sugg = $('sugg');
   const $dipBody = $('dip-body');
