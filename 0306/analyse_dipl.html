@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <script>window.PP_APP_NAME = "equipements";</script>
+
   
-  <script>
-    window.PP_APP_NAME = "equipements";
-  </script>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
   <!-- Portail Prévention PACA (GitHub) -->
-  <link rel="stylesheet" href="/pp-core.css" />
-  <link rel="stylesheet" href="/pp-portail.css" />
-  <script src="/pp-config.js"></script>
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
+  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
+  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -368,7 +367,12 @@
         return;
       }
 
-      const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
+      
+      // Auth (si disponible) : ouvre la lightbox et garantit un token partagé entre pages
+      if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
+        try { await window.PP_AUTH.requireDdfpt(); } catch(e) { /* AUTH_REQUIRED = normal */ }
+      }
+const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
       const [diplomeTable, equipTable, travauxTable] = await Promise.all([
         fetchT(DIPLOME_TABLE),
@@ -947,5 +951,6 @@
 
   init();
 </script>
+  <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 </body>
 </html>
