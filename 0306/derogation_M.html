@@ -485,6 +485,7 @@ if (!fetchTable){
 }
 
 let tE, tD, tR, tQ;
+let C_ETAB_CODE_DET, C_ETAB_LABEL_DET, C_ETAB_STATUT_DET;
 try{
   [tE, tD, tR, tQ] = await Promise.all([
     fetchTable(T_ETAB),
@@ -498,9 +499,9 @@ function _keyCI(obj, wanted){
   const w = String(wanted||"").toLowerCase();
   return Object.keys(obj||{}).find(k => String(k).toLowerCase() === w) || null;
 }
-const C_ETAB_CODE_DET   = _keyCI(tE, C_ETAB_CODE)   || _keyCI(tE, "codepaca") || C_ETAB_CODE;
-const C_ETAB_LABEL_DET  = _keyCI(tE, C_ETAB_LABEL)  || _keyCI(tE, "appellation_officielle") || C_ETAB_LABEL;
-const C_ETAB_STATUT_DET = _keyCI(tE, C_ETAB_STATUT) || _keyCI(tE, "statut") || C_ETAB_STATUT;
+C_ETAB_CODE_DET   = _keyCI(tE, C_ETAB_CODE)   || _keyCI(tE, "codepaca") || C_ETAB_CODE;
+C_ETAB_LABEL_DET  = _keyCI(tE, C_ETAB_LABEL)  || _keyCI(tE, "appellation_officielle") || C_ETAB_LABEL;
+C_ETAB_STATUT_DET = _keyCI(tE, C_ETAB_STATUT) || _keyCI(tE, "statut") || C_ETAB_STATUT;
 }catch(e){
   console.error(e);
   $hint.textContent = 'Erreur chargement des données : ' + (e?.message||e);
