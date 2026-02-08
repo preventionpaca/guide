@@ -139,7 +139,7 @@
 <div id="pp-header"></div>
 <script>
   // Injection header commun
-  fetch('pp-header.html', { cache: 'no-store' })
+  fetch('/guide/partials/pp-header.html', { cache: 'no-store' })
     .then(r => r.ok ? r.text() : '')
     .then(t => { if(t) document.getElementById('pp-header').innerHTML = t; })
     .catch(() => {});
@@ -362,10 +362,29 @@
 
   async function init() {
     try {
-      if (!window.PP_fetchTable) {
-        showError("PP_fetchTable indisponible (pp-config.js non chargé).");
-        return;
-      }
+      // Attendre un peu que pp-config s'initialise, ou créer un fallback si besoin.
+if (!window.PP_fetchTable) {
+  // Fallback : si pp-config expose l'URL Supabase read-app, on recrée PP_fetchTable ici.
+  if (window.PP_SB_API_READ && window.PP_APP_NAME) {
+    window.PP_fetchTable = async function(tableName) {
+      const url = `${window.PP_SB_API_READ}?app=${encodeURIComponent(window.PP_APP_NAME)}&table=${encodeURIComponent(tableName)}`;
+      const r = await fetch(url, { method: 'GET' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) throw new Error(j?.error || `read-app failed (${r.status})`);
+      // Compat: certains endpoints renvoient {records}, d'autres {items}
+      return j.records ?? j.items ?? j;
+    };
+  } else {
+    // Attente courte (pp-config chargé mais initialisation asynchrone)
+    for (let i = 0; i < 20 && !window.PP_fetchTable; i++) {
+      await new Promise(res => setTimeout(res, 50));
+    }
+  }
+}
+if (!window.PP_fetchTable) {
+  showError("PP_fetchTable indisponible (pp-config/PP_SB_API_READ non disponible).");
+  return;
+}
 
       
       // Auth (si disponible) : ouvre la lightbox et garantit un token partagé entre pages
@@ -951,21 +970,6 @@ const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
   init();
 </script>
-  <!-- ===== JS commun pour le header (thème + liens) ===== -->
-<script>
-  window.PP_PAGE = 'ddfpt';
-  window.PP_LINKS = {
-    home:   'https://preventionpaca.github.io/guide/#home',
-    portal: 'https://preventionpaca.github.io/guide/#home',
-    admin:  'https://preventionpaca.github.io/guide/#admin',
-    ddfpt:  'https://preventionpaca.github.io/guide/#ddfpt'
-  };
-  window.PP_HEADER_TEXT = {
-    title: 'PORTAIL PRÉVENTION PACA',
-    subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
-  };
-</script>
-<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
-
+  <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 </body>
 </html>
