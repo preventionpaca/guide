@@ -1004,9 +1004,13 @@ console.log("[ETAB] etabCodeToObj.size=", etabCodeToObj.size, "sample=", Array.f
     const byTrav=new Map();
 
     for(const r of rows){
-      const label=r.trav||'Travaux';
-      const keyTrav=r.travN||hardNorm(label);
-      const equi=(r.equi&&r.equi.trim())?r.equi.trim():'—';
+      // ⛔ Ne pas afficher la catégorie générique "Travaux" (= équipements non catégorisés)
+      const label = (r.trav && String(r.trav).trim()) ? String(r.trav).trim() : '';
+      if(!label) continue;
+      const labelN = hardNorm(label);
+      if(labelN === 'travaux') continue;
+      const keyTrav = r.travN || labelN;
+const equi=(r.equi&&r.equi.trim())?r.equi.trim():'—';
       const nat=(r.nat&&r.nat.trim())?r.nat.trim():'—';
 
       if(!byTrav.has(keyTrav)) byTrav.set(keyTrav,{label,pairs:new Map()});
