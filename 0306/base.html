@@ -4,10 +4,18 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Equipements — DDFPT / ISST (Supabase SB_*)</title>
+<title>Equipements — DDFPT / DREETS (Supabase SB_*)</title>
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
   <!-- grist-plugin-api removed for public GitHub page -->
 <script>
+/* PATCH v15.33 — normalize rows iterable (rows|records|items) */
+function __pp_rowsIterable(rows){
+  if (Array.isArray(rows)) return rows;
+  if (rows && Array.isArray(rows.records)) return rows.records;
+  if (rows && Array.isArray(rows.items)) return rows.items;
+  return [];
+}
+
   console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -40,7 +48,7 @@
   --accent-green:#16a34a;
   --accent-orange:#ea580c;
 
-  /* DDFPT / ISST panneaux */
+  /* DDFPT / DREETS panneaux */
   --ddfpt-border:#60a5fa;
   --ddfpt-bg-soft:rgba(37,99,235,0.08);
   --dreets-border:#22c55e;
@@ -56,7 +64,7 @@
 
   --badge-danger:#b91c1c;
 
-  /* Rose fluo ISST (régime "A compléter par la ISST") */
+  /* Rose fluo DREETS (régime "A compléter par la DREETS") */
   --dreets-pink:#db2777;
   --dreets-pink-soft:#f9a8d4;
 }
@@ -166,7 +174,7 @@ body{
   z-index:1;  /* Inférieur au z-index:10 du bloc caractéristiques */
 }
 
-/* ISST global (panneau vert du bas) */
+/* DREETS global (panneau vert du bas) */
 .panel-dreets{
   border-color:var(--dreets-border);
   background:
@@ -176,7 +184,7 @@ body{
   z-index:5;  /* Inférieur au z-index:10 du bloc caractéristiques */
 }
 
-/* variante « chevauchement » : panneau ISST remonte sous le DDFPT */
+/* variante « chevauchement » : panneau DREETS remonte sous le DDFPT */
 .panel-dreets.panel-dreets-overlap{
   /* Positionnement demandé : sous "Caractéristiques", sans chevauchement */
   margin-top:0;
@@ -209,7 +217,7 @@ body{
 .panel-title span:first-child{
   font-size:13px;
 }
-/* Bouton "Mode ajout" collé au mot ISST */
+/* Bouton "Mode ajout" collé au mot DREETS */
 .panel-dreets .panel-title-bar{
   justify-content:flex-start;
 }
@@ -252,7 +260,7 @@ body[data-theme="light"] .delete-pill{
   position:relative;
   padding-right:670px;      /* réserve pour le bloc vert caractéristiques élargi */
   overflow:visible;
-  margin-bottom:100px;      /* marge augmentée pour que les bordures verticales touchent le ISST */
+  margin-bottom:100px;      /* marge augmentée pour que les bordures verticales touchent le DREETS */
 }
 
 /* ================== BLOC CARACTÉRISTIQUES (encadré vert – ancienne / nouvelle variante) ================== */
@@ -265,12 +273,12 @@ body[data-theme="light"] .delete-pill{
   margin:0;
   overflow:visible;
   z-index:10;
-  padding-bottom:40px;  /* Prolonge les bordures verticales jusqu'au ISST */
+  padding-bottom:40px;  /* Prolonge les bordures verticales jusqu'au DREETS */
 
   border-top:2px solid var(--dreets-border);
   border-left:2px solid var(--dreets-border);
   border-right:2px solid var(--dreets-border);
-  border-bottom:0;                 /* pour que le cadre ISST du dessous "touche" */
+  border-bottom:0;                 /* pour que le cadre DREETS du dessous "touche" */
   border-radius:14px 14px 0 0;
   background:
     linear-gradient(to bottom, var(--dreets-bg-soft), transparent 22%),
@@ -287,12 +295,12 @@ body[data-theme="light"] .delete-pill{
   margin:0;
   overflow:visible;
   z-index:10;
-  padding-bottom:40px;  /* Prolonge les bordures verticales jusqu'au ISST */
+  padding-bottom:40px;  /* Prolonge les bordures verticales jusqu'au DREETS */
 
   border-top:2px solid var(--dreets-border);
   border-left:2px solid var(--dreets-border);
   border-right:2px solid var(--dreets-border);
-  border-bottom:0;                 /* pour que le cadre ISST du dessous "touche" */
+  border-bottom:0;                 /* pour que le cadre DREETS du dessous "touche" */
   border-radius:14px 14px 0 0;
   background:
     linear-gradient(to bottom, var(--dreets-bg-soft), transparent 22%),
@@ -301,7 +309,7 @@ body[data-theme="light"] .delete-pill{
 }
 }
 
-/* ================== PANEL ISST (cadre vert du bas) ================== */
+/* ================== PANEL DREETS (cadre vert du bas) ================== */
 .panel-dreets{
   position:relative;
   border:2px solid var(--dreets-border);
@@ -590,7 +598,7 @@ input,textarea,select,button{
   margin-bottom:4px;
 }
 
-/* bloc "Régime" rose quand "A compléter par la ISST" */
+/* bloc "Régime" rose quand "A compléter par la DREETS" */
 #regimeBlock.regime-dreets-active{
   background:var(--dreets-pink-soft);
   border-color:var(--dreets-pink);
@@ -1177,7 +1185,7 @@ body[data-theme="dark"] .file-trigger{color:#93c5fd;}
   padding:0 4px;
 }
 
-/* ======================= LIGHTBOX MODE AJOUT ISST ======================= */
+/* ======================= LIGHTBOX MODE AJOUT DREETS ======================= */
 #dlgAddModeDreets{
   position:fixed;
   inset:0;
@@ -3148,7 +3156,7 @@ html.fp-exporting-doc #fpWrapper #fpMachineName{
 #ppSaveToast.show{ opacity:1; transform:translateY(0); }
 
 
-/* ====== ISST : 2 colonnes (gauche = workflow / droite = caractéristiques produit) ====== */
+/* ====== DREETS : 2 colonnes (gauche = workflow / droite = caractéristiques produit) ====== */
 .dreets-layout{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -3168,9 +3176,9 @@ html.fp-exporting-doc #fpWrapper #fpMachineName{
 
 
 
-/* ================== PATCH V32 (mise en page ISST + fiche de poste) ================== */
+/* ================== PATCH V32 (mise en page DREETS + fiche de poste) ================== */
 
-/* ISST : panneau sous le DDFPT, dans la colonne de droite uniquement */
+/* DREETS : panneau sous le DDFPT, dans la colonne de droite uniquement */
 #rightPane{display:flex; flex-direction:column;}
 .panel.panel-dreets{margin-top:4px;}  /* Réduit de 14px à 4px pour coller au DDFPT */
 .dreets-layout{
@@ -3275,13 +3283,13 @@ html.fp-exporting-doc #fpWrapper #fpMachineName{
 
 
 
-/* ISST : Limiter la hauteur de la liste des travaux */
+/* DREETS : Limiter la hauteur de la liste des travaux */
 .trav-list{
   
   overflow-y:auto;
 }
 
-/* ISST : Ajuster les hauteurs des textareas pour équilibrer avec Travaux + Régime */
+/* DREETS : Ajuster les hauteurs des textareas pour équilibrer avec Travaux + Régime */
 #precisions.dreets-tall-textarea{
   min-height:140px !important;  /* Augmenté pour équilibrer */
 }
@@ -3899,7 +3907,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   <label class="kind-mode active"><input type="radio" name="kindMode" value="all" checked> Tous</label>
   <label class="kind-mode"><input type="radio" name="kindMode" value="equipement"> Equipements</label>
   <label class="kind-mode"><input type="radio" name="kindMode" value="produit"> Produits</label>
-  <label class="kind-mode"><input type="radio" name="kindMode" value="travaux"> Travaux réglementés</label>
 </div>
 <div class="row row-nowrap">
 <input class="text-input" id="filter" placeholder="Filtrer…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search">
@@ -3917,7 +3924,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="color-dot" data-col="red" title="Interdiction absolue"></div>
 <div class="color-dot" data-col="orange" title="Travaux soumis à dérogation"></div>
 <div class="color-dot" data-col="green" title="Travaux autorisés"></div>
-<div class="color-dot" data-col="pink" title="À compléter par l'ISST"></div>
+<div class="color-dot" data-col="pink" title="À compléter par la DREETS"></div>
 </div>
 </div>
 <div id="equip-count">0 équipements affichés</div>
@@ -3959,7 +3966,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
           Mode ajout activé pour <span id="addModeEtab">—</span>
 </div>
 <div class="block">
-<div class="block-title"><div class="type-inline"><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeEquipMain" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeProduitMain" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeTravauxMain" value="travaux"> Travaux réglementés</label></div></div>
+<div class="block-title"><div class="type-inline"><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeEquipMain" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeProduitMain" value="produit"> Produit</label></div></div>
 <div class="equip-lib-wrapper">
 <input class="input-pill" id="f-lib">
 <div class="regime-badge regime-on-lib" id="regimeToken">—</div>
@@ -4006,15 +4013,15 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="block-title">Diplômes concernés</div>
 <div class="natural-multi" id="di-natural"></div>
 </div>
-<!-- VALIDATION ISST (demande par établissement / admin) -->
+<!-- VALIDATION DREETS (demande par établissement / admin) -->
 <div class="block" id="dreetsRequestBlock">
-  <div class="block-title">Validation ISST</div>
+  <div class="block-title">Validation DREETS</div>
   <div class="row" style="align-items:center; gap:10px; flex-wrap:wrap;">
-    <button class="btn btn-small btn-pill-orange" id="btnAskDreets" type="button">À compléter par ISST</button>
+    <button class="btn btn-small btn-pill-orange" id="btnAskDreets" type="button">A compléter par la Dreets</button>
     <div class="status" id="dreetsAskMsg"></div>
   </div>
   <div style="font-size:12px; opacity:.75; margin-top:6px;">
-    Ce bouton sélectionne automatiquement le régime "À compléter par ISST" et envoie une notification (FormSubmit).
+    Ce bouton sélectionne automatiquement le régime "A compléter par la Dreets" et envoie une notification (FormSubmit).
   </div>
 </div>
 
@@ -4094,7 +4101,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   
   <!-- Bloc Caractéristiques à droite du PHOTO/VGP -->
   <div class="block dreets-overlap-block" id="dreetsProductBlock">
-    <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par l'ISST</span></div>
+    <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par la DREETS</span></div>
     <div class="dreets-product-grid">
 
 <div class="dreets-field">
@@ -4126,18 +4133,18 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 
 </div><!-- fin panel DDFPT -->
 
-<!-- ================== PANEL ISST (cadre vert) ================== -->
+<!-- ================== PANEL DREETS (cadre vert) ================== -->
 <div class="panel panel-dreets panel-dreets-overlap">
 <div class="panel-title-bar">
 <div class="panel-title">
 <span>▸</span>
-<span>ISST</span>
+<span>DREETS</span>
 </div>
 <div class="panel-actions">
-<button class="theme-toggle" id="dreetsAddModeBtn" type="button">MODE AJOUT ISST</button>
+<button class="theme-toggle" id="dreetsAddModeBtn" type="button">MODE AJOUT DREETS</button>
 </div>
 </div>
-<!-- Le reste du panneau ISST (sous la zone imbriquée) -->
+<!-- Le reste du panneau DREETS (sous la zone imbriquée) -->
 <div class="dreets-layout">
   <div class="dreets-left">
 <div class="block">
@@ -4165,9 +4172,9 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
   </div><!-- /.dreets-right -->
 </div><!-- /.dreets-layout -->
-</div><!-- fin panel ISST -->
-</div><!-- fin panel ISST -->
-<!-- ================== /PANEL ISST ================== -->
+</div><!-- fin panel DREETS -->
+</div><!-- fin panel DREETS -->
+<!-- ================== /PANEL DREETS ================== -->
 
 
 
@@ -4231,7 +4238,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="fp-banner" id="fpHeaderBar">
   <div class="fp-banner-left" id="fpHeaderLeft">
     <div class="fp-banner-title">FICHE DE POSTE</div>
-    <div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input type="radio" name="fpKind" id="fpKindEquip" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindProduit" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindTravaux" value="travaux"> Travaux réglementés</label></div>
+    <div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input type="radio" name="fpKind" id="fpKindEquip" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindProduit" value="produit"> Produit</label></div>
     <div class="fp-equip-name" id="fpMachineName">—</div>
   </div>
 
@@ -4382,14 +4389,14 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 </div>
 </div>
-<!-- Lightbox MODE AJOUT ISST -->
+<!-- Lightbox MODE AJOUT DREETS -->
 <div aria-hidden="true" id="dlgAddModeDreets">
 <div class="addmode-inner">
-<div class="addmode-title">🔐 Activer le mode ISST</div>
+<div class="addmode-title">🔐 Activer le mode DREETS</div>
 <div class="addmode-body">
-      Saisir le <strong>code ISST</strong> pour déverrouiller l'encadré « ISST » (travaux réglementés, régime, précisions, observations).
+      Saisir le <strong>code DREETS</strong> pour déverrouiller l'encadré « DREETS » (travaux réglementés, régime, précisions, observations).
     </div>
-<input autocomplete="off" class="addmode-input" id="dreets-code" type="password" placeholder="Code ISST…"/>
+<input autocomplete="off" class="addmode-input" id="dreets-code" type="password" placeholder="Code DREETS…"/>
 <div class="addmode-error" id="dreets-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small btn-cancel" id="dreets-cancel" type="button">Annuler</button>
@@ -4402,7 +4409,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-inner">
 <div class="addmode-title">👤 Mode administrateur</div>
 <div class="addmode-body">
-      Saisir un <strong>code administrateur</strong> pour déverrouiller tous les blocs (Mode ajout et ISST).
+      Saisir un <strong>code administrateur</strong> pour déverrouiller tous les blocs (Mode ajout et DREETS).
     </div>
 <input autocomplete="off" class="addmode-input" id="admin-mode-code" type="password" placeholder="Code administrateur…"/ inputmode="numeric">
 <div class="addmode-error" id="admin-mode-error"></div>
@@ -4412,7 +4419,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 </div>
 </div>
-<!-- Lightbox confirmation effacement TR ISST -->
+<!-- Lightbox confirmation effacement TR DREETS -->
 <div aria-hidden="true" id="dlgClearTravaux">
 <div class="addmode-inner">
 <div class="addmode-title">Effacer tous les travaux réglementés</div>
@@ -4479,7 +4486,7 @@ function detectLibCol(rows){
   // Prefer columns that exist AND are populated
   for(const c of cands){
     let seen = 0;
-    for(const r of (rows||[])){
+    for(const r of (__pp_rowsIterable(rows))){
       if(r && (c in r)){
         const v = (r[c] ?? '').toString().trim();
         if(v){ seen++; if(seen >= 2) return c; } // quick confidence
@@ -4488,7 +4495,7 @@ function detectLibCol(rows){
   }
   // Otherwise just pick the first existing candidate
   for(const c of cands){
-    for(const r of (rows||[])){
+    for(const r of (__pp_rowsIterable(rows))){
       if(r && (c in r)) return c;
     }
   }
@@ -4535,7 +4542,7 @@ const COL_TMP_PREV  ='Tampon_prevention';
 const COL_TMP_ENV   ='Tampon_environnement';
 const COL_TMP_PREREQ='Tampon_pre_requis';
 
-/* Colonnes ISST (caractéristiques produit / agent chimique) */
+/* Colonnes DREETS (caractéristiques produit / agent chimique) */
 const COL_PRECI='Precisions_regime_d_interdiction_derogation';
 const COL_OBS  ='Observations_particulieres';
 const COL_VGP  ='Verification_Generale_Periodique';
@@ -4719,7 +4726,7 @@ let DREETS_UNLOCKED=false;
 /* Mode admin global */
 let ADMIN_MODE=false;
 
-// --- Synchronisation des flags "mode" pour les blocs ajoutés (perso, bouton ISST, export) ---
+// --- Synchronisation des flags "mode" pour les blocs ajoutés (perso, bouton DREETS, export) ---
 // Le code historique utilise des variables locales (ADMIN_MODE, ADD_MODE_ACTIVE...),
 // mais certains ajouts s'appuient sur window.*. On garde les deux cohérents.
 function __ppSyncWindowModes(){
@@ -4748,24 +4755,22 @@ const KIND_EQUIP = 'Equipement';
 const KIND_PROD  = 'Produit';
 
 function readKindFromRec(rec){
-  // Colonne "Type" (Liste_des_equipements) : valeurs attendues = Equipement / Produit / Travaux
-  // (accepté aussi en minuscules, avec/sans accents, etc.)
+  // Colonne binaire "Type" : valeurs attendues = 'equipement' ou 'produit'
+  // Par défaut (valeur vide / inconnue) => 'equipement'
   let raw = '';
   try{
     if(rec && rec[KIND_COL] != null) raw = rec[KIND_COL];
     else if(rec && rec.fields && rec.fields[KIND_COL] != null) raw = rec.fields[KIND_COL];
   }catch(e){ raw=''; }
 
-  // Support si la colonne est un booléen (héritage) : true => produit
+  // Support si la colonne est finalement un booléen (ex: Produit? true/false)
   if(typeof raw === 'boolean') return raw ? 'produit' : 'equipement';
   if(typeof raw === 'number')  return (raw === 1) ? 'produit' : 'equipement';
 
   const v = String(raw || '').trim().toLowerCase();
   if(!v) return 'equipement';
   if(v.startsWith('prod')) return 'produit';
-  if(v.startsWith('trav')) return 'travaux';
   if(v.startsWith('équip') || v.startsWith('equip')) return 'equipement';
-
   // Valeur inattendue -> on force le défaut
   return 'equipement';
 }
@@ -4801,7 +4806,7 @@ function writeKindToRec(rec, kind) {
 function setFpKindDisplay(kind){
   const el = document.getElementById('fpKindDisplay');
   if(!el) return;
-  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'travaux' ? 'Travaux réglementés' : (kind === 'equipement' ? 'Equipement' : '—'));
+  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'equipement' ? 'Equipement' : '—');
 }
 function applyProduitVisibility(kind){
   const blk = document.querySelector('.dreets-overlap-block');
@@ -4810,7 +4815,7 @@ function applyProduitVisibility(kind){
 }
 
 function updateProduitFieldsEnabled(rec){
-  // Champs de l'encart Produit : éditables uniquement si (admin OU ISST) ET Type = produit
+  // Champs de l'encart Produit : éditables uniquement si (admin OU DREETS) ET Type = produit
   const r = rec || ROW || {};
   const kind = readKindFromRec(r);
   const ok = (ADMIN_MODE || DREETS_UNLOCKED) && (kind === 'produit');
@@ -4840,46 +4845,34 @@ function syncTypeRadiosFromRec(rec){
   const kind = readKindFromRec(rec);
   const mE = document.getElementById('typeEquipMain');
   const mP = document.getElementById('typeProduitMain');
-  const mT = document.getElementById('typeTravauxMain');
-  const mT = document.getElementById('typeTravauxMain');
   const fE = document.getElementById('fpKindEquip');
   const fP = document.getElementById('fpKindProduit');
-  const fT = document.getElementById('fpKindTravaux');
-  const fT = document.getElementById('fpKindTravaux');
-
   // Force same radio group names (avoid stuck selection)
-  try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; if(mT) mT.name='kindMain'; }catch(e){}
-  try{ if(fE) fE.name='kindFP';   if(fP) fP.name='kindFP';   if(fT) fT.name='kindFP'; }catch(e){}
+  try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; }catch(e){}
+  try{ if(fE) fE.name='kindFP'; if(fP) fP.name='kindFP'; }catch(e){}
 
-  // MAIN
   if(mE && mP){
     mE.checked = (kind==='equipement');
     mP.checked = (kind==='produit');
-    if(mT) mT.checked = (kind==='travaux');
-    if(kind===null){ mE.checked=false; mP.checked=false; if(mT) mT.checked=false; }
+    if(kind===null){ mE.checked=false; mP.checked=false; }
   }
   // Mise en évidence visuelle (soulignement + cercle) pour savoir tout de suite le Type
   try{
     const le = mE ? mE.closest('label') : null;
     const lp = mP ? mP.closest('label') : null;
-    const lt = mT ? mT.closest('label') : null;
-    [le,lp,lt].forEach(x=>{ if(x) x.classList.remove('type-active'); });
+    if(le) le.classList.remove('type-active');
+    if(lp) lp.classList.remove('type-active');
     if(kind==='equipement' && le) le.classList.add('type-active');
-    if(kind==='produit'   && lp) lp.classList.add('type-active');
-    if(kind==='travaux'   && lt) lt.classList.add('type-active');
+    if(kind==='produit' && lp) lp.classList.add('type-active');
   }catch(e){}
-
-  // FICHE POSTE
   if(fE && fP){
     fE.checked = (kind==='equipement');
     fP.checked = (kind==='produit');
-    if(fT) fT.checked = (kind==='travaux');
-    if(kind===null){ fE.checked=false; fP.checked=false; if(fT) fT.checked=false; }
+    if(kind===null){ fE.checked=false; fP.checked=false; }
   }
-
   applyProduitVisibility(kind);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ setFpKindDisplay(kind); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (kind==='produit') ? 'Produit' : (kind==='equipement' ? 'Equipement' : '—'); }catch(e){}
 }
 
 let __TYPE_RADIOS__ = null;
@@ -4889,12 +4882,12 @@ function initTypeRadios(){
   const fE = document.getElementById('fpKindEquip');
   const fP = document.getElementById('fpKindProduit');
   // Force same radio group names (avoid stuck selection)
-  try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; if(mT) mT.name='kindMain'; }catch(e){}
-  try{ if(fE) fE.name='kindFP'; if(fP) fP.name='kindFP'; if(fT) fT.name='kindFP'; }catch(e){}
+  try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; }catch(e){}
+  try{ if(fE) fE.name='kindFP'; if(fP) fP.name='kindFP'; }catch(e){}
 
 
   const setDisabled = (dis) => {
-    [mE,mP,mT,fE,fP,fT].forEach(el=>{ if(el) el.disabled = dis; });
+    [mE,mP,fE,fP].forEach(el=>{ if(el) el.disabled = dis; });
   };
 
   const canEdit = () => (ADMIN_MODE || ADD_MODE_ACTIVE);
@@ -4913,8 +4906,7 @@ function initTypeRadios(){
     if(!ROW && active && active.id){ ROW = active; }
     const rec = MAP.get(Number(active.id)) || active;
     const src = ev && ev.target ? ev.target : null;
-    const v = (src && String(src.value||'').toLowerCase()) || '';
-    const kind = v.startsWith('prod') ? 'produit' : (v.startsWith('trav') ? 'travaux' : 'equipement');
+    const kind = (src && String(src.value||'').toLowerCase().startsWith('prod')) ? 'produit' : 'equipement';
 
     console.log('[KIND v15.5] Handler radio déclenché:', {
       kind,
@@ -4929,14 +4921,13 @@ function initTypeRadios(){
       console.log('[KIND v15.5] Permission refusée, resynchronisation');
       syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : 'Equipement'; }catch(e){}
       setDisabled(!canEdit());
       return;
     }
 
     // Tentative d'écriture. En cas d'échec on remet l'état précédent (évite le "bloqué sur produit").
-    const pv = String(rec[KIND_COL]||'').toLowerCase();
-    const prev = pv.includes('prod') ? 'produit' : (pv.includes('trav') ? 'travaux' : 'equipement');
+    const prev = (String(rec[KIND_COL]||'').toLowerCase().includes('produit')) ? 'produit' : 'equipement';
     
     console.log('[KIND v15.5] Tentative d\'écriture:', {
       kind: kind,
@@ -4952,7 +4943,7 @@ function initTypeRadios(){
     }catch(e){
       console.error('[KIND v15.5] Erreur écriture:', e);
       try{ syncTypeRadiosFromRec(rec);
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){} }catch(_){ }
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : 'Equipement'; }catch(e){} }catch(_){ }
       try{ applyProduitVisibility(prev); }catch(_){ }
       alert("Écriture refusée ou non disponible. Si vous êtes dans un navigateur externe, ouvrez la page dans Grist.");
     }
@@ -4960,7 +4951,7 @@ function initTypeRadios(){
   };
 
   // ✅ FIX v15.4 : Ajouter les événements 'click' ET 'change' pour garantir la réactivité au premier clic
-  [mE,mP,mT,fE,fP,fT].forEach(el=>{ 
+  [mE,mP,fE,fP].forEach(el=>{ 
     if(el) {
       el.addEventListener('change', handler);
       el.addEventListener('click', handler);
@@ -5032,6 +5023,81 @@ const SB_API_AUTH  = SB_ROOT + '/auth-code';
 const SB_API_WRITE = SB_ROOT + '/write-app';
 const SB_TABLE_MAIN = (typeof TBL_MAIN!=='undefined' && TBL_MAIN) ? TBL_MAIN : 'Liste_des_equipements';
 
+
+// ----------------------------------------------------------------------------
+// ✅ Fallback public (GitHub Pages) : lecture via Supabase read-app
+//   - Dans Grist: utilise grist.docApi.fetchTable
+//   - Hors Grist: utilise SB_API_READ et transforme {records:[{id,fields}]} -> [{id,...fields}]
+// ----------------------------------------------------------------------------
+async function fetchTable(tableName, opts = {}) {
+  const t = String(tableName || '').trim();
+  if (!t) throw new Error('fetchTable: missing table');
+
+  // --- Grist plugin context ---
+  if (typeof IS_GRIST !== 'undefined' && IS_GRIST && window.grist?.docApi?.fetchTable) {
+    const raw = await window.grist.docApi.fetchTable(t);
+    // Grist retourne un objet colonnes -> arrays, on convertit
+    if (window.grist?.rowsToRecords) return window.grist.rowsToRecords(raw);
+    // fallback ultra simple
+    const ids = (raw?.id || []).map(Number);
+    return ids.map((id, i) => {
+      const row = { id };
+      for (const k of Object.keys(raw || {})) if (k !== 'id') row[k] = raw[k]?.[i];
+      return row;
+    });
+  }
+
+  // --- Public mode (GitHub Pages) ---
+  const app = (window.PP_APP_NAME || 'equipements');
+  const v = opts?.v ?? 2;
+  const full = (opts?.full ?? 1) ? 1 : 0;
+
+  const url = `${SB_API_READ}?app=${encodeURIComponent(app)}&table=${encodeURIComponent(t)}&full=${full}&v=${encodeURIComponent(String(v))}`;
+  const r = await fetch(url, { method: 'GET' });
+  const j = await r.json().catch(() => ({}));
+
+  if (!r.ok || !j?.records) {
+    const msg = j?.error ? String(j.error) : (r.status + ' ' + r.statusText);
+    throw new Error(`[SB] fetchTable failed ${t}: ${msg}`);
+  }
+
+  // j.records: [{id, fields:{...}}]
+  return j.records.map(rec => ({ id: rec.id, ...(rec.fields || {}) }));
+}
+
+// ----------------------------------------------------------------------------
+// ✅ Charge la liste (colonne gauche) + sélection (évite "loadFull is not defined")
+// ----------------------------------------------------------------------------
+async function loadFull(selectId = null) {
+  const rows = await ensureTable(SB_TABLE_MAIN);
+  const libCol = (typeof detectLibCol === 'function') ? detectLibCol(rows) : 'Equipements_ou_produits';
+
+  // MAP: id -> {id,label,row}
+  try { MAP = new Map(); } catch(_) {}
+  if (typeof MAP !== 'undefined') {
+    MAP.clear?.();
+    for(const r of (__pp_rowsIterable(rows))){
+      const label = (r?.[libCol] ?? '').toString().trim() || '(sans libellé)';
+      MAP.set(r.id, { id: r.id, label, row: r });
+    }
+  }
+
+  if (typeof renderList === 'function') renderList();
+
+  // Détermine l’ID à sélectionner
+  let idToSelect = null;
+  const candidate = (selectId ?? selectedId ?? null);
+
+  if (candidate && MAP?.has?.(candidate)) idToSelect = candidate;
+  if (!idToSelect) {
+    const first = (rows && rows.length) ? rows[0].id : null;
+    if (first != null) idToSelect = first;
+  }
+
+  if (idToSelect != null && typeof selectRow === 'function') {
+    await selectRow(idToSelect);
+  }
+}
 const FORCE_PUBLIC = (new URLSearchParams(location.search).get('forcePublic')==='1') || /github\.io$/i.test(location.hostname);
 const IS_GRIST = !FORCE_PUBLIC && !!(window.grist && window.grist.docApi);
 
@@ -5050,253 +5116,87 @@ function _hashBaseId(){
 }
 
 
-async function sbWriteAppTry(payloadVariants){
-  const token = localStorage.getItem('pp_token') || '';
-  const anon  = (window.PP_SUPABASE_ANON_KEY || window.PP_ANON_KEY || window.PP_SUPABASE_KEY || '').toString();
-  const app   = (window.PP_APP_NAME || 'equipements').toString();
-  const url   = SB_API_WRITE + '?app=' + encodeURIComponent(app);
+async function sbWriteAppTry(payloadVariants) {
+  const variants = Array.isArray(payloadVariants) ? payloadVariants : [payloadVariants];
+  const app = (window.PP_APP_NAME || "equipements").toString();
+  const url = `${SUPABASE_URL}/functions/v1/write-app?app=${encodeURIComponent(app)}`;
 
-  const headers = { 'Content-Type': 'application/json' };
-  if(anon) headers['apikey'] = anon;
-  // Pour les Edge Functions Supabase, Authorization est souvent requis (Bearer token user si dispo, sinon anon).
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
+  const token = (localStorage.getItem("pp_token") || "").toString();
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  let last = null;
-  for(const payload of (payloadVariants||[])){
-    try{
-      const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
-      const js = await r.json().catch(()=> ({}));
-      if(r.ok && js && js.ok !== false){
-        return js;
+  let lastErr = null;
+  for (const variant of (variants || [])) {
+    const bodyObj = Array.isArray(variant) ? { userActions: variant } : (variant || {});
+    try {
+      const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(bodyObj) });
+      const text = await res.text().catch(() => "");
+      let resp;
+      try { resp = text ? JSON.parse(text) : {}; } catch { resp = { raw: text }; }
+
+      if (res.ok && (resp?.ok !== false)) {
+        return { ok: true, status: res.status, resp };
       }
-      last = { status: r.status, resp: js, payload };
-      console.warn('[SB write-app] rejected payload', last);
-      try{ console.warn('[SB write-app] resp.json', JSON.stringify(js)); }catch(_){ }
-      try{ console.warn('[SB write-app] payload.json', JSON.stringify(payload)); }catch(_){ }
-    }catch(e){
-      last = { error: String(e), payload };
-      console.warn('[SB write-app] error payload', last);
-    }
-  }
-  const msg = (last && last.resp && (last.resp.error||last.resp.message)) ? (last.resp.error||last.resp.message) : (last && last.error) ? last.error : 'write-app failed';
-  throw new Error(msg);
-}
 
-function getNextLocalId(){
-  try{
-    const ids = [];
-    if(typeof LIST_IDS !== 'undefined' && Array.isArray(LIST_IDS)) LIST_IDS.forEach(x=>ids.push(Number(x)));
-    if(typeof MAP !== 'undefined' && MAP && typeof MAP.keys === 'function'){
-      for(const k of MAP.keys()){ ids.push(Number(k)); }
-    }
-    const maxId = Math.max(0, ...ids.filter(n=>Number.isFinite(n)));
-    return maxId + 1;
-  }catch(e){
-    return Date.now();
-  }
-}
-
-async function sbFetchTable(table){
-  const t = String(table||'').trim();
-  const wantsFull = (t === SB_TABLE_MAIN) || (typeof TBL_MAIN !== 'undefined' && t === String(TBL_MAIN)) ||
-                    /dipl|dom|sect|admin|dreets|etab/i.test(t);
-  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(t)
-            + (wantsFull ? '&full=1' : '')
-            + '&v=2';
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  const headers = {};
-  if(anon) headers['apikey'] = anon;
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  let r=null, j=null, lastErr=null;
-  for(let attempt=0; attempt<3; attempt++){
-    try{
-      const u = url + (attempt?('&retry=' + attempt + '&ts=' + Date.now()):'');
-      r = await fetch(u, { method:'GET', headers, credentials:'omit', cache:'no-store' });
-      j = await r.json().catch(()=>null);
-      if(j && j.ok) { lastErr=null; break; }
-      lastErr = new Error((j && (j.error||j.message)) ? (j.error||j.message) : ('Lecture impossible (Supabase) HTTP ' + (r?r.status:'?')));
-    }catch(e){
+      console.warn("[SB write-app] rejected payload", { status: res.status, resp, payload: bodyObj });
+      lastErr = new Error(resp?.error || resp?.message || `write-app ${res.status}`);
+      lastErr._status = res.status;
+      lastErr._resp = resp;
+    } catch (e) {
+      console.warn("[SB write-app] fetch failed", e);
       lastErr = e;
     }
   }
-  if(lastErr) throw lastErr;
-  // Compat: records[{id,fields}] ou items[{...}] ou rows[{...}]
-  const raw = j.records || j.items || j.rows || [];
-  const rows = (raw || []).map(rec=>{
-    if(rec && typeof rec === 'object'){
-      if('fields' in rec && rec.fields && typeof rec.fields === 'object'){
-        return { id: Number(rec.id), ...(rec.fields||{}) };
-      }
-      if('id' in rec) return { ...rec, id: Number(rec.id) };
-    }
-    return rec;
-  });
-  return rows;
+
+  throw (lastErr || new Error("write-app failed"));
 }
 
+async function sbWriteOp(op, a, b, c) {
+  const _op = (op || "patch").toString().toLowerCase();
 
-async function sbFetchRow(table, id){
-  const url = SB_API_READ + '?app=' + encodeURIComponent(SB_APP)
-            + '&table=' + encodeURIComponent(String(table||''))
-            + '&id=' + encodeURIComponent(String(id));
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  const headers = {};
-  if(anon) headers['apikey'] = anon;
-  if(token) headers['Authorization'] = 'Bearer ' + token;
-  else if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  const r = await fetch(url, { method:'GET', headers, credentials:'omit' });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || ('Lecture ligne impossible: ' + table));
+  // Support both signatures:
+  // 1) sbWriteOp(op, table, id, fields)
+  // 2) sbWriteOp(op, {table, id, fields|payload|data|userActions})
+  let table, id, fields, userActions;
 
-  if(j.item) return j.item; // ancien format possible
-  if(j.record) return { id: j.record.id, ...(j.record.fields||{}) };
-  // parfois la function renvoie {items:[...]} même pour un id
-  if(Array.isArray(j.items) && j.items[0]) return j.items[0];
-  if(Array.isArray(j.records) && j.records[0]) return { id: j.records[0].id, ...(j.records[0].fields||{}) };
-  return null;
-}
-
-async function sbFetchList(){
-  return sbFetchTable(SB_TABLE_MAIN);
-}
-
-async function sbFetchOne(id){
-  return sbFetchRow(SB_TABLE_MAIN, id);
-}
-
-
-function sbRecToRow(rec){
-  try{
-    if(!rec) return null;
-
-    // Compat: rec peut déjà être "flatten" {id, ...cols} OU être {id, fields:{...}}
-    const id = Number(rec.id);
-    let row = null;
-
-    if(rec.fields && typeof rec.fields === 'object'){
-      row = { id, ...(rec.fields||{}) };
-    }else{
-      // déjà aplati
-      row = { ...rec };
-      row.id = id;
-      // au cas où un vieux format traîne
-      if(row.fields){ 
-        try{ Object.assign(row, row.fields||{}); }catch(e){} 
-        delete row.fields;
-      }
-    }
-    return row;
-  }catch(e){ return null; }
-}
-
-
-async function sbWrite(id, fields){
-  const token = localStorage.getItem('pp_token') || '';
-  if(!token) throw new Error('Non authentifié (token absent).');
-  const r = await fetch(SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP), {
-    method:'POST',
-    headers:(()=>{
-      const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-      const h = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
-      if(anon) h['apikey'] = anon;
-      return h;
-    })(),
-    body: JSON.stringify({ id: Number(id), fields: fields || {} })
-  });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Écriture impossible (Supabase)');
-  return j;
-}
-
-
-// write-app "ops" (certains backends n'acceptent pas les UserActions, mais acceptent op=add/delete)
-async function sbWriteOp(op, payload, opts){
-  const token = (localStorage.getItem('pp_token') || '').trim();
-  if(!token) throw new Error('Non authentifié (token absent).');
-  const anon = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  // Certains backends attendent aussi la table dans l'URL ou le body.
-  const tbl = (payload && payload.table) ? String(payload.table) : (typeof TBL_MAIN !== 'undefined' && TBL_MAIN) ? String(TBL_MAIN) : 'Liste_des_equipements';
-    // Normalisation op
-  const _opRaw = String(op||'').toLowerCase();
-  const _op = (_opRaw === 'delete') ? 'remove' : _opRaw;
-  const urlBase = SB_API_WRITE + '?app=' + encodeURIComponent(SB_APP)
-            + '&op=' + encodeURIComponent(_op)
-            + '&table=' + encodeURIComponent(tbl);
-  // Certains backends (proxy Grist) lisent l'id uniquement dans la querystring.
-// ATTENTION: pour op=add, on ne DOIT PAS forcer d'id (le backend l'attribue).
-const qId = (payload && (payload.recordId ?? payload.id ?? payload.rid ?? payload.record_id ?? payload.rowId)) ?? null;
-const hasValidId = (qId && Number.isFinite(Number(qId)) && Number(qId) > 0);
-const idKey = (opts && opts.idKey) ? String(opts.idKey) : 'id';
-const forbidId = (opts && opts.forceNoId) ? true : (_op === 'add' || _op === 'insert' || _op === 'create');
-const url = (hasValidId && !forbidId)
-  ? (urlBase + '&' + encodeURIComponent(idKey) + '=' + encodeURIComponent(String(Number(qId))))
-  : urlBase;
-  const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token };
-  if(anon) headers['apikey'] = anon;
-  const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload || {}) });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok){
-    console.warn('[SB write-op] rejected', {op, url, payload, resp: j});
-    throw new Error(j?.error || ('Écriture op=' + op + ' impossible'));
+  if (a && typeof a === "object" && !Array.isArray(a)) {
+    table = a.table || a.Table || a.t;
+    id = a.id ?? a.recordId ?? a.rowId ?? a.rid ?? b;
+    fields = a.fields || a.payload || a.data || c;
+    userActions = a.userActions;
+  } else {
+    table = a;
+    id = b;
+    fields = c;
   }
-  return j;
-}
 
-async function sbAuth(code){
-  const anon  = (window.PP_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY || '').trim();
-  const headers = {'Content-Type':'application/json'};
-  // Certaines Edge Functions exigent apikey + Authorization, même pour l'auth
-  if(anon) headers['apikey'] = anon;
-  if(anon) headers['Authorization'] = 'Bearer ' + anon;
-  const r = await fetch(SB_API_AUTH, {
-    method:'POST',
-    headers,
-    body: JSON.stringify({ code: String(code||'').trim() })
-  });
-  const j = await r.json().catch(()=>null);
-  if(!j || !j.ok) throw new Error(j?.error || 'Code invalide');
-  try{
-    localStorage.setItem('pp_token', j.token);
-    localStorage.setItem('pp_role', j.role);
-  }catch(e){}
-  return j;
-}
-
-async function fetchTable(tbl){
-  // Mode Grist (dev / widget) : comportement inchangé
-  if(IS_GRIST && window.grist?.docApi?.fetchTable) return toRows(await window.grist.docApi.fetchTable(tbl));
-  if(IS_GRIST && window.grist?.docApi?.getTable)   return toRows(await window.grist.docApi.getTable(tbl));
-
-  // Mode public : via Supabase Edge Function (read-app)
-  try{
-    const rows = await sbFetchTable(tbl);
-    // Normaliser : s'assurer d'un champ id numérique si possible
-    return rows.map(r=>{
-      if(r && typeof r === 'object' && 'id' in r) return { ...r, id: Number(r.id) };
-      return r;
-    });
-  }catch(e){
-    console.error('[SB] fetchTable failed', tbl, e);
-    return [];
+  if (Array.isArray(userActions)) {
+    return await sbWriteAppTry({ userActions });
   }
+
+  if (!table || typeof table !== "string") {
+    throw new Error("Missing table");
+  }
+
+  if (_op === "add") {
+    return await sbWriteAppTry({ userActions: [["AddRecord", table, null, (fields || {})]] });
+  }
+
+  if (_op === "patch" || _op === "update") {
+    const rid = Number(id);
+    if (!Number.isFinite(rid)) throw new Error("Missing/invalid id");
+    return await sbWriteAppTry({ userActions: [["UpdateRecord", table, rid, (fields || {})]] });
+  }
+
+  if (_op === "remove" || _op === "delete") {
+    const rid = Number(id);
+    if (!Number.isFinite(rid)) throw new Error("Missing/invalid id");
+    return await sbWriteAppTry({ userActions: [["RemoveRecord", table, rid]] });
+  }
+
+  throw new Error(`Unknown op: ${_op}`);
 }
 
-
-async function loadFull(){
-  const rows=await fetchTable(TBL_MAIN);
-  try{ COL_LIB_RUNTIME = detectLibCol(rows); }catch(e){}
-  try{ console.log('[LIST] label col:', COL_LIB_RUNTIME, 'legacy:', COL_LIB, 'sample keys:', Object.keys(rows[0]||{}).slice(0,20)); }catch(e){}
-  MAP=new Map(rows.map(r=>[Number(r.id),r]));
-}
-
-/* progress */
-const tick=pct=>{pbar.style.width=`${pct}%`;};
-let __ppToastT=null;
 function ppToast(msg){
   const el=document.getElementById('ppSaveToast');
   if(!el) return;
@@ -5340,8 +5240,22 @@ async function applyUA(actions){
         return;
       }
 
-      const payload = { userActions: actions };
-      await sbWriteAppTry(payload);
+      // Conversion userActions -> write-op (op=add/patch/remove) pour compatibilité maximale.
+      for (const a of actions) {
+        const t = a && a[0];
+        const table = a && a[1];
+        const rid = a && a[2];
+        const fields = (a && a[3]) || {};
+        if (t === 'AddRecord') {
+          await sbWriteOp('add', table, null, fields);
+        } else if (t === 'UpdateRecord') {
+          await sbWriteOp('patch', table, rid, fields);
+        } else if (t === 'RemoveRecord') {
+          await sbWriteOp('remove', table, rid, null);
+        } else {
+          console.warn('[applyUA] action non supportée (mode public):', a);
+        }
+      }
     }
   }finally{
     selectionLocked = false;
@@ -5411,7 +5325,7 @@ function colorFromLabel(lbl){
     "Dérogation de droit si":   {color:'#22c55e', pale:'#bbf7d0'},
     "Pas d'interdiction si":    {color:'#22c55e', pale:'#bbf7d0'},
     "Autorisé":                 {color:'#22c55e', pale:'#bbf7d0'},
-    "À compléter par ISST":{color:'#db2777', pale:'#f9a8d4'}
+    "A compléter par la Dreets":{color:'#db2777', pale:'#f9a8d4'}
   };
   if(map[lbl]) return map[lbl].color;
   const e=norm(lbl||"");
@@ -5419,7 +5333,7 @@ function colorFromLabel(lbl){
   if(e.startsWith("declaration de derogation"))return'#ea580c';
   if(e.startsWith("derogation de droit si")||e.startsWith("pas dinterdiction si"))return'#22c55e';
   if(e.startsWith("autorise"))return'#22c55e';
-  if(e.startsWith("a completer par isst") || e.startsWith("a completer par isst"))return'#db2777';
+  if(e.startsWith("a completer par la dreets") || e.startsWith("a completer par drets"))return'#db2777';
   return null;
 }
 
@@ -5483,7 +5397,7 @@ function renderList(){
       if(colorFilter==='red')   return c===colorFromLabel('Interdiction absolue');
       if(colorFilter==='orange')return c===colorFromLabel("Déclaration de dérogation à l'inspection du travail");
       if(colorFilter==='green') return c===colorFromLabel('Autorisé') || c===colorFromLabel('Dérogation de droit si') || c===colorFromLabel("Pas d'interdiction si");
-      if(colorFilter==='pink')  return c===colorFromLabel('À compléter par ISST');
+      if(colorFilter==='pink')  return c===colorFromLabel('A compléter par la Dreets');
       return true;
     });
   }
@@ -5524,53 +5438,7 @@ async function exportFilteredToPdf(){
       return;
     }
     w.document.open();
-    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…
-<script>
-/* ==========================================================
-   HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
-   - si MAP est chargé mais la liste est vide, on relance renderList()
-   - si MAP est vide alors qu'on devrait avoir des données, on relance load
-   ========================================================== */
-(function(){
-  'use strict';
-  function countItems(){ try{ return document.querySelectorAll('#list .item').length; }catch(e){ return 0; } }
-  async function tryReload(reason){
-    console.warn('[HEALTHCHECK] Relance initialisation:', reason);
-    try{
-      if(typeof loadAll === 'function'){
-        await loadAll();
-      }else if(typeof loadData === 'function'){
-        await loadData();
-      }else if(typeof init === 'function'){
-        await init();
-      }
-    }catch(e){
-      console.error('[HEALTHCHECK] Echec relance', e);
-    }
-  }
-  function checkOnce(){
-    try{
-      const mapSize = (window.MAP && window.MAP.size) ? window.MAP.size : 0;
-      const items = countItems();
-      if(mapSize>0 && items===0){
-        console.warn('[HEALTHCHECK] MAP ok mais liste vide -> renderList()');
-        try{ if(typeof renderList==='function') renderList(); }catch(e){ console.error(e); }
-      }else if(mapSize===0){
-        // Cas fréquent en course condition au premier chargement
-        console.warn('[HEALTHCHECK] MAP vide -> tentative reload');
-        tryReload('MAP vide');
-      }
-    }catch(e){}
-  }
-  if(typeof onReady === 'function'){
-    onReady(()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
-  }else{
-    document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
-  }
-})();
-</script>
-
-</body></html>");
+    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…</body></html>");
     w.document.close();
 
     // Etablissements / Diplomes (via table de lien)
@@ -5655,7 +5523,7 @@ async function exportFilteredToPdf(){
       if(!c) return '';
       if(c===colorFromLabel('Interdiction absolue')) return 'red';
       if(c===colorFromLabel("Déclaration de dérogation à l'inspection du travail")) return 'orange';
-      if(c===colorFromLabel('À compléter par ISST')) return 'pink';
+      if(c===colorFromLabel('A compléter par la Dreets')) return 'pink';
       return 'green';
     }
 
@@ -5948,7 +5816,7 @@ function setSticky(rec){
     const kind = readKindFromRec(rec);
     const lbl = document.querySelector('.current-equip-label');
     if(lbl){
-      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : (kind === 'travaux' ? 'Travaux réglementés en cours' : 'Equipement en cours');
+      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : 'Equipement en cours';
     }
   }catch(e){}
 }
@@ -6268,7 +6136,8 @@ async function savePersoNow(opts = {}) {
     const code = (window.PP_ETAB_CODE || '').trim();
     const equipId = Number(window.PP_CURRENT_EQUIP_ID || 0);
     if(!code || !equipId){
-      throw new Error('Contexte incomplet (établissement / équipement)');
+      console.warn('[PERSO] Contexte incomplet (établissement / équipement) — sauvegarde différée');
+      return { ok:false, skipped:true, reason:'missing_context' };
     }
 
     const ref   = (qs('#perso-reference')?.value || '').trim();
@@ -7240,7 +7109,7 @@ async function refreshRight(){
     qs('#precisions').value = rec[COL_PRECI] ?? '';
     qs('#observations').value = rec[COL_OBS] ?? '';
   }
-  // [RIGHTS] verrouillage champs ISST (precisions/observations)
+  // [RIGHTS] verrouillage champs DREETS (precisions/observations)
   const canEditDreets = (DREETS_UNLOCKED || ADMIN_MODE);
   try{
     const p = qs('#precisions'); const o = qs('#observations');
@@ -7291,7 +7160,7 @@ async function refreshRight(){
   await buildDomainesEtSecteurs(rec);
   syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : 'Equipement'; }catch(e){}
   await renderTravauxFromRec(rec);
   if(_rp){ _rp.scrollTop = _scrollTop; }
 }
@@ -7317,6 +7186,23 @@ async function renderEtabDiplDom(rec){
 
   const diLabels=parseTextList((rec[COL_TMP_DIP]??'').toString());
   setNaturalTextLines('di-natural',diLabels);
+}
+
+async function keepCursor(){
+  try{
+    const el = document.activeElement;
+    if(!el) return;
+    const isText = (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+    const ss = isText && typeof el.selectionStart === 'number' ? el.selectionStart : null;
+    const se = isText && typeof el.selectionEnd === 'number' ? el.selectionEnd : null;
+    // microtask to restore after DOM updates
+    queueMicrotask(() => {
+      try{
+        if(document.activeElement !== el) el.focus?.({preventScroll:true});
+        if(isText && ss!==null && se!==null) el.setSelectionRange?.(ss,se);
+      }catch(_e){}
+    });
+  }catch(_e){}
 }
 
 async function selectRow(id,userClick=false){
@@ -7438,7 +7324,7 @@ function bindDreetsCharField(inputId, colName){
 
   async function saveNow(){
     if (!ROW) return;
-    if (!(ADMIN_MODE || DREETS_UNLOCKED)) return; // admin ou ISST
+    if (!(ADMIN_MODE || DREETS_UNLOCKED)) return; // admin ou DREETS
 
     // Snapshot pour éviter les "mauvaises lignes" si l'utilisateur change d'équipement pendant l'enregistrement
     const rid = Number(ROW.id);
@@ -7451,7 +7337,7 @@ function bindDreetsCharField(inputId, colName){
         r[colName] = v || null;
         MAP.set(rid, r);
       } else {
-        console.warn(`[ISST CHAR] Row ${rid} not in MAP`);
+        console.warn(`[DREETS CHAR] Row ${rid} not in MAP`);
       }
     }
 
@@ -7555,7 +7441,7 @@ function colorizeRegimeSelect(label){
 
   const color = colorFromLabel(label || '');
   const block = document.getElementById('regimeBlock');
-  const isDreets = norm(label||'') === 'a completer par isst' || norm(label||'') === 'a completer par isst';
+  const isDreets = norm(label||'') === 'a completer par la dreets' || norm(label||'') === 'a completer par drets';
 
   if(color){
     sel.style.background = color;
@@ -7584,7 +7470,7 @@ function colorizeRegimeSelect(label){
 }
 
 /* ==========================================================
-   ÉVÉNEMENTS DE SAISIE DDFPT / ISST
+   ÉVÉNEMENTS DE SAISIE DDFPT / DREETS
    ========================================================== */
 qs('#f-lib').addEventListener('change',async()=>{
   if(!ROW) return;
@@ -8412,7 +8298,7 @@ function initAddModeDialog() {
 }
 
 /* ==========================================================
-   MODE AJOUT ISST
+   MODE AJOUT DREETS
    ========================================================== */
 function initDreetsModeDialog(){
   const btn = document.getElementById('dreetsAddModeBtn');
@@ -8467,12 +8353,12 @@ function initDreetsModeDialog(){
         const auth = await sbAuth(code);
         const role = String(auth.role||'').toLowerCase();
         if(role && !['dreets','admin','superadmin','root'].includes(role)){
-          err.textContent = 'Code ISST invalide.';
+          err.textContent = 'Code DREETS invalide.';
           return;
         }
         DREETS_UNLOCKED = true;
       }catch(e){
-        err.textContent = 'Code ISST invalide.';
+        err.textContent = 'Code DREETS invalide.';
         return;
       }
     }else{
@@ -8481,22 +8367,22 @@ function initDreetsModeDialog(){
       const findCode = (row)=> codeCols.map(c=>row?.[c]).find(v=>String(v||'').trim()===code);
       const adminRow = admins.find(a => findCode(a));
       if(!adminRow){
-        err.textContent = 'Code ISST invalide.';
+        err.textContent = 'Code DREETS invalide.';
         return;
       }
       DREETS_UNLOCKED = true;
     }
 
     unlockDreetsSection();
-    // Appliquer immediatement les droits ISST (evite le cote 'bancal')
-    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[ISST] post-unlock refresh failed', e); }
-    try{ await refreshRight(); }catch(e){ console.error('[ISST] refreshRight failed', e); }
-    // Appliquer immediatement les droits ISST
-    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[ISST] post-unlock refresh failed', e); }
-    try{ await refreshRight(); }catch(e){ console.error('[ISST] refreshRight failed', e); }
-    // Appliquer immediatement les droits ISST (evite le cote "bancal")
-    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[ISST] post-unlock refresh failed', e); }
-    try{ await refreshRight(); }catch(e){ console.error('[ISST] refreshRight failed', e); }
+    // Appliquer immediatement les droits DREETS (evite le cote 'bancal')
+    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[DREETS] post-unlock refresh failed', e); }
+    try{ await refreshRight(); }catch(e){ console.error('[DREETS] refreshRight failed', e); }
+    // Appliquer immediatement les droits DREETS
+    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[DREETS] post-unlock refresh failed', e); }
+    try{ await refreshRight(); }catch(e){ console.error('[DREETS] refreshRight failed', e); }
+    // Appliquer immediatement les droits DREETS (evite le cote "bancal")
+    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[DREETS] post-unlock refresh failed', e); }
+    try{ await refreshRight(); }catch(e){ console.error('[DREETS] refreshRight failed', e); }
     closeDlg();
   });
 }
@@ -8559,7 +8445,7 @@ function applyAdminModeUI() {
 
   try{ refreshPersoBlock && refreshPersoBlock(); }catch(e){}
 
-  // maintenir window.* cohérent pour les modules additionnels (perso / bouton ISST / export)
+  // maintenir window.* cohérent pour les modules additionnels (perso / bouton DREETS / export)
   try{ __ppSyncWindowModes(); }catch(e){}
   try{ window.__ppRefreshAskDreets && window.__ppRefreshAskDreets(); }catch(e){}
 }
@@ -8870,7 +8756,7 @@ if (admOkBtn) {
 }
 
 /* ==========================================================
-   LOCK / UNLOCK ISST
+   LOCK / UNLOCK DREETS
    ========================================================== */
 function setButtonEnabled(selector, enabled) {
   document.querySelectorAll(selector).forEach(btn => {
@@ -9592,7 +9478,7 @@ async function saveFichePosteDialog(){
 /* ==========================================================
    PATCH: saisie "inline" sans lightbox (compat Suite Numérique)
    - Mode ajout : prompt Codepaca
-   - Mode ISST : prompt Code ISST
+   - Mode DREETS : prompt Code DREETS
    - Admin : prompt Code admin
    (les anciennes lightbox sont forcées en display:none via CSS)
    ========================================================== */
@@ -10034,21 +9920,21 @@ function initDreetsModeDialog(){
   const freshBtn = document.getElementById('dreetsAddModeBtn');
 
   freshBtn.addEventListener('click', async ()=>{
-    const code = (window.prompt("Code ISST :", "") || "").trim();
+    const code = (window.prompt("Code DREETS :", "") || "").trim();
     if(!code) return;
 
     const admins = await fetchTable(TBL_ADMIN);
     const adminRow = admins.find(a => (a[COL_ADM_CODE_DREETS] ?? '').toString().trim() === code);
     if(!adminRow){
-      alert('Code ISST invalide.');
+      alert('Code DREETS invalide.');
       return;
     }
 
     DREETS_UNLOCKED = true;
     unlockDreetsSection();
-    // Appliquer immediatement les droits ISST (evite le cote "bancal")
-    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[ISST] post-unlock refresh failed', e); }
-    try{ await refreshRight(); }catch(e){ console.error('[ISST] refreshRight failed', e); }
+    // Appliquer immediatement les droits DREETS (evite le cote "bancal")
+    try{ const rec = (ROW ? (MAP.get(Number(ROW.id))||ROW) : null); if(rec){ updateProduitFieldsEnabled(rec); await renderTravauxFromRec(rec); } }catch(e){ console.error('[DREETS] post-unlock refresh failed', e); }
+    try{ await refreshRight(); }catch(e){ console.error('[DREETS] refreshRight failed', e); }
   });
 }
 
@@ -10154,12 +10040,12 @@ function initAdminModeDialog(){
    ========================================================== */
 
 /* ==========================================================
-   BOUTON : "À compléter par ISST" (zone DDFPT)
-   - force Tampon_regime = "À compléter par ISST" (même sans mode ISST)
+   BOUTON : "A compléter par la Dreets" (zone DDFPT)
+   - force Tampon_regime = "A compléter par la Dreets" (même sans mode DREETS)
    - envoie une notif par FormSubmit (comme page Contact)
    Accessible : Admin ou Mode ajout établissement (Codepaca)
    ========================================================== */
-const DREETS_REGIME_LABEL = 'À compléter par ISST';
+const DREETS_REGIME_LABEL = 'A compléter par la Dreets';
 const DREETS_FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/guide.preventionpaca@lycee-les-eucalyptus.org';
 
 
@@ -10199,7 +10085,7 @@ async function __ppAskDreetsActor(){
     }
   } else {
     // Cas par défaut : ni DDFPT ni Admin
-    console.warn('[ISST ASK] Ni mode DDFPT ni Admin actif');
+    console.warn('[DREETS ASK] Ni mode DDFPT ni Admin actif');
     return { code: '', origin: 'Inconnu', etabName: '' };
   }
   
@@ -10212,7 +10098,7 @@ async function __ppAskDreetsActor(){
         etabName = String(etab[COL_ETAB_LABEL] || '').trim();
       }
     }catch(e){
-      console.warn('[ISST ASK] Cannot fetch établissement name:', e);
+      console.warn('[DREETS ASK] Cannot fetch établissement name:', e);
     }
   }
   
@@ -10268,23 +10154,23 @@ function initAskDreetsButton(){
   };
 
   btn.addEventListener('click', async ()=>{
-    console.log('[ISST BUTTON] ========== Click détecté ==========');
+    console.log('[DREETS BUTTON] ========== Click détecté ==========');
     refresh();
-    console.log('[ISST BUTTON] Après refresh, disabled:', btn.disabled);
+    console.log('[DREETS BUTTON] Après refresh, disabled:', btn.disabled);
     if(btn.disabled) {
-      console.log('[ISST BUTTON] Bouton disabled, arrêt');
+      console.log('[DREETS BUTTON] Bouton disabled, arrêt');
       return;
     }
     if(!ROW){ 
-      console.log('[ISST BUTTON] Pas de ROW');
+      console.log('[DREETS BUTTON] Pas de ROW');
       if(msg) msg.textContent = 'Aucun équipement sélectionné.'; 
       return; 
     }
 
-    console.log('[ISST BUTTON] ROW.id:', ROW.id);
+    console.log('[DREETS BUTTON] ROW.id:', ROW.id);
     const rid = Number(ROW.id);
     const rec = MAP.get(rid) || ROW;
-    console.log('[ISST BUTTON] rec:', {id: rec.id, libelle: rec[COL_LIB]});
+    console.log('[DREETS BUTTON] rec:', {id: rec.id, libelle: rec[COL_LIB]});
 
     // 1) force select regime + update Grist
     const sel = document.getElementById('f-regime');
@@ -10302,11 +10188,11 @@ function initAskDreetsButton(){
 
     try{
       if(msg) msg.textContent = 'Mise à jour du statut…';
-      console.log('[ISST BUTTON] Début runQuick...');
+      console.log('[DREETS BUTTON] Début runQuick...');
       await runQuick(async()=>{
         await applyUA([['UpdateRecord', TBL_MAIN, rid, { [COL_TMP_REG]: DREETS_REGIME_LABEL }]]);
       });
-      console.log('[ISST BUTTON] runQuick terminé');
+      console.log('[DREETS BUTTON] runQuick terminé');
       const r = MAP.get(rid);
       if(r) {
         r[COL_TMP_REG] = DREETS_REGIME_LABEL;
@@ -10318,18 +10204,18 @@ function initAskDreetsButton(){
       try{ renderList(); }catch(e){}
 
       // 2) mail notif
-      console.log('[ISST BUTTON] Appel __ppAskDreetsActor...');
+      console.log('[DREETS BUTTON] Appel __ppAskDreetsActor...');
       const actor = await __ppAskDreetsActor();
-      console.log('[ISST BUTTON] actor:', actor);
+      console.log('[DREETS BUTTON] actor:', actor);
       const equipLabel = (rec[COL_LIB] ?? '').toString().trim();
       
       // Générer le lien vers la fiche (lien QR code)
-      console.log('[ISST BUTTON] Génération lien fiche...');
+      console.log('[DREETS BUTTON] Génération lien fiche...');
       const ficheUrl = _getDeepLinkUrlForFiche(rec);
-      console.log('[ISST BUTTON] ficheUrl:', ficheUrl);
+      console.log('[DREETS BUTTON] ficheUrl:', ficheUrl);
       
-      const subject = `Demande validation ISST – ${equipLabel || 'Equipement'}`;
-      console.log('[ISST BUTTON] Envoi mail FormSubmit...');
+      const subject = `Demande validation DREETS – ${equipLabel || 'Equipement'}`;
+      console.log('[DREETS BUTTON] Envoi mail FormSubmit...');
       
       // ✅ CORRECTION : RETIRER TOUS LES ACCENTS DES NOMS DE CHAMPS
       const okMail = await __ppSendFormSubmitMail({
@@ -10344,13 +10230,13 @@ function initAskDreetsButton(){
           'Lien_fiche': ficheUrl || '—',
         }
       });
-      console.log('[ISST BUTTON] Mail envoyé, okMail:', okMail);
+      console.log('[DREETS BUTTON] Mail envoyé, okMail:', okMail);
 
       if(msg) msg.textContent = okMail ? 'Demande envoyée.' : 'Statut mis à jour (mail non envoyé).';
       setTimeout(()=>{ if(msg && (msg.textContent==='Demande envoyée.' || msg.textContent==='Statut mis à jour (mail non envoyé).')) msg.textContent=''; }, 1600);
     }catch(e){
-      console.error('[ISST BUTTON] ❌ ERREUR:', e);
-      console.error('[ISST BUTTON] Stack:', e.stack);
+      console.error('[DREETS BUTTON] ❌ ERREUR:', e);
+      console.error('[DREETS BUTTON] Stack:', e.stack);
       if(msg) msg.textContent = "Erreur : impossible de mettre à jour.";
     }
   });
@@ -11336,7 +11222,7 @@ window.grist.onRecords(async (records, mappings) => {
       blockTitle.innerHTML = `
         ${currentText}
         <span style="color: #db2777; font-weight: 700; margin-left: 10px; font-size: 0.9em;">
-          (À compléter par l'ISST)
+          (À compléter par la DREETS)
         </span>
       `;
     }
