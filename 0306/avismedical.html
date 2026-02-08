@@ -154,11 +154,7 @@ window.PP_fetchTable = async function(tableName){
       <!-- RECHERCHE (diplôme + établissement) – non imprimée -->
       <div class="search-card non-printable">
         <h3>Recherche</h3>
-        <div class="non-printable" style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" id="pp-reconnect-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Reconnexion établissement</button>
-          <button type="button" id="pp-change-etab-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Changer d’établissement</button>
-        </div>
-        <p>
+<p>
           1. Choisissez une <strong>formation</strong> (diplôme).<br>
           2. Choisissez un <strong>établissement</strong>.<br>
           Ces choix alimentent automatiquement le formulaire ci-dessous.
@@ -524,7 +520,11 @@ window.PP_fetchTable = async function(tableName){
       }
       return [];
     })();
-    if (!travaux.length) {
+
+    // ✅ Filtrage : ne garder que "Travail..." / "Travaux..."
+    const travauxFiltrees = travaux.filter(keepOnlyTravailItems);
+    
+    if (!travauxFiltrees.length) {
       const p = document.createElement("p");
       p.className = "equip-empty";
       p.textContent = "Aucun travail réglementé (dérogation) trouvé pour cette formation.";
@@ -544,7 +544,7 @@ window.PP_fetchTable = async function(tableName){
       return {};
     })();
 
-    travaux.forEach(trav => {
+    travauxFiltrees.forEach(trav => {
       const card = document.createElement("div");
       card.className = "trav-card";
 
@@ -781,6 +781,10 @@ window.PP_fetchTable = async function(tableName){
 
     if (!travaux.length) return;
 
+    // ✅ Filtrage : ne garder que "Travail..." / "Travaux..."
+    travaux = travaux.filter(keepOnlyTravailItems);
+    if (!travaux.length) return;
+
     // Tri des libellés pour un affichage propre
     travaux.sort((a, b) => a.localeCompare(b, "fr"));
 
@@ -924,21 +928,25 @@ async function loadAuxTables() {
                 const travailLabel = travauxLigne[idx] || travauxLigne[travauxLigne.length - 1];
                 if (!travailLabel) continue;
 
-                tmp[key][etabKey].push(String(travailLabel).trim());
+                const tLabel = String(travailLabel).trim();
+
+                // ✅ Filtrage : on ne garde que les libellés "Travail..." / "Travaux..."
+                // (exclut les codes du type "D. 4153-..." ou "AD..." qui ne doivent pas apparaître)
+                if (!keepOnlyTravailItems(tLabel)) continue;
+
+                tmp[key][etabKey].push(tLabel);
 
                 // Verso : rattacher les equipements/produits au travail
                 const eq = (equipText == null) ? "" : String(equipText).trim();
                 if (eq) {
                   if (!equipByDiplomeEtabTrav[key]) equipByDiplomeEtabTrav[key] = {};
                   if (!equipByDiplomeEtabTrav[key][etabKey]) equipByDiplomeEtabTrav[key][etabKey] = {};
-                  if (!equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()]) {
-                    equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()] = new Set();
+                  if (!equipByDiplomeEtabTrav[key][etabKey][tLabel]) {
+                    equipByDiplomeEtabTrav[key][etabKey][tLabel] = new Set();
                   }
-                  equipByDiplomeEtabTrav[key][etabKey][String(travailLabel).trim()].add(eq);
+                  equipByDiplomeEtabTrav[key][etabKey][tLabel].add(eq);
                 }
-              }
-
-              });            });
+              }});            });
           }
 
 // Déduplication + tri : chaque travail n’apparaît qu’une seule fois par diplôme ET par établissement
@@ -1132,44 +1140,6 @@ function tryRestoreEtabSession() {
     });
 
 }
-
-// Boutons : (re)connexion / changement d'établissement
-const btnReconnect = document.getElementById("pp-reconnect-btn");
-const btnChangeEtab = document.getElementById("pp-change-etab-btn");
-
-function showCodeModal() {
-  if (codeModal && codeInput) {
-    codeModal.style.display = "flex";
-    setTimeout(() => codeInput.focus(), 50);
-    return true;
-  }
-  return false;
-}
-
-function unlockEtablissement() {
-  selectedEtabCodeNorm = null;
-  selectedEtabNameNorm = null;
-  selectedEtabNameLoose = null;
-  currentEtabName = "";
-  if (versoEtabEl) versoEtabEl.textContent = "";
-  if (etabText) etabText.innerHTML = "";
-  if (inputEtab) {
-    inputEtab.readOnly = false;
-    inputEtab.classList.remove("locked");
-    inputEtab.value = "";
-  }
-  if (inputDiplome) inputDiplome.value = "";
-  if (formationText) formationText.textContent = "";
-  if (travauxListEl) travauxListEl.innerHTML = "";
-  renderVerso();
-}
-
-if (btnReconnect) btnReconnect.addEventListener("click", () => showCodeModal());
-if (btnChangeEtab) btnChangeEtab.addEventListener("click", () => {
-  clearEtabSession();
-  unlockEtablissement();
-  showCodeModal();
-});
 
 window.addEventListener("load", async () => {
   if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
