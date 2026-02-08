@@ -4713,6 +4713,16 @@ let selectedId=null;
 let CACHE={};
 let selectionLocked=false;
 
+// Prevent crashes if keepCursor() is referenced before being defined
+function keepCursor(){
+  try{
+    // Keep the currently selected item in view when selection is locked
+    const sel = document.querySelector('.item.selected');
+    if(sel) sel.scrollIntoView({ block:'nearest' });
+  }catch(e){}
+}
+
+
 let colorFilter='none';
 let DREETS_UNLOCKED=false;
 
@@ -4884,8 +4894,10 @@ let __TYPE_RADIOS__ = null;
 function initTypeRadios(){
   const mE = document.getElementById('typeEquipMain');
   const mP = document.getElementById('typeProduitMain');
+  const mT = document.getElementById('typeTravauxMain');
   const fE = document.getElementById('fpKindEquip');
   const fP = document.getElementById('fpKindProduit');
+  const fT = document.getElementById('fpKindTravaux');
   // Force same radio group names (avoid stuck selection)
   try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; if(mT) mT.name='kindMain'; }catch(e){}
   try{ if(fE) fE.name='kindFP'; if(fP) fP.name='kindFP'; if(fT) fT.name='kindFP'; }catch(e){}
@@ -4897,7 +4909,7 @@ function initTypeRadios(){
 
   const canEdit = () => (ADMIN_MODE || ADD_MODE_ACTIVE);
 
-  __TYPE_RADIOS__ = {mE,mP,fE,fP,setDisabled,canEdit};
+  __TYPE_RADIOS__ = {mE,mP,mT,fE,fP,fT,setDisabled,canEdit};
   window.refreshTypeRadiosLock = ()=>{ try{ setDisabled(!canEdit()); }catch(e){} };
 
   const handler = async (ev)=>{
@@ -5049,6 +5061,8 @@ function _hashBaseId(){
 
 
 async function sbWriteAppTry(payloadVariants){
+  // Accept either an array of payloads OR a single payload object
+  if(payloadVariants && !Array.isArray(payloadVariants)) payloadVariants = [payloadVariants];
   const token = localStorage.getItem('pp_token') || '';
   const anon  = (window.PP_SUPABASE_ANON_KEY || window.PP_ANON_KEY || window.PP_SUPABASE_KEY || '').toString();
   const app   = (window.PP_APP_NAME || 'equipements').toString();
@@ -6168,6 +6182,11 @@ function schedulePersoSave(){
 }
 
 function initPersoAutosave(){
+  // Public/GitHub mode: don't start perso autosave (requires Grist context)
+  if(!(window.grist && window.grist.docApi)){
+    console.warn('[PERSO-INIT] Skipped: Grist API indisponible');
+    return;
+  }
   console.log('[PERSO-INIT] 🚀 initPersoAutosave() appelée');
   const ids = ['perso-reference','perso-atelier','perso-annee','perso-notes'];
   let foundCount = 0;
