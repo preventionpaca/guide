@@ -5522,53 +5522,7 @@ async function exportFilteredToPdf(){
       return;
     }
     w.document.open();
-    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…
-<script>
-/* ==========================================================
-   HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
-   - si MAP est chargé mais la liste est vide, on relance renderList()
-   - si MAP est vide alors qu'on devrait avoir des données, on relance load
-   ========================================================== */
-(function(){
-  'use strict';
-  function countItems(){ try{ return document.querySelectorAll('#list .item').length; }catch(e){ return 0; } }
-  async function tryReload(reason){
-    console.warn('[HEALTHCHECK] Relance initialisation:', reason);
-    try{
-      if(typeof loadAll === 'function'){
-        await loadAll();
-      }else if(typeof loadData === 'function'){
-        await loadData();
-      }else if(typeof init === 'function'){
-        await init();
-      }
-    }catch(e){
-      console.error('[HEALTHCHECK] Echec relance', e);
-    }
-  }
-  function checkOnce(){
-    try{
-      const mapSize = (window.MAP && window.MAP.size) ? window.MAP.size : 0;
-      const items = countItems();
-      if(mapSize>0 && items===0){
-        console.warn('[HEALTHCHECK] MAP ok mais liste vide -> renderList()');
-        try{ if(typeof renderList==='function') renderList(); }catch(e){ console.error(e); }
-      }else if(mapSize===0){
-        // Cas fréquent en course condition au premier chargement
-        console.warn('[HEALTHCHECK] MAP vide -> tentative reload');
-        tryReload('MAP vide');
-      }
-    }catch(e){}
-  }
-  if(typeof onReady === 'function'){
-    onReady(()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
-  }else{
-    document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
-  }
-})();
-</script>
-
-</body></html>");
+    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…</body></html>");
     w.document.close();
 
     // Etablissements / Diplomes (via table de lien)
@@ -11341,6 +11295,49 @@ window.grist.onRecords(async (records, mappings) => {
   }, 1000);
   
   console.log('[CORRECTIF v14] ✅ Installation terminée');
+})();
+</script>
+
+<script>
+/* ==========================================================
+   HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
+   - si MAP est chargé mais la liste est vide, on relance renderList()
+   - si MAP est vide alors qu'on devrait avoir des données, on relance load
+   ========================================================== */
+(function(){
+  'use strict';
+  function countItems(){ try{ return document.querySelectorAll('#list .item').length; }catch(e){ return 0; } }
+  async function tryReload(reason){
+    console.warn('[HEALTHCHECK] Relance initialisation:', reason);
+    try{
+      if(typeof loadAll === 'function'){
+        await loadAll();
+      }else if(typeof loadData === 'function'){
+        await loadData();
+      }else if(typeof init === 'function'){
+        await init();
+      }
+    }catch(e){
+      console.error('[HEALTHCHECK] Echec relance', e);
+    }
+  }
+  function checkOnce(){
+    try{
+      const mapSize = (window.MAP && window.MAP.size) ? window.MAP.size : 0;
+      const items = countItems();
+      if(mapSize>0 && items===0){
+        console.warn('[HEALTHCHECK] MAP ok mais liste vide -> renderList()');
+        try{ if(typeof renderList==='function') renderList(); }catch(e){ console.error(e); }
+      }else if(mapSize===0){
+        console.warn('[HEALTHCHECK] MAP vide -> tentative reload');
+        tryReload('MAP vide');
+      }
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    setTimeout(checkOnce, 250);
+    setTimeout(checkOnce, 900);
+  });
 })();
 </script>
 
