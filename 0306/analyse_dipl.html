@@ -11,7 +11,8 @@
   <!-- Portail Prévention PACA (GitHub) -->
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
   <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
-  <script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+  <script>window.PP_AUTH_DISABLED = true;</script>
+<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -133,6 +134,16 @@
       display:none !important;
     }
   </style>
+
+  <style>
+    /* Patch analyse_dipl: align with Portail Prévention PACA theme */
+    body { background: var(--pp-bg, #071a2f); }
+    .app { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+    .card { background: var(--pp-card-bg, #ffffff); border-radius: 16px; box-shadow: 0 8px 26px rgba(0,0,0,.08); border: 1px solid rgba(0,0,0,.06); padding: 18px 18px 16px; }
+    .title { font-size: 20px; font-weight: 700; color: var(--pp-blue-900, #1B396A); margin-bottom: 10px; }
+    #err { color: #b00020; }
+  </style>
+
 </head>
 
 <body>
@@ -350,47 +361,22 @@
     // Déjà au format colonnes (fetchTable Grist)
     if (raw.id && Array.isArray(raw.id)) return raw;
 
+    // Si on reçoit directement un tableau [{id, fields}...] (cas où un wrapper renvoie records)
+    if (Array.isArray(raw)) return recordsToColumns(raw);
+
     // read-app: {records:[{id,fields}...]}
     if (Array.isArray(raw.records)) return recordsToColumns(raw.records);
 
-    // read-app Liste_des_equipements: {records, items}
+    // read-app Liste_des_equipements: parfois {items:[...], records:[...]}
     if (Array.isArray(raw.items) && Array.isArray(raw.records)) return recordsToColumns(raw.records);
 
     // Fallback: rien de lisible
     return null;
   }
-
-  async function init() {
-    try {
-      // Attendre un peu que pp-config s'initialise, ou créer un fallback si besoin.
-if (!window.PP_fetchTable) {
-  // Fallback : si pp-config expose l'URL Supabase read-app, on recrée PP_fetchTable ici.
-  if (window.PP_SB_API_READ && window.PP_APP_NAME) {
-    window.PP_fetchTable = async function(tableName) {
-      const url = `${window.PP_SB_API_READ}?app=${encodeURIComponent(window.PP_APP_NAME)}&table=${encodeURIComponent(tableName)}`;
-      const r = await fetch(url, { method: 'GET' });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j?.ok) throw new Error(j?.error || `read-app failed (${r.status})`);
-      // Compat: certains endpoints renvoient {records}, d'autres {items}
-      return j.records ?? j.items ?? j;
-    };
-  } else {
-    // Attente courte (pp-config chargé mais initialisation asynchrone)
-    for (let i = 0; i < 20 && !window.PP_fetchTable; i++) {
-      await new Promise(res => setTimeout(res, 50));
-    }
-  }
-}
 if (!window.PP_fetchTable) {
   showError("PP_fetchTable indisponible (pp-config/PP_SB_API_READ non disponible).");
   return;
 }
-
-      
-      // Auth (si disponible) : ouvre la lightbox et garantit un token partagé entre pages
-      if (window.PP_AUTH && typeof window.PP_AUTH.requireDdfpt === "function") {
-        try { await window.PP_AUTH.requireDdfpt(); } catch(e) { /* AUTH_REQUIRED = normal */ }
-      }
 const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
       const [diplomeTable, equipTable, travauxTable] = await Promise.all([
