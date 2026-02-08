@@ -10,9 +10,9 @@
   <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
   <!-- Portail Prévention PACA (GitHub) -->
-  <link rel="stylesheet" href="pp-core.css" />
-  <link rel="stylesheet" href="pp-portail.css" />
-  <script src="pp-config.js"></script>
+  <link rel="stylesheet" href="/pp-core.css" />
+  <link rel="stylesheet" href="/pp-portail.css" />
+  <script src="/pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -215,10 +215,7 @@
   let travailToUrlByNorm = new Map();     // libellé normalisé -> url
 
   let pieChart = null;
-
-  grist.ready({ requiredAccess: "read table" });
-
-  // ---------- utilitaires ----------
+// ---------- utilitaires ----------
   function normalizeText(str) {
     if (str == null) return "";
     return String(str).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
@@ -329,19 +326,60 @@
   }
 
   // ---------- chargement initial ----------
+  function recordsToColumns(records) {
+    const ids = [];
+    const cols = { id: ids };
+    const keys = new Set();
+    for (const r of (records || [])) {
+      ids.push(r?.id ?? null);
+      const f = r?.fields || {};
+      for (const k of Object.keys(f)) keys.add(k);
+    }
+    for (const k of keys) cols[k] = new Array(ids.length).fill(null);
+    let i = 0;
+    for (const r of (records || [])) {
+      const f = r?.fields || {};
+      for (const k of keys) cols[k][i] = (k in f) ? f[k] : null;
+      i++;
+    }
+    return cols;
+  }
+
+  function normalizeTable(raw) {
+    if (!raw) return null;
+
+    // Déjà au format colonnes (fetchTable Grist)
+    if (raw.id && Array.isArray(raw.id)) return raw;
+
+    // read-app: {records:[{id,fields}...]}
+    if (Array.isArray(raw.records)) return recordsToColumns(raw.records);
+
+    // read-app Liste_des_equipements: {records, items}
+    if (Array.isArray(raw.items) && Array.isArray(raw.records)) return recordsToColumns(raw.records);
+
+    // Fallback: rien de lisible
+    return null;
+  }
+
   async function init() {
     try {
-      const api = grist.docApi;
-      if (!api) {
-        showError("API Grist non disponible.");
+      if (!window.PP_fetchTable) {
+        showError("PP_fetchTable indisponible (pp-config.js non chargé).");
         return;
       }
 
+      const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
+
       const [diplomeTable, equipTable, travauxTable] = await Promise.all([
-        api.fetchTable(DIPLOME_TABLE),
-        api.fetchTable(EQUIPEMENTS_TABLE),
-        api.fetchTable(TRAVAUX_TABLE)
+        fetchT(DIPLOME_TABLE),
+        fetchT(EQUIPEMENTS_TABLE),
+        fetchT(TRAVAUX_TABLE)
       ]);
+
+      if (!diplomeTable || !equipTable || !travauxTable) {
+        showError("Erreur lors du chargement des données (tables incomplètes).");
+        return;
+      }
 
       buildDiplomas(diplomeTable);
       buildTravailUrls(travauxTable);
@@ -350,9 +388,10 @@
       wireExportButtons();
     } catch (e) {
       console.error(e);
-      showError("Erreur lors du chargement des données : " + e.message);
+      showError("Erreur lors du chargement des données : " + (e?.message || e));
     }
   }
+
 
   function buildDiplomas(table) {
     diplomasByLabel.clear();
