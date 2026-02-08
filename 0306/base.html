@@ -7150,27 +7150,32 @@ await ensureTravauxData();
         return;
       }
       __setDelBusy(true, 'Suppression…');
-    try{
-    await runQuick(async () => {
-        await applyUA([['UpdateRecord', TBL_MAIN, Number(ROW.id), {
-          [COL_TMP_TR]: null,
-          [COL_TMP_INTI_TR]: null,
-          [COL_TMP_ART]: null
-        }]]);
-        const r = MAP.get(Number(ROW.id)) || ROW;
-        r[COL_TMP_TR] = null;
-        r[COL_TMP_INTI_TR] = null;
-        r[COL_TMP_ART] = null;
-        MAP.set(Number(ROW.id), r);
-        travSelection = {};
-        await renderTravauxFromRec(r);
-      });
+      try{
+        await runQuick(async () => {
+          await applyUA([['UpdateRecord', TBL_MAIN, Number(ROW.id), {
+            [COL_TMP_TR]: null,
+            [COL_TMP_INTI_TR]: null,
+            [COL_TMP_ART]: null
+          }]]);
+          const r = MAP.get(Number(ROW.id)) || ROW;
+          r[COL_TMP_TR] = null;
+          r[COL_TMP_INTI_TR] = null;
+          r[COL_TMP_ART] = null;
+          MAP.set(Number(ROW.id), r);
+          travSelection = {};
+          await renderTravauxFromRec(r);
+        });
 
-      dlgClear.style.display = 'none';
-      dlgClear.setAttribute('aria-hidden','true');
-    });
-  }
-}
+        dlgClear.style.display = 'none';
+        dlgClear.setAttribute('aria-hidden','true');
+      }
+      catch(e){
+        console.error('[CLEAR TRAVAUX] ❌ erreur suppression travaux:', e);
+        // On garde la modale ouverte pour éviter une fausse impression de succès
+      }
+      finally{
+        __setDelBusy(false, '');
+      }
 
 /* ==========================================================
    SÉLECTION / REFRESH DROITE
