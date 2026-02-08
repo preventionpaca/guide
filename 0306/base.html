@@ -8806,14 +8806,6 @@ const admCancelBtn = document.getElementById('adm-del-cancel');
 if (admCancelBtn) {
   admCancelBtn.addEventListener('click', () => {
     closeAdminDeleteDialog();
-    }
-    catch(e){
-      console.error('[ADMIN DELETE] ❌ Erreur suppression:', e);
-      err.textContent = (e && e.message) ? String(e.message) : String(e);
-    }
-    finally{
-      __setDelBusy(false, '');
-    }
   });
 }
 
