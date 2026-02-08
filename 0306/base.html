@@ -8,6 +8,14 @@
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
   <!-- grist-plugin-api removed for public GitHub page -->
 <script>
+/* PATCH v15.33 — normalize rows iterable (rows|records|items) */
+function __pp_rowsIterable(rows){
+  if (Array.isArray(rows)) return rows;
+  if (rows && Array.isArray(rows.records)) return rows.records;
+  if (rows && Array.isArray(rows.items)) return rows.items;
+  return [];
+}
+
   console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -4478,7 +4486,7 @@ function detectLibCol(rows){
   // Prefer columns that exist AND are populated
   for(const c of cands){
     let seen = 0;
-    for(const r of (rows||[])){
+    for(const r of (__pp_rowsIterable(rows))){
       if(r && (c in r)){
         const v = (r[c] ?? '').toString().trim();
         if(v){ seen++; if(seen >= 2) return c; } // quick confidence
@@ -4487,7 +4495,7 @@ function detectLibCol(rows){
   }
   // Otherwise just pick the first existing candidate
   for(const c of cands){
-    for(const r of (rows||[])){
+    for(const r of (__pp_rowsIterable(rows))){
       if(r && (c in r)) return c;
     }
   }
@@ -5068,7 +5076,7 @@ async function loadFull(selectId = null) {
   try { MAP = new Map(); } catch(_) {}
   if (typeof MAP !== 'undefined') {
     MAP.clear?.();
-    for (const r of (rows || [])) {
+    for(const r of (__pp_rowsIterable(rows))){
       const label = (r?.[libCol] ?? '').toString().trim() || '(sans libellé)';
       MAP.set(r.id, { id: r.id, label, row: r });
     }
