@@ -8,7 +8,7 @@
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
   <!-- grist-plugin-api removed for public GitHub page -->
 <script>
-  console.log('[PP-TR] LOADED v15.26-ISST-TRAVAUX-FIX-T4-UX');
+  console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -3899,7 +3899,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   <label class="kind-mode active"><input type="radio" name="kindMode" value="all" checked> Tous</label>
   <label class="kind-mode"><input type="radio" name="kindMode" value="equipement"> Equipements</label>
   <label class="kind-mode"><input type="radio" name="kindMode" value="produit"> Produits</label>
-  <label class="kind-mode"><input type="radio" name="kindMode" value="travaux"> Travaux</label>
+  <label class="kind-mode"><input type="radio" name="kindMode" value="travaux"> Travaux réglementés</label>
 </div>
 <div class="row row-nowrap">
 <input class="text-input" id="filter" placeholder="Filtrer…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search">
@@ -3959,7 +3959,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
           Mode ajout activé pour <span id="addModeEtab">—</span>
 </div>
 <div class="block">
-<div class="block-title"><div class="type-inline"><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeEquipMain" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeProduitMain" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeTravauxMain" value="travaux"> Travaux</label></div></div>
+<div class="block-title"><div class="type-inline"><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeEquipMain" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeProduitMain" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeTravauxMain" value="travaux"> Travaux réglementés</label></div></div>
 <div class="equip-lib-wrapper">
 <input class="input-pill" id="f-lib">
 <div class="regime-badge regime-on-lib" id="regimeToken">—</div>
@@ -4141,7 +4141,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="dreets-layout">
   <div class="dreets-left">
 <div class="block">
-<div class="block-title">Travaux</div>
+<div class="block-title">Travaux réglementés</div>
 <div class="trav-buttons">
 <button class="btn btn-small" id="tr-choose" type="button">Sélectionner</button>
 <button class="btn btn-small" id="tr-clear" type="button">Tout effacer</button>
@@ -4192,7 +4192,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 <div class="modal-footer">
 <button class="btn btn-small" id="dlg-di-cancel" type="button">Annuler</button>
-<span id="dlg-di-status" style="flex:1;text-align:left;font-size:12px;color:#475569;align-self:center;"></span>
 <button class="btn btn-small" id="dlg-di-ok" type="button">Valider</button>
 </div>
 </div>
@@ -4232,7 +4231,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="fp-banner" id="fpHeaderBar">
   <div class="fp-banner-left" id="fpHeaderLeft">
     <div class="fp-banner-title">FICHE DE POSTE</div>
-    <div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input type="radio" name="fpKind" id="fpKindEquip" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindProduit" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindTravaux" value="travaux"> Travaux</label></div>
+    <div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input type="radio" name="fpKind" id="fpKindEquip" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindProduit" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindTravaux" value="travaux"> Travaux réglementés</label></div>
     <div class="fp-equip-name" id="fpMachineName">—</div>
   </div>
 
@@ -4439,7 +4438,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-error" id="adm-del-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small" id="adm-del-cancel" type="button">Annuler</button>
-<span id="adm-del-status" style="flex:1;text-align:left;font-size:12px;color:#475569;align-self:center;"></span>
 <button class="btn btn-small" id="adm-del-ok" type="button">Supprimer</button>
 </div>
 </div>
@@ -4604,7 +4602,7 @@ const COL_ETAB_LABEL    ='appellation_officielle';
 const COL_ETAB_DIP_TEXT ='Diplomes';
 const COL_ETAB_CODE     ='Codepaca';
 
-/* Travaux : table Liste_travaux */
+/* Travaux réglementés : table Liste_travaux */
 const TBL_TRAV      ='Liste_travaux';
 const COL_TR_LABEL  ='Travaux';
 const COL_TR_NUMPOS ='num';
@@ -4715,16 +4713,6 @@ let selectedId=null;
 let CACHE={};
 let selectionLocked=false;
 
-// Prevent crashes if keepCursor() is referenced before being defined
-function keepCursor(){
-  try{
-    // Keep the currently selected item in view when selection is locked
-    const sel = document.querySelector('.item.selected');
-    if(sel) sel.scrollIntoView({ block:'nearest' });
-  }catch(e){}
-}
-
-
 let colorFilter='none';
 let DREETS_UNLOCKED=false;
 
@@ -4747,7 +4735,7 @@ function __ppSyncWindowModes(){
   }catch(e){}
 }
 
-/* Travaux */
+/* Travaux réglementés */
 let travRows=[];
 let travSelection={};
 let artIndex=new Map();
@@ -4813,7 +4801,7 @@ function writeKindToRec(rec, kind) {
 function setFpKindDisplay(kind){
   const el = document.getElementById('fpKindDisplay');
   if(!el) return;
-  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'travaux' ? 'Travaux' : (kind === 'equipement' ? 'Equipement' : '—'));
+  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'travaux' ? 'Travaux réglementés' : (kind === 'equipement' ? 'Equipement' : '—'));
 }
 function applyProduitVisibility(kind){
   const blk = document.querySelector('.dreets-overlap-block');
@@ -4853,8 +4841,10 @@ function syncTypeRadiosFromRec(rec){
   const mE = document.getElementById('typeEquipMain');
   const mP = document.getElementById('typeProduitMain');
   const mT = document.getElementById('typeTravauxMain');
+  const mT = document.getElementById('typeTravauxMain');
   const fE = document.getElementById('fpKindEquip');
   const fP = document.getElementById('fpKindProduit');
+  const fT = document.getElementById('fpKindTravaux');
   const fT = document.getElementById('fpKindTravaux');
 
   // Force same radio group names (avoid stuck selection)
@@ -4896,10 +4886,8 @@ let __TYPE_RADIOS__ = null;
 function initTypeRadios(){
   const mE = document.getElementById('typeEquipMain');
   const mP = document.getElementById('typeProduitMain');
-  const mT = document.getElementById('typeTravauxMain');
   const fE = document.getElementById('fpKindEquip');
   const fP = document.getElementById('fpKindProduit');
-  const fT = document.getElementById('fpKindTravaux');
   // Force same radio group names (avoid stuck selection)
   try{ if(mE) mE.name='kindMain'; if(mP) mP.name='kindMain'; if(mT) mT.name='kindMain'; }catch(e){}
   try{ if(fE) fE.name='kindFP'; if(fP) fP.name='kindFP'; if(fT) fT.name='kindFP'; }catch(e){}
@@ -4911,7 +4899,7 @@ function initTypeRadios(){
 
   const canEdit = () => (ADMIN_MODE || ADD_MODE_ACTIVE);
 
-  __TYPE_RADIOS__ = {mE,mP,mT,fE,fP,fT,setDisabled,canEdit};
+  __TYPE_RADIOS__ = {mE,mP,fE,fP,setDisabled,canEdit};
   window.refreshTypeRadiosLock = ()=>{ try{ setDisabled(!canEdit()); }catch(e){} };
 
   const handler = async (ev)=>{
@@ -4941,7 +4929,7 @@ function initTypeRadios(){
       console.log('[KIND v15.5] Permission refusée, resynchronisation');
       syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
       setDisabled(!canEdit());
       return;
     }
@@ -4964,7 +4952,7 @@ function initTypeRadios(){
     }catch(e){
       console.error('[KIND v15.5] Erreur écriture:', e);
       try{ syncTypeRadiosFromRec(rec);
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){} }catch(_){ }
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){} }catch(_){ }
       try{ applyProduitVisibility(prev); }catch(_){ }
       alert("Écriture refusée ou non disponible. Si vous êtes dans un navigateur externe, ouvrez la page dans Grist.");
     }
@@ -5063,8 +5051,6 @@ function _hashBaseId(){
 
 
 async function sbWriteAppTry(payloadVariants){
-  // Accept either an array of payloads OR a single payload object
-  if(payloadVariants && !Array.isArray(payloadVariants)) payloadVariants = [payloadVariants];
   const token = localStorage.getItem('pp_token') || '';
   const anon  = (window.PP_SUPABASE_ANON_KEY || window.PP_ANON_KEY || window.PP_SUPABASE_KEY || '').toString();
   const app   = (window.PP_APP_NAME || 'equipements').toString();
@@ -5538,7 +5524,53 @@ async function exportFilteredToPdf(){
       return;
     }
     w.document.open();
-    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…</body></html>");
+    w.document.write("<!doctype html><html><head><meta charset='utf-8'><title>Export</title></head><body style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px'>Export en cours…
+<script>
+/* ==========================================================
+   HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
+   - si MAP est chargé mais la liste est vide, on relance renderList()
+   - si MAP est vide alors qu'on devrait avoir des données, on relance load
+   ========================================================== */
+(function(){
+  'use strict';
+  function countItems(){ try{ return document.querySelectorAll('#list .item').length; }catch(e){ return 0; } }
+  async function tryReload(reason){
+    console.warn('[HEALTHCHECK] Relance initialisation:', reason);
+    try{
+      if(typeof loadAll === 'function'){
+        await loadAll();
+      }else if(typeof loadData === 'function'){
+        await loadData();
+      }else if(typeof init === 'function'){
+        await init();
+      }
+    }catch(e){
+      console.error('[HEALTHCHECK] Echec relance', e);
+    }
+  }
+  function checkOnce(){
+    try{
+      const mapSize = (window.MAP && window.MAP.size) ? window.MAP.size : 0;
+      const items = countItems();
+      if(mapSize>0 && items===0){
+        console.warn('[HEALTHCHECK] MAP ok mais liste vide -> renderList()');
+        try{ if(typeof renderList==='function') renderList(); }catch(e){ console.error(e); }
+      }else if(mapSize===0){
+        // Cas fréquent en course condition au premier chargement
+        console.warn('[HEALTHCHECK] MAP vide -> tentative reload');
+        tryReload('MAP vide');
+      }
+    }catch(e){}
+  }
+  if(typeof onReady === 'function'){
+    onReady(()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
+  }else{
+    document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(checkOnce, 250); setTimeout(checkOnce, 900); });
+  }
+})();
+</script>
+
+</body></html>");
     w.document.close();
 
     // Etablissements / Diplomes (via table de lien)
@@ -5916,7 +5948,7 @@ function setSticky(rec){
     const kind = readKindFromRec(rec);
     const lbl = document.querySelector('.current-equip-label');
     if(lbl){
-      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : (kind === 'travaux' ? 'Travaux en cours' : 'Equipement en cours');
+      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : (kind === 'travaux' ? 'Travaux réglementés en cours' : 'Equipement en cours');
     }
   }catch(e){}
 }
@@ -6184,11 +6216,6 @@ function schedulePersoSave(){
 }
 
 function initPersoAutosave(){
-  // Public/GitHub mode: don't start perso autosave (requires Grist context)
-  if(!(window.grist && window.grist.docApi)){
-    console.warn('[PERSO-INIT] Skipped: Grist API indisponible');
-    return;
-  }
   console.log('[PERSO-INIT] 🚀 initPersoAutosave() appelée');
   const ids = ['perso-reference','perso-atelier','perso-annee','perso-notes'];
   let foundCount = 0;
@@ -7149,35 +7176,27 @@ await ensureTravauxData();
         dlgClear.setAttribute('aria-hidden','true');
         return;
       }
-      __setDelBusy(true, 'Suppression…');
-      try{
-        await runQuick(async () => {
-          await applyUA([['UpdateRecord', TBL_MAIN, Number(ROW.id), {
-            [COL_TMP_TR]: null,
-            [COL_TMP_INTI_TR]: null,
-            [COL_TMP_ART]: null
-          }]]);
-          const r = MAP.get(Number(ROW.id)) || ROW;
-          r[COL_TMP_TR] = null;
-          r[COL_TMP_INTI_TR] = null;
-          r[COL_TMP_ART] = null;
-          MAP.set(Number(ROW.id), r);
-          travSelection = {};
-          await renderTravauxFromRec(r);
-        });
+      await runQuick(async () => {
+        await applyUA([['UpdateRecord', TBL_MAIN, Number(ROW.id), {
+          [COL_TMP_TR]: null,
+          [COL_TMP_INTI_TR]: null,
+          [COL_TMP_ART]: null
+        }]]);
+        const r = MAP.get(Number(ROW.id)) || ROW;
+        r[COL_TMP_TR] = null;
+        r[COL_TMP_INTI_TR] = null;
+        r[COL_TMP_ART] = null;
+        MAP.set(Number(ROW.id), r);
+        travSelection = {};
+        await renderTravauxFromRec(r);
+      });
 
-        dlgClear.style.display = 'none';
-        dlgClear.setAttribute('aria-hidden','true');
-      }
-      catch(e){
-        console.error('[CLEAR TRAVAUX] ❌ erreur suppression travaux:', e);
-        // On garde la modale ouverte pour éviter une fausse impression de succès
-      }
-      finally{
-        __setDelBusy(false, '');
-      }
-
+      dlgClear.style.display = 'none';
+      dlgClear.setAttribute('aria-hidden','true');
     });
+  }
+}
+
 /* ==========================================================
    SÉLECTION / REFRESH DROITE
    ========================================================== */
@@ -7272,7 +7291,7 @@ async function refreshRight(){
   await buildDomainesEtSecteurs(rec);
   syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
   await renderTravauxFromRec(rec);
   if(_rp){ _rp.scrollTop = _scrollTop; }
 }
@@ -7992,18 +8011,6 @@ qs('#dlgDiplomes').addEventListener('click',e=>{if(e.target.id==='dlgDiplomes')c
 
 qs('#dlg-di-ok').onclick = async () => {
   if (!ROW) return;
-  const __diOk = qs('#dlg-di-ok');
-  const __diCancel = qs('#dlg-di-cancel');
-  const __diStatus = qs('#dlg-di-status');
-  const __setDiplomeBusy = (busy, msg='') => {
-    try{
-      if(__diOk) __diOk.disabled = !!busy;
-      if(__diCancel) __diCancel.disabled = !!busy;
-      if(__diStatus) __diStatus.textContent = msg || '';
-    }catch(e){}
-  };
-  __setDiplomeBusy(true, 'Enregistrement…');
-  try{
 
   console.log('[DIPLOMES v14] Validation démarrée pour équipement:', ROW.id);
 
@@ -8097,15 +8104,6 @@ qs('#dlg-di-ok').onclick = async () => {
 
   closeDiplomeDialog();
   console.log('[DIPLOMES v14] Modale fermée');
-  }
-  catch(e){
-    console.error('[DIPLOMES v14] ❌ Erreur enregistrement:', e);
-    __setDiplomeBusy(false, "Erreur d'enregistrement (voir console)");
-    return;
-  }
-  finally{
-    __setDiplomeBusy(false, '');
-  }
 };
 
 /* ==========================================================
@@ -8328,16 +8326,8 @@ function initAddModeDialog() {
       err.textContent = 'Saisir un code.';
       return;
     }
-    const __delOk = document.getElementById('adm-del-ok');
-    const __delCancel = document.getElementById('adm-del-cancel');
-    const __delStatus = document.getElementById('adm-del-status');
-    const __setDelBusy = (busy, msg='') => {
-      try{
-        if(__delOk) __delOk.disabled = !!busy;
-        if(__delCancel) __delCancel.disabled = !!busy;
-        if(__delStatus) __delStatus.textContent = msg || '';
-      }catch(e){}
-    };
+    err.textContent = '';
+
     const hasGristWrite = !!(window.grist && window.grist.docApi && typeof window.grist.docApi.applyUserActions === 'function');
     let authInfo = null;
     if(!hasGristWrite){
@@ -11353,49 +11343,6 @@ window.grist.onRecords(async (records, mappings) => {
   }, 1000);
   
   console.log('[CORRECTIF v14] ✅ Installation terminée');
-})();
-</script>
-
-<script>
-/* ==========================================================
-   HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
-   - si MAP est chargé mais la liste est vide, on relance renderList()
-   - si MAP est vide alors qu'on devrait avoir des données, on relance load
-   ========================================================== */
-(function(){
-  'use strict';
-  function countItems(){ try{ return document.querySelectorAll('#list .item').length; }catch(e){ return 0; } }
-  async function tryReload(reason){
-    console.warn('[HEALTHCHECK] Relance initialisation:', reason);
-    try{
-      if(typeof loadAll === 'function'){
-        await loadAll();
-      }else if(typeof loadData === 'function'){
-        await loadData();
-      }else if(typeof init === 'function'){
-        await init();
-      }
-    }catch(e){
-      console.error('[HEALTHCHECK] Echec relance', e);
-    }
-  }
-  function checkOnce(){
-    try{
-      const mapSize = (window.MAP && window.MAP.size) ? window.MAP.size : 0;
-      const items = countItems();
-      if(mapSize>0 && items===0){
-        console.warn('[HEALTHCHECK] MAP ok mais liste vide -> renderList()');
-        try{ if(typeof renderList==='function') renderList(); }catch(e){ console.error(e); }
-      }else if(mapSize===0){
-        console.warn('[HEALTHCHECK] MAP vide -> tentative reload');
-        tryReload('MAP vide');
-      }
-    }catch(e){}
-  }
-  document.addEventListener('DOMContentLoaded', ()=>{
-    setTimeout(checkOnce, 250);
-    setTimeout(checkOnce, 900);
-  });
 })();
 </script>
 
