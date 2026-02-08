@@ -154,11 +154,7 @@ window.PP_fetchTable = async function(tableName){
       <!-- RECHERCHE (diplôme + établissement) – non imprimée -->
       <div class="search-card non-printable">
         <h3>Recherche</h3>
-        <div class="non-printable" style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" id="pp-reconnect-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Reconnexion établissement</button>
-          <button type="button" id="pp-change-etab-btn" class="export-btn" style="padding:6px 10px; font-size:13px;">Changer d’établissement</button>
-        </div>
-        <p>
+<p>
           1. Choisissez une <strong>formation</strong> (diplôme).<br>
           2. Choisissez un <strong>établissement</strong>.<br>
           Ces choix alimentent automatiquement le formulaire ci-dessous.
@@ -1148,44 +1144,6 @@ function tryRestoreEtabSession() {
 
 }
 
-// Boutons : (re)connexion / changement d'établissement
-const btnReconnect = document.getElementById("pp-reconnect-btn");
-const btnChangeEtab = document.getElementById("pp-change-etab-btn");
-
-function showCodeModal() {
-  if (codeModal && codeInput) {
-    codeModal.style.display = "flex";
-    setTimeout(() => codeInput.focus(), 50);
-    return true;
-  }
-  return false;
-}
-
-function unlockEtablissement() {
-  selectedEtabCodeNorm = null;
-  selectedEtabNameNorm = null;
-  selectedEtabNameLoose = null;
-  currentEtabName = "";
-  if (versoEtabEl) versoEtabEl.textContent = "";
-  if (etabText) etabText.innerHTML = "";
-  if (inputEtab) {
-    inputEtab.readOnly = false;
-    inputEtab.classList.remove("locked");
-    inputEtab.value = "";
-  }
-  if (inputDiplome) inputDiplome.value = "";
-  if (formationText) formationText.textContent = "";
-  if (travauxListEl) travauxListEl.innerHTML = "";
-  renderVerso();
-}
-
-if (btnReconnect) btnReconnect.addEventListener("click", () => showCodeModal());
-if (btnChangeEtab) btnChangeEtab.addEventListener("click", () => {
-  clearEtabSession();
-  unlockEtablissement();
-  showCodeModal();
-});
-
 window.addEventListener("load", async () => {
   if (docEditedDateEl) docEditedDateEl.textContent = formatTodayFR();
 
@@ -1300,93 +1258,6 @@ window.addEventListener("load", async () => {
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 
 
-<!-- PP DIAG TRAVAUX (v12) -->
-<div id="pp-diag-travaux" style="position:fixed;right:12px;bottom:12px;z-index:99998;max-width:420px;width:92vw;
-background:rgba(2,6,23,.92);color:#e5f0ff;border:1px solid rgba(249,115,22,.8);border-radius:14px;
-box-shadow:0 18px 40px rgba(0,0,0,.45);font:12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;
-padding:10px 12px;display:none;">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-    <div style="font-weight:800;letter-spacing:.2px;">DIAG TRAVAUX</div>
-    <button id="pp-diag-close" type="button" style="border:none;background:transparent;color:#93c5fd;cursor:pointer;font-weight:700;">Fermer</button>
-  </div>
-  <pre id="pp-diag-pre" style="margin:8px 0 0;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;"></pre>
-</div>
-
-<script>
-(function(){
-  function $(id){ return document.getElementById(id); }
-  function show(){ const box=$('pp-diag-travaux'); if(box) box.style.display='block'; }
-  function setTxt(t){ const pre=$('pp-diag-pre'); if(pre) pre.textContent = t; }
-  function kv(obj){
-    const lines=[];
-    for(const k of Object.keys(obj)){ lines.push(k + ': ' + obj[k]); }
-    return lines.join('\\n');
-  }
-  function safeJson(x){ try { return JSON.stringify(x); } catch(e){ return String(x); } }
-
-  function detectColumnsFromRecords(raw){
-    // raw peut être {records:[{fields:{...}}]} ou [{...}] déjà aplati
-    const rec0 = (raw && Array.isArray(raw.records) && raw.records[0] && raw.records[0].fields) ? raw.records[0].fields
-                : (Array.isArray(raw) && raw[0]) ? raw[0]
-                : null;
-    if(!rec0) return [];
-    return Object.keys(rec0);
-  }
-
-  async function diag(){
-    const diagState = {
-      'Auth (PP_AUTH.get)': 'n/a',
-      'PP_fetchTable': typeof window.PP_fetchTable,
-      'PP_SB_API_READ': (window.PP_SB_API_READ || '').slice(0,80) + (String(window.PP_SB_API_READ||'').length>80?'…':''),
-      'Liste_des_equipements': 'n/a',
-      'Colonnes (échantillon)': 'n/a',
-      'Note': 'Si Liste_des_equipements est 0 ligne ou colonnes introuvables, il faut ajuster le mapping.'
-    };
-
-    try{
-      if(window.PP_AUTH && typeof window.PP_AUTH.get === 'function'){
-        const st = window.PP_AUTH.get();
-        diagState['Auth (PP_AUTH.get)'] = st ? ('OK role=' + (st.role||'?') + ' codepaca=' + (st.codepaca||'') ) : 'NULL (pas de session valide)';
-      } else {
-        diagState['Auth (PP_AUTH.get)'] = 'PP_AUTH absent';
-      }
-    }catch(e){
-      diagState['Auth (PP_AUTH.get)'] = 'Erreur: ' + (e && e.message ? e.message : String(e));
-    }
-
-    // tente de lire la table travaux
-    try{
-      if(typeof window.PP_fetchTable === 'function'){
-        const raw = await window.PP_fetchTable('Liste_des_equipements');
-        // normalise comptage
-        let n = 0;
-        if(raw && Array.isArray(raw.records)) n = raw.records.length;
-        else if(Array.isArray(raw)) n = raw.length;
-        diagState['Liste_des_equipements'] = n + ' lignes';
-        const cols = detectColumnsFromRecords(raw);
-        diagState['Colonnes (échantillon)'] = cols.length ? cols.join(', ') : '(aucune colonne détectée)';
-      } else {
-        diagState['Liste_des_equipements'] = 'PP_fetchTable indisponible';
-      }
-    }catch(e){
-      diagState['Liste_des_equipements'] = 'Erreur: ' + (e && e.message ? e.message : String(e));
-    }
-
-    show();
-    setTxt(kv(diagState));
-    console.log('[TRAVAUX][DIAG]', diagState);
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    const btn = $('pp-diag-close');
-    if(btn){ btn.addEventListener('click', () => { const box=$('pp-diag-travaux'); if(box) box.style.display='none'; }); }
-    // lance diag après un petit délai (laisser pp-config et auth se mettre en place)
-    setTimeout(diag, 600);
-    // relance diag après changement d'auth
-    document.addEventListener('pp:auth-changed', () => setTimeout(diag, 300));
-  });
-})();
-</script>
 
 </body>
 </html>
