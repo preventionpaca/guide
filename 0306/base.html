@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Equipements — DDFPT / ISST (Supabase SB_*)</title>
 <!-- Grist widget API : tag séparé (sinon certains navigateurs ignorent le chargement) -->
-  <!-- grist-plugin-api removed for public GitHub page -->
+<!-- grist-plugin-api removed for public GitHub page -->
 <script>
   console.log('[PP-TR] LOADED v15.23-FIX-CURRENTREC-FALLBACK');
 </script>
@@ -3298,7 +3298,6 @@ html.fp-exporting-doc #fpWrapper #fpMachineName{
 /* Ensure FP dialog centered and scroll internal */
 #dlgFichePoste .fp-dialog{margin:0; max-height:92vh; overflow:auto; width:min(1200px,96vw);}
 </style>
-
 <style>
 /* ===== PP-TR TEST MODAL (debug) ===== */
 .pp-test-overlay{
@@ -3572,7 +3571,6 @@ html.fp-exporting-doc #fpHeaderBar{display:flex !important; align-items:stretch 
 html.fp-exporting-doc #fpHeaderLeft{flex:1 1 auto !important;}
 html.fp-exporting-doc #fpMachineName{margin:0 auto !important; left:auto !important; right:auto !important; transform:none !important; max-width:calc(100% - 10px) !important;}
 </style>
-
 <!-- ===== V32 PATCH (layout fiche de poste) ===== -->
 <style id="pptr-v32-fp">
 #dlgFichePoste.fp-overlay{position:fixed; inset:0; display:none; align-items:flex-start; justify-content:center; padding:16px; background:rgba(2,6,23,.55); z-index:2147483000;}
@@ -3602,7 +3600,6 @@ html.fp-exporting-doc #fpMachineName{margin:0 auto !important; left:auto !import
 html.fp-exporting-doc #dlgFichePoste .fp-dialog{max-height:none !important; overflow:visible !important;}
 html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparent !important;}
 </style>
-
 <style id="pptr-v32-ficheposte-fix">
 /* ===== V32 — Fiche de poste: même plan, fond blanc, bandeau au-dessus de Nature des travaux ===== */
 #dlgFichePoste.fp-overlay{
@@ -3707,7 +3704,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 #dlgFichePoste #fpQR .fp-qr-tooltip{display:none !important;} /* on garde le title natif */
 
 </style>
-
 <style id="pp-fp-v36-patch">
 /* === V36 PATCH: header fiche de poste dans le même plan + boutons alignés === */
 #dlgFichePoste .fp-dialog{background:#fff !important;}
@@ -3752,8 +3748,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 
 
 </style>
-
-
 <!-- ===== PATCH V28.6 – ÉQUILIBRAGE FINAL : HAUT -20% + PHOTO + HAUT (écran + PNG) ===== -->
 <style id="pp-fp-balance-v28-6">
 
@@ -3795,8 +3789,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 }
 
 </style>
-
-
 <!-- ===== PATCH V28.8 – ÉCRAN : PHOTO LÉGÈREMENT RÉDUITE (PNG inchangé) ===== -->
 <style id="pp-fp-photo-screen-v28-8">
 /* Photo "à l'écran" : on évite toute sensation de zoom/cadrage en
@@ -3820,8 +3812,6 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   max-height:100% !important;
 }
 </style>
-
-
 <!-- ===== PATCH V29.0 – Lightbox modes réactivées + champs code masqués ===== -->
 <style id="pp-lightbox-fix-v29-0">
 /* Certaines versions forçaient ces lightbox à rester cachées via display:none !important.
@@ -3843,17 +3833,11 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
   pointer-events:none !important;
 }
 </style>
-
 </head>
-
 <body data-theme="dark" style="margin:0;padding:0;">
-
 <div id="topSpacer"></div>
-
 <!-- PP-TR VERSION BADGE -->
-
-<div id="ppSaveToast" aria-hidden="true">Modification enregistrée</div>
-
+<div aria-hidden="true" id="ppSaveToast">Modification enregistrée</div>
 <div class="wrap">
 <div class="layout">
 <!-- ================== COLONNE GAUCHE ================== -->
@@ -3894,18 +3878,17 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
             Diplôme
           </label>
 </div>
-
 <div class="kind-modes">
-  <label class="kind-mode active"><input type="radio" name="kindMode" value="all" checked> Tous</label>
-  <label class="kind-mode"><input type="radio" name="kindMode" value="equipement"> Equipements</label>
-  <label class="kind-mode"><input type="radio" name="kindMode" value="produit"> Produits</label>
-  <label class="kind-mode"><input type="radio" name="kindMode" value="travaux"> Travaux réglementés</label>
+<label class="kind-mode active"><input checked="" name="kindMode" type="radio" value="all"/> Tous</label>
+<label class="kind-mode"><input name="kindMode" type="radio" value="equipement"/> Equipements</label>
+<label class="kind-mode"><input name="kindMode" type="radio" value="produit"/> Produits</label>
+<label class="kind-mode"><input name="kindMode" type="radio" value="travaux"/> Travaux</label>
 </div>
 <div class="row row-nowrap">
-<input class="text-input" id="filter" placeholder="Filtrer…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search">
+<input autocapitalize="off" autocomplete="off" autocorrect="off" class="text-input" id="filter" inputmode="search" placeholder="Filtrer…" spellcheck="false"/>
 <button class="btn-circle" id="applyFilter">✓</button>
 <button class="btn-circle" id="clearFilter">✗</button>
-</input></div>
+</div>
 <datalist id="dl-filter-domain"></datalist>
 <datalist id="dl-filter-secteur"></datalist>
 <datalist id="dl-filter-diplome"></datalist>
@@ -3922,7 +3905,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 <div id="equip-count">0 équipements affichés</div>
 <div class="row row-nowrap" style="margin-top:6px;">
-  <button class="theme-toggle" id="exportBtn" type="button" style="width:100%;">Exporter (PDF)</button>
+<button class="theme-toggle" id="exportBtn" style="width:100%;" type="button">Exporter (PDF)</button>
 </div>
 </div>
 <!-- Liste des équipements -->
@@ -3959,21 +3942,21 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
           Mode ajout activé pour <span id="addModeEtab">—</span>
 </div>
 <div class="block">
-<div class="block-title"><div class="type-inline"><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeEquipMain" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeProduitMain" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="equipTypeMain" id="typeTravauxMain" value="travaux"> Travaux réglementés</label></div></div>
+<div class="block-title"><div class="type-inline"><label class="type-opt"><input id="typeEquipMain" name="equipTypeMain" type="radio" value="equipement"/> Equipement</label><label class="type-opt"><input id="typeProduitMain" name="equipTypeMain" type="radio" value="produit"/> Produit</label><label class="type-opt"><input id="typeTravauxMain" name="equipTypeMain" type="radio" value="travaux"/> Travaux</label></div></div>
 <div class="equip-lib-wrapper">
-<input class="input-pill" id="f-lib">
+<input class="input-pill" id="f-lib"/>
 <div class="regime-badge regime-on-lib" id="regimeToken">—</div>
-</input></div>
+</div>
 </div>
 <!-- Nature des travaux + Secteur / Domaines -->
 <div class="block">
 <div class="trav-sect-grid">
 <div class="trav-col">
 <div class="block-title">Nature des travaux</div>
-<textarea class="input-pill input-area" id="f-travaux" readonly readonly></textarea>
+<textarea class="input-pill input-area" id="f-travaux" readonly=""></textarea>
 </div>
 <div class="sectdom-col">
-<div class="block-title">Secteur d'activité & domaines</div>
+<div class="block-title">Secteur d'activité &amp; domaines</div>
 <div class="domains-col">
 <div>
 <div class="domains-title">Secteur d'activité</div>
@@ -3990,13 +3973,13 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="block">
 <div class="block-title">Check par établissement</div>
 <div class="row">
-<input autocomplete="off" class="input-pill" id="check-etab-inp" list="dl-check-etab" placeholder="Choisir un établissement…">
+<input autocomplete="off" class="input-pill" id="check-etab-inp" list="dl-check-etab" placeholder="Choisir un établissement…"/>
 <datalist id="dl-check-etab"></datalist>
 <!-- bouton voir diplômes : stylé via .btn-pill-orange -->
 <button class="btn btn-small btn-pill-orange" id="check-etab-open" type="button">
               Voir diplômes
             </button>
-</input></div>
+</div>
 </div>
 <div class="block block-dreets-slot">
 <div class="block-title">Établissements sélectionnés</div>
@@ -4008,51 +3991,48 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 <!-- VALIDATION ISST (demande par établissement / admin) -->
 <div class="block" id="dreetsRequestBlock">
-  <div class="block-title">Validation ISST</div>
-  <div class="row" style="align-items:center; gap:10px; flex-wrap:wrap;">
-    <button class="btn btn-small btn-pill-orange" id="btnAskDreets" type="button">À compléter par ISST</button>
-    <div class="status" id="dreetsAskMsg"></div>
-  </div>
-  <div style="font-size:12px; opacity:.75; margin-top:6px;">
+<div class="block-title">Validation ISST</div>
+<div class="row" style="align-items:center; gap:10px; flex-wrap:wrap;">
+<button class="btn btn-small btn-pill-orange" id="btnAskDreets" type="button">À compléter par ISST</button>
+<div class="status" id="dreetsAskMsg"></div>
+</div>
+<div style="font-size:12px; opacity:.75; margin-top:6px;">
     Ce bouton sélectionne automatiquement le régime "À compléter par ISST" et envoie une notification (FormSubmit).
   </div>
 </div>
-
 <!-- CHAMPS PERSONNALISÉS (par établissement) -->
 <div class="block" id="persoFieldsBlock" style="display:none;">
-  <div class="block-title">Champs personnalisés (établissement)</div>
-  <!-- Admin : choisir l’établissement cible (libellé) pour éditer comme l’établissement -->
-  <div class="row" id="adminPersoTargetRow" style="display:none; margin-bottom:8px;">
-    <input class="input-pill" id="adminTargetEtab" list="dl-check-etab" placeholder="(Admin) Établissement cible…" autocomplete="off" />
-  </div>
-
-  <div class="row" style="gap:10px; flex-wrap:wrap;">
-    <div style="flex:1 1 180px; min-width:180px;">
-      <div class="domains-title">Référence</div>
-      <input class="input-pill" id="perso-reference" placeholder="Référence…" />
-    </div>
-    <div style="flex:1 1 180px; min-width:180px;">
-      <div class="domains-title">Atelier</div>
-      <input class="input-pill" id="perso-atelier" placeholder="Atelier…" />
-    </div>
-    <div style="flex:0 0 140px; min-width:140px;">
-      <div class="domains-title">Année</div>
-      <input class="input-pill" id="perso-annee" placeholder="Année…" />
-    </div>
-  </div>
-  <div style="margin-top:8px;">
-    <div class="domains-title">Notes</div>
-    <textarea class="input-pill input-area" id="perso-notes" rows="3" placeholder="Notes…"></textarea>
-  </div>
-  <div class="status" id="persoMsg" style="margin-top:6px;"></div>
+<div class="block-title">Champs personnalisés (établissement)</div>
+<!-- Admin : choisir l’établissement cible (libellé) pour éditer comme l’établissement -->
+<div class="row" id="adminPersoTargetRow" style="display:none; margin-bottom:8px;">
+<input autocomplete="off" class="input-pill" id="adminTargetEtab" list="dl-check-etab" placeholder="(Admin) Établissement cible…"/>
+</div>
+<div class="row" style="gap:10px; flex-wrap:wrap;">
+<div style="flex:1 1 180px; min-width:180px;">
+<div class="domains-title">Référence</div>
+<input class="input-pill" id="perso-reference" placeholder="Référence…"/>
+</div>
+<div style="flex:1 1 180px; min-width:180px;">
+<div class="domains-title">Atelier</div>
+<input class="input-pill" id="perso-atelier" placeholder="Atelier…"/>
+</div>
+<div style="flex:0 0 140px; min-width:140px;">
+<div class="domains-title">Année</div>
+<input class="input-pill" id="perso-annee" placeholder="Année…"/>
+</div>
+</div>
+<div style="margin-top:8px;">
+<div class="domains-title">Notes</div>
+<textarea class="input-pill input-area" id="perso-notes" placeholder="Notes…" rows="3"></textarea>
+</div>
+<div class="status" id="persoMsg" style="margin-top:6px;"></div>
 </div>
 <!-- /CHAMPS PERSONNALISÉS -->
-
 <!-- PHOTO / VGP / DOC -->
 <div class="block block-photo-vgp">
 <div class="block-title">Photo / VGP / Doc bureau de contrôle</div>
 <div class="photo-product-row">
-  <div class="photo-left">
+<div class="photo-left">
 <div class="photo-row">
 <div>
 <div class="photo-box" id="photoThumb" title="Cliquer pour agrandir">
@@ -4063,19 +4043,19 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div>
 <div class="domains-title">Fichier image</div>
 <a class="file-trigger" id="fileTrigger">Choisir un fichier…</a>
-<input accept="image/*" id="filePick" style="display:none" type="file">
+<input accept="image/*" id="filePick" style="display:none" type="file"/>
 <div class="file-name-pill"><span id="fileName">Aucun fichier choisi</span></div>
-</input></div>
+</div>
 <div>
 <button class="btn btn-small" id="btnUpload">Téléverser</button>
 <div class="status" id="photoMsg"></div>
 </div>
 <div class="row" id="adminPhotoSwitchRow" style="display:none; margin-top:6px; align-items:center; gap:10px;">
-  <label style="display:flex; align-items:center; gap:8px; font-size:12px; opacity:.92;">
-    <input type="checkbox" id="photoTargetSwitch" checked />
-    <span>Photo établissement</span>
-  </label>
-  <span style="font-size:12px; opacity:.75;">(décocher = photo de base)</span>
+<label style="display:flex; align-items:center; gap:8px; font-size:12px; opacity:.92;">
+<input checked="" id="photoTargetSwitch" type="checkbox"/>
+<span>Photo établissement</span>
+</label>
+<span style="font-size:12px; opacity:.75;">(décocher = photo de base)</span>
 </div>
 <div>
 <div class="domains-title">VGP</div>
@@ -4090,13 +4070,11 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 </div>
 </div>
-  </div><!-- /.photo-left -->
-  
-  <!-- Bloc Caractéristiques à droite du PHOTO/VGP -->
-  <div class="block dreets-overlap-block" id="dreetsProductBlock">
-    <div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par l'ISST</span></div>
-    <div class="dreets-product-grid">
-
+</div><!-- /.photo-left -->
+<!-- Bloc Caractéristiques à droite du PHOTO/VGP -->
+<div class="block dreets-overlap-block" id="dreetsProductBlock">
+<div class="block-title">Caractéristiques du produit / agent chimique <span class="tag-dreets">À compléter par l'ISST</span></div>
+<div class="dreets-product-grid">
 <div class="dreets-field">
 <label class="domains-title" for="dreets-agent">Agent chimique</label>
 <input class="input-pill" id="dreets-agent"/>
@@ -4118,14 +4096,11 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <input class="input-pill" id="dreets-epi"/>
 </div>
 </div><!-- /.dreets-product-grid -->
-  </div><!-- /#dreetsProductBlock -->
-  
+</div><!-- /#dreetsProductBlock -->
 </div><!-- /.photo-product-row -->
 </div>
 <!-- fin bloc PHOTO/VGP -->
-
 </div><!-- fin panel DDFPT -->
-
 <!-- ================== PANEL ISST (cadre vert) ================== -->
 <div class="panel panel-dreets panel-dreets-overlap">
 <div class="panel-title-bar">
@@ -4139,7 +4114,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 </div>
 <!-- Le reste du panneau ISST (sous la zone imbriquée) -->
 <div class="dreets-layout">
-  <div class="dreets-left">
+<div class="dreets-left">
 <div class="block">
 <div class="block-title">Travaux réglementés</div>
 <div class="trav-buttons">
@@ -4153,7 +4128,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <select class="input-pill" id="f-regime"></select>
 </div>
 </div>
-  <div class="dreets-right">
+<div class="dreets-right">
 <!-- Précisions et Observations à droite avec hauteurs ajustées pour équilibrer avec Travaux + Régime -->
 <div class="block">
 <div class="block-title">Précisions sur le régime d'interdiction / dérogation</div>
@@ -4163,18 +4138,14 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="block-title">Observations</div>
 <textarea class="input-pill input-area full-width-area dreets-tall-textarea" id="observations" rows="5"></textarea>
 </div>
-  </div><!-- /.dreets-right -->
+</div><!-- /.dreets-right -->
 </div><!-- /.dreets-layout -->
 </div><!-- fin panel ISST -->
 </div><!-- fin panel ISST -->
 <!-- ================== /PANEL ISST ================== -->
-
-
-
-
 </div><!-- /rightPane -->
 </div><!-- /layout -->
-</div><!-- /wrap -->
+<!-- /wrap -->
 <!-- Lightbox image -->
 <div aria-hidden="true" id="lightbox">
 <span aria-label="Fermer" class="close">✕</span>
@@ -4191,6 +4162,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div id="dlg-di-list"></div>
 </div>
 <div class="modal-footer">
+<div id="dlg-di-msg" style="flex:1; font:12px system-ui; color:#475569; padding-right:10px;"></div>
 <button class="btn btn-small" id="dlg-di-cancel" type="button">Annuler</button>
 <button class="btn btn-small" id="dlg-di-ok" type="button">Valider</button>
 </div>
@@ -4229,34 +4201,31 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <!-- HEADER : bandeau bleu + barre équipement -->
 <div class="fp-header" id="fpHeader">
 <div class="fp-banner" id="fpHeaderBar">
-  <div class="fp-banner-left" id="fpHeaderLeft">
-    <div class="fp-banner-title">FICHE DE POSTE</div>
-    <div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input type="radio" name="fpKind" id="fpKindEquip" value="equipement"> Equipement</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindProduit" value="produit"> Produit</label><label class="type-opt"><input type="radio" name="fpKind" id="fpKindTravaux" value="travaux"> Travaux réglementés</label></div>
-    <div class="fp-equip-name" id="fpMachineName">—</div>
-  </div>
-
-  <div class="fp-banner-right" id="fpHeaderRight">
-    <div class="fp-actions-top">
-        <button id="fpBtnQrSetup" class="fp-btn fp-btn-lite" title="Régler l’URL du QR code">Réglage QR</button>
-        <button id="fpCancel" type="button">Annuler</button>
-        <button id="fpExportShot" type="button">Enregistrer sous</button>
-        <button id="fpSave" type="button">Valider</button>
-      </div>
-
-    <div class="fp-qrcode-box" id="fpQrBox">
-      <a id="fpQrLink" href="#" target="_blank" rel="noopener"><div id="fpQR" class="fp-qr"></div></a>
-    </div>
-  </div>
+<div class="fp-banner-left" id="fpHeaderLeft">
+<div class="fp-banner-title">FICHE DE POSTE</div>
+<div class="fp-kind-line" style="margin-top:4px; display:flex; gap:10px; align-items:center;"><span class="domains-title" style="margin:0;">Type :</span><span id="fpKindDisplay" style="font-weight:800;">—</span></div><div class="type-inline" style="margin-top:4px; display:none;"><label class="type-opt"><input id="fpKindEquip" name="fpKind" type="radio" value="equipement"/> Equipement</label><label class="type-opt"><input id="fpKindProduit" name="fpKind" type="radio" value="produit"/> Produit</label><label class="type-opt"><input id="fpKindTravaux" name="fpKind" type="radio" value="travaux"/> Travaux réglementés</label></div>
+<div class="fp-equip-name" id="fpMachineName">—</div>
+</div>
+<div class="fp-banner-right" id="fpHeaderRight">
+<div class="fp-actions-top">
+<button class="fp-btn fp-btn-lite" id="fpBtnQrSetup" title="Régler l’URL du QR code">Réglage QR</button>
+<button id="fpCancel" type="button">Annuler</button>
+<button id="fpExportShot" type="button">Enregistrer sous</button>
+<button id="fpSave" type="button">Valider</button>
+</div>
+<div class="fp-qrcode-box" id="fpQrBox">
+<a href="#" id="fpQrLink" rel="noopener" target="_blank"><div class="fp-qr" id="fpQR"></div></a>
 </div>
 </div>
-
+</div>
+</div>
 <!-- CONTENU -->
 <div class="fp-content">
 <!-- Nature des travaux -->
 <div class="fp-topline">
 <div class="fp-section">
 <label for="fpNatureTravaux">Nature des travaux réalisés</label>
-<textarea class="fp-textarea" id="fpNatureTravaux" readonly rows="2" readonly readonly></textarea>
+<textarea class="fp-textarea" id="fpNatureTravaux" readonly="" rows="2"></textarea>
 </div>
 </div>
 <!-- Diplômes associés -->
@@ -4276,12 +4245,12 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="fp-photo-empty" id="fpPhotoEmpty">Aucune photo disponible</div>
 </div>
 <div class="fp-perso" id="fpPersoBlock" style="margin-top:10px; padding:8px 10px; border-radius:12px; border:1px solid rgba(148,163,184,0.35); background: rgba(15,23,42,0.18);">
-  <div style="font-weight:800; font-size:12px; margin-bottom:6px; opacity:.95;">Champs établissement</div>
-  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 10px; font-size:12px;">
-    <div><span style="opacity:.75;">Référence :</span> <span id="fpPersoRef">—</span></div>
-    <div><span style="opacity:.75;">Atelier :</span> <span id="fpPersoAtelier">—</span></div>
-    <div><span style="opacity:.75;">Année :</span> <span id="fpPersoAnnee">—</span></div>
-    <div><span style="opacity:.75;">Notes :</span> <span id="fpPersoNotes">—</span></div>
+<div style="font-weight:800; font-size:12px; margin-bottom:6px; opacity:.95;">Champs établissement</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 10px; font-size:12px;">
+<div><span style="opacity:.75;">Référence :</span> <span id="fpPersoRef">—</span></div>
+<div><span style="opacity:.75;">Atelier :</span> <span id="fpPersoAtelier">—</span></div>
+<div><span style="opacity:.75;">Année :</span> <span id="fpPersoAnnee">—</span></div>
+<div><span style="opacity:.75;">Notes :</span> <span id="fpPersoNotes">—</span></div>
 </div>
 </div>
 </div>
@@ -4374,7 +4343,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-body">
       Saisir le code d'établissement (<strong>Codepaca</strong>) pour déverrouiller le bloc « Nouvel équipement ».
     </div>
-<input autocomplete="off" class="addmode-input" id="addmode-code" type="password" placeholder="Code établissement…"/ inputmode="numeric">
+<input autocomplete="off" class="addmode-input" id="addmode-code" inputmode="numeric" placeholder="Code établissement…" type="password"/>
 <div class="addmode-error" id="addmode-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small btn-cancel" id="addmode-cancel" type="button">Annuler</button>
@@ -4389,7 +4358,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-body">
       Saisir le <strong>code ISST</strong> pour déverrouiller l'encadré « ISST » (travaux réglementés, régime, précisions, observations).
     </div>
-<input autocomplete="off" class="addmode-input" id="dreets-code" type="password" placeholder="Code ISST…"/>
+<input autocomplete="off" class="addmode-input" id="dreets-code" placeholder="Code ISST…" type="password"/>
 <div class="addmode-error" id="dreets-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small btn-cancel" id="dreets-cancel" type="button">Annuler</button>
@@ -4404,7 +4373,7 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-body">
       Saisir un <strong>code administrateur</strong> pour déverrouiller tous les blocs (Mode ajout et ISST).
     </div>
-<input autocomplete="off" class="addmode-input" id="admin-mode-code" type="password" placeholder="Code administrateur…"/ inputmode="numeric">
+<input autocomplete="off" class="addmode-input" id="admin-mode-code" inputmode="numeric" placeholder="Code administrateur…" type="password"/>
 <div class="addmode-error" id="admin-mode-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small btn-cancel" id="admin-mode-cancel" type="button">Annuler</button>
@@ -4431,10 +4400,10 @@ html.fp-exporting-doc #dlgFichePoste{padding:0 !important; background:transparen
 <div class="addmode-inner">
 <div class="addmode-title">Suppression d'un équipement</div>
 <div class="addmode-body">
-      Equipement : <strong id="delEquipLabel">—</strong><br>
+      Equipement : <strong id="delEquipLabel">—</strong><br/>
       Saisir un <strong>code administrateur</strong> pour confirmer la suppression.
-    </br></div>
-<input autocomplete="off" class="addmode-input" id="adm-del-code" placeholder="Code administrateur…"/ type="password" inputmode="numeric">
+    </div>
+<input autocomplete="off" class="addmode-input" id="adm-del-code" inputmode="numeric" placeholder="Code administrateur…" type="password"/>
 <div class="addmode-error" id="adm-del-error"></div>
 <div class="addmode-footer">
 <button class="btn btn-small" id="adm-del-cancel" type="button">Annuler</button>
@@ -4602,7 +4571,7 @@ const COL_ETAB_LABEL    ='appellation_officielle';
 const COL_ETAB_DIP_TEXT ='Diplomes';
 const COL_ETAB_CODE     ='Codepaca';
 
-/* Travaux réglementés : table Liste_travaux */
+/* Travaux : table Liste_travaux */
 const TBL_TRAV      ='Liste_travaux';
 const COL_TR_LABEL  ='Travaux';
 const COL_TR_NUMPOS ='num';
@@ -4745,7 +4714,7 @@ function __ppSyncWindowModes(){
   }catch(e){}
 }
 
-/* Travaux réglementés */
+/* Travaux */
 let travRows=[];
 let travSelection={};
 let artIndex=new Map();
@@ -4811,7 +4780,7 @@ function writeKindToRec(rec, kind) {
 function setFpKindDisplay(kind){
   const el = document.getElementById('fpKindDisplay');
   if(!el) return;
-  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'travaux' ? 'Travaux réglementés' : (kind === 'equipement' ? 'Equipement' : '—'));
+  el.textContent = (kind === 'produit') ? 'Produit' : (kind === 'travaux' ? 'Travaux' : (kind === 'equipement' ? 'Equipement' : '—'));
 }
 function applyProduitVisibility(kind){
   const blk = document.querySelector('.dreets-overlap-block');
@@ -4823,7 +4792,7 @@ function updateProduitFieldsEnabled(rec){
   // Champs de l'encart Produit : éditables uniquement si (admin OU ISST) ET Type = produit
   const r = rec || ROW || {};
   const kind = readKindFromRec(r);
-  const ok = (ADMIN_MODE || DREETS_UNLOCKED) && (kind === 'produit');
+  const ok = (ADMIN_MODE || ADD_MODE_ACTIVE) && (kind === 'produit');
   ['#dreets-type','#dreets-famille','#dreets-agent','#dreets-clp','#dreets-epi'].forEach(sel=>{
     try{ setSectionEnabled(sel, ok); }catch(e){}
   });
@@ -4910,6 +4879,8 @@ function initTypeRadios(){
   const canEdit = () => (ADMIN_MODE || ADD_MODE_ACTIVE);
 
   __TYPE_RADIOS__ = {mE,mP,mT,fE,fP,fT,setDisabled,canEdit};
+  // Verrouillage initial (évite les radios cliquables avant identification)
+  try{ setDisabled(!canEdit()); }catch(e){}
   window.refreshTypeRadiosLock = ()=>{ try{ setDisabled(!canEdit()); }catch(e){} };
 
   const handler = async (ev)=>{
@@ -4939,7 +4910,7 @@ function initTypeRadios(){
       console.log('[KIND v15.5] Permission refusée, resynchronisation');
       syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){}
       setDisabled(!canEdit());
       return;
     }
@@ -4962,7 +4933,7 @@ function initTypeRadios(){
     }catch(e){
       console.error('[KIND v15.5] Erreur écriture:', e);
       try{ syncTypeRadiosFromRec(rec);
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){} }catch(_){ }
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){} }catch(_){ }
       try{ applyProduitVisibility(prev); }catch(_){ }
       alert("Écriture refusée ou non disponible. Si vous êtes dans un navigateur externe, ouvrez la page dans Grist.");
     }
@@ -5914,7 +5885,7 @@ function setSticky(rec){
     const kind = readKindFromRec(rec);
     const lbl = document.querySelector('.current-equip-label');
     if(lbl){
-      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : (kind === 'travaux' ? 'Travaux réglementés en cours' : 'Equipement en cours');
+      lbl.textContent = (kind === 'produit') ? 'Produit en cours' : (kind === 'travaux' ? 'Travaux en cours' : 'Equipement en cours');
     }
   }catch(e){}
 }
@@ -7262,7 +7233,7 @@ async function refreshRight(){
   await buildDomainesEtSecteurs(rec);
   syncTypeRadiosFromRec(rec);
   try{ updateProduitFieldsEnabled(rec); }catch(e){}
-  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux réglementés' : 'Equipement'); }catch(e){}
+  try{ const d=document.getElementById('fpKindDisplay'); if(d) d.textContent = (readKindFromRec(rec)==='produit') ? 'Produit' : (readKindFromRec(rec)==='travaux' ? 'Travaux' : 'Equipement'); }catch(e){}
   await renderTravauxFromRec(rec);
   if(_rp){ _rp.scrollTop = _scrollTop; }
 }
@@ -7982,6 +7953,13 @@ qs('#dlgDiplomes').addEventListener('click',e=>{if(e.target.id==='dlgDiplomes')c
 
 qs('#dlg-di-ok').onclick = async () => {
   if (!ROW) return;
+  // UX: feedback pendant l'enregistrement
+  const __okBtn = qs('#dlg-di-ok');
+  const __msg = qs('#dlg-di-msg');
+  const __prevTxt = __okBtn ? __okBtn.textContent : '';
+  try{ if(__okBtn) { __okBtn.disabled = true; __okBtn.textContent = 'Enregistrement…'; } }catch(e){}
+  try{ if(__msg) { __msg.textContent = 'Patientez… enregistrement en cours.'; __msg.style.opacity='1'; } }catch(e){}
+  try {
 
   console.log('[DIPLOMES v14] Validation démarrée pour équipement:', ROW.id);
 
@@ -8075,6 +8053,11 @@ qs('#dlg-di-ok').onclick = async () => {
 
   closeDiplomeDialog();
   console.log('[DIPLOMES v14] Modale fermée');
+
+  } finally {
+    try{ if(__okBtn) { __okBtn.disabled = false; __okBtn.textContent = __prevTxt || 'Valider'; } }catch(e){}
+    try{ if(__msg) { __msg.textContent = ''; __msg.style.opacity=''; } }catch(e){}
+  }
 };
 
 /* ==========================================================
@@ -10851,13 +10834,6 @@ window.grist.onRecords(async (records, mappings) => {
   }, true); // capture=true => passe avant les handlers Grist
 })();
 </script>
-
-
-
-
-
-
-
 <script>
 /* ==========================================================
    HARD GUARD OPEN LIGHTBOX TRAVAUX (anti-navigation)
@@ -11027,9 +11003,7 @@ window.grist.onRecords(async (records, mappings) => {
 })();
 
 </script>
-
 <!-- ===== PP-TR CLEAN: pas de lightbox alternative / pas de patchs empilés ===== -->
-
 <script>
 /* PATCH v11.62 CLEAR TRAVAUX + ZINDEX (désactivé: gestion native + CSS) */
 (function(){
@@ -11074,7 +11048,6 @@ window.grist.onRecords(async (records, mappings) => {
   });
 })();
 </script>
-
 <script>
 
 /* ===== V35 PATCH (DOM moves + clickable QR URL) ===== */
@@ -11175,7 +11148,6 @@ window.grist.onRecords(async (records, mappings) => {
 })();
 
 </script>
-
 <script>
 /* ========================================================================
    CORRECTIF v14 - VRAIMENT FINAL
@@ -11316,7 +11288,6 @@ window.grist.onRecords(async (records, mappings) => {
   console.log('[CORRECTIF v14] ✅ Installation terminée');
 })();
 </script>
-
 <script>
 /* ==========================================================
    HEALTHCHECK LISTE GAUCHE (anti "1 fois sur 2")
@@ -11359,7 +11330,5 @@ window.grist.onRecords(async (records, mappings) => {
   });
 })();
 </script>
-
 </body>
-
 </html>
