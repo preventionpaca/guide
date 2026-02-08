@@ -951,6 +951,21 @@ const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
   init();
 </script>
-  <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+  <!-- ===== JS commun pour le header (thème + liens) ===== -->
+<script>
+  window.PP_PAGE = 'ddfpt';
+  window.PP_LINKS = {
+    home:   'https://preventionpaca.github.io/guide/#home',
+    portal: 'https://preventionpaca.github.io/guide/#home',
+    admin:  'https://preventionpaca.github.io/guide/#admin',
+    ddfpt:  'https://preventionpaca.github.io/guide/#ddfpt'
+  };
+  window.PP_HEADER_TEXT = {
+    title: 'PORTAIL PRÉVENTION PACA',
+    subtitle: 'Avis médical d’aptitude aux travaux réglementés.'
+  };
+</script>
+<script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
+
 </body>
 </html>
