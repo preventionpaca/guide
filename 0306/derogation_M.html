@@ -1293,86 +1293,72 @@ try{
     window.print();
   });
 
-    // ===== GESTION LIGHTBOX CODE ETABLISSEMENT =====
-  // Persistance du code établissement (comme PDFT) : partagé entre pages
+      // ===== GESTION ETABLISSEMENT VIA PP_AUTH (lightbox centralisée) =====
+  // Même logique que la version P (GitHub) : l'identification est centralisée par pp-config.js.
+  // Ici on ne garde AUCUNE lightbox "historique Grist" dans la page.
+
   const PP_ETAB_CODE_STORAGE_KEY = 'pp_etab_code';
-  function getStoredEtabCode(){ try { return (localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || '').trim(); } catch { return ''; } }
+
+  function _normCodepaca(v){
+    return String(v ?? '').trim().toUpperCase();
+  }
+  function getStoredEtabCode(){
+    try { return _normCodepaca(localStorage.getItem(PP_ETAB_CODE_STORAGE_KEY) || ''); } catch { return ''; }
+  }
   function setStoredEtabCode(code){
     try{
-      const v=(code||'').toString().trim().toUpperCase();
+      const v = _normCodepaca(code);
       if(v) localStorage.setItem(PP_ETAB_CODE_STORAGE_KEY, v);
     }catch{}
   }
-  function clearStoredEtabCode(){ try{ localStorage.removeItem(PP_ETAB_CODE_STORAGE_KEY); }catch{} }
 
+  function applyEtabFromAuth(){
+    const st = (window.PP_AUTH && typeof PP_AUTH.get === 'function') ? PP_AUTH.get() : null;
+    if(!st || !st.ok) return false;
 
-  function handleCodeSubmit(opts={}){
-    const silent = !!opts.silent;
-    const remember = opts.remember !== false;
+    const code = _normCodepaca(st.codepaca);
+    if(code) setStoredEtabCode(code);
 
-    if(!hasCodeColumn || !etabCodeToObj.size){
-      if(!silent){
-        alert("Colonne de code établissement indisponible dans la base. Sélection manuelle requise.");
-      }
-      $q.readOnly = false;
-      return false;
+    // 1) On privilégie la correspondance exacte Codepaca -> libellé officiel (base Etablissements_edi)
+    let label = '';
+    if(code && window.etabCodeToObj && etabCodeToObj.size){
+      const rec = etabCodeToObj.get(code);
+      if(rec && rec.label) label = String(rec.label).trim();
     }
 
-    if(!code){
-      if(!silent) alert("Merci de saisir le code établissement.");
-      return false;
-    }
+    // 2) Fallback : nom renvoyé par auth-code (si disponible)
+    if(!label && st.etabName) label = String(st.etabName).trim();
 
-    const rec = etabCodeToObj.get(code);
-    if(!rec){
-      if(silent){
-        clearStoredEtabCode();
-        return false;
-      }
-      alert("Code établissement non reconnu.\nVérifiez le code et recommencez.");
-      return false;
-    }
+    if(!label) return false;
 
-    // OK
-    $q.value = rec.label;
-    onSelectEtab(rec.label);
-    if(remember) setStoredEtabCode(code);
+    if($q){
+      $q.value = label;
+      $q.readOnly = true;
+    }
+    try{ onSelectEtab(label); }catch(_e){}
     return true;
   }
 
-  }
-      if(e.key==='Enter'){
-        e.preventDefault();
-        handleCodeSubmit({silent:false, remember:true});
+  // Au chargement : si pas connecté, pp-config affiche la lightbox.
+  // Ensuite on applique l'établissement dans le champ de recherche.
+  (async () => {
+    try{
+      if(window.PP_AUTH && typeof PP_AUTH.requireDdfpt === 'function'){
+        await PP_AUTH.requireDdfpt();
+      } else if(window.PP_AUTH && typeof PP_AUTH.require === 'function'){
+        await PP_AUTH.require();
       }
-    });
-  }
-      window.location.href = HOMEPAGE_URL;
-    });
-  }
+    }catch(_e){}
 
-  // Au chargement :
-  // - si un code est déjà mémorisé : tentative d’auto-connexion silencieuse
-  // - sinon : première connexion → lightbox
-  if(hasCodeColumn && etabCodeToObj.size){
-    $q.readOnly = true;
+    // tentative immédiate, puis après chargement des tables
+    applyEtabFromAuth();
+  })();
 
-    const stored = getStoredEtabCode();
-    if(stored){
+  window.addEventListener('pp:auth-changed', () => {
+    applyEtabFromAuth();
+  });
 
-      const ok = handleCodeSubmit({silent:true, remember:true});
-      if(!ok){
-      }
-    }else{
-    }
-  }else{
-    // fallback : sélection manuelle possible
-    $q.readOnly = false;
-  }
-
-
-
-  $overlay.classList.add('hidden');
+$overlay.classList.add('hidden');
 })();
 </script>
 <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
