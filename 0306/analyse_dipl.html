@@ -3,128 +3,25 @@
 <head>
   
   <script>
-    window.PP_APP_NAME = "site";
+    window.PP_APP_NAME = "equipements";
   </script>
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Répartition des travaux réglementés par diplôme</title>
-
-  <!-- API Grist -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-
+  <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
-
-<script>
-  // ===============================
-  // PPP Data Layer (GitHub + Grist)
-  // - Lecture: PP_fetchTable(table)
-  // - En dehors de Grist: utilise Supabase Edge Function read-app
-  // ===============================
-  (function () {
-    const DEFAULT_SB = "https://hpiqwvwpxzppxpxhjede.supabase.co";
-    const sbBase = (window.PP_SUPABASE_URL || DEFAULT_SB).replace(/\/+$/, "");
-    const SB_ROOT = sbBase + "/functions/v1";
-
-    // IMPORTANT: dans votre cas, le docId est résolu via resolve-app => app= "equipements"
+  <!-- Portail Prévention PACA (GitHub) -->
+  <link rel="stylesheet" href="pp-core.css" />
+  <link rel="stylesheet" href="pp-portail.css" />
+  <script src="pp-config.js"></script>
+  <script>
+    // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
+  </script>
 
-    window.PP_SB_ROOT = SB_ROOT;
-    window.PP_SB_API_READ = SB_ROOT + "/read-app";
-    window.PP_SB_API_AUTH = SB_ROOT + "/auth-code";
-    window.PP_SB_API_WRITE = SB_ROOT + "/write-app";
+<!-- API Grist supprimée (GitHub-only) -->
 
-    window.PP_IS_GRIST = !!(
-      window.grist &&
-      window.grist.docApi &&
-      typeof window.grist.docApi.fetchTable === "function" &&
-      window.parent !== window
-    );
+  <!-- PPP Data Layer supprimé: utilisation de pp-config.js -->
 
-    function rowsToGristTable(rows) {
-      if (!Array.isArray(rows) || !rows.length) return { id: [] };
-      const cols = new Set();
-      for (const r of rows) Object.keys(r || {}).forEach((k) => cols.add(k));
-      cols.delete("id");
-      const t = { id: [] };
-      for (const c of cols) t[c] = [];
-      for (const r of rows) {
-        t.id.push(r.id);
-        for (const c of cols) t[c].push(r[c]);
-      }
-      return t;
-    }
-
-    async function sbFetchTable(tableName) {
-      const url = window.PP_SB_API_READ +
-        "?app=" + encodeURIComponent(window.PP_APP_NAME) +
-        "&table=" + encodeURIComponent(tableName);
-
-      const r = await fetch(url, { credentials: "omit" });
-      const j = await r.json().catch(() => null);
-
-      if (!r.ok || !j || !j.ok) {
-        throw new Error(j?.error || "Lecture Supabase impossible");
-      }
-
-      // ✅ Support formats possibles:
-      // 1) { table: {id:[], ...} }
-      if (j.table) return j.table;
-
-      // 2) { rows: [...] } ou { data:[...] } ou { items:[...] }
-      if (Array.isArray(j.rows)) return rowsToGristTable(j.rows);
-      if (Array.isArray(j.data)) return rowsToGristTable(j.data);
-      if (Array.isArray(j.items)) return rowsToGristTable(j.items);
-
-      // 3) { records: [{id, fields:{...}}] } (format Grist-like)
-      if (Array.isArray(j.records)) {
-        const rows = j.records.map((rec) => ({ id: rec.id, ...(rec.fields || {}) }));
-        return rowsToGristTable(rows);
-      }
-
-      // 4) { tables: {TableName: {id:[], ...}} }
-      if (j.tables && j.tables[tableName]) return j.tables[tableName];
-
-      return j;
-    }
-
-    window.PP_fetchTable = async function (tableName) {
-      if (window.PP_IS_GRIST) return window.grist.docApi.fetchTable(tableName);
-      return sbFetchTable(tableName);
-    };
-
-    // ✅ Shim: pour éviter de retoucher 50 scripts existants
-    // Beaucoup de vos pages appellent grist.docApi.fetchTable(...) et grist.rowsToRecords(...)
-    // En mode GitHub, on "simule" juste ces fonctions.
-    if (!window.PP_IS_GRIST) {
-      window.grist = window.grist || {};
-      window.grist.docApi = window.grist.docApi || {};
-      window.grist.docApi.fetchTable = window.PP_fetchTable;
-
-      if (typeof window.grist.rowsToRecords !== "function") {
-        window.grist.rowsToRecords = function (table) {
-          const ids = table.id || [];
-          const records = [];
-          let cols = {};
-
-          if (table.fields && typeof table.fields === "object") cols = table.fields;
-          else {
-            for (const [k, v] of Object.entries(table)) {
-              if (k === "id") continue;
-              if (Array.isArray(v)) cols[k] = v;
-            }
-          }
-
-          for (let i = 0; i < ids.length; i++) {
-            const rec = { id: ids[i] };
-            for (const [k, arr] of Object.entries(cols)) rec[k] = arr[i];
-            records.push(rec);
-          }
-          return records;
-        };
-      }
-    }
-  })();
-</script>
 
 <!-- Chart.js + plugin datalabels -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -240,9 +137,17 @@
 </head>
 
 <body>
+<div id="pp-header"></div>
+<script>
+  // Injection header commun
+  fetch('pp-header.html', { cache: 'no-store' })
+    .then(r => r.ok ? r.text() : '')
+    .then(t => { if(t) document.getElementById('pp-header').innerHTML = t; })
+    .catch(() => {});
+</script>
 <div class="app">
   <div class="card">
-    <div class="title">Répartition des travaux réglementés par diplôme</div>
+    <div class="title">Répartition des travaux réglementés par diplôme en PACA</div>
 
     <div class="field-label">Choix du diplôme (autocomplétion)</div>
     <div class="search-row">
