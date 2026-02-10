@@ -361,14 +361,32 @@
     return null;
   }
 
-  async function init() {
-    try {
-      if (!window.PP_fetchTable) {
-        showError("PP_fetchTable indisponible (pp-config.js non chargé).");
-        return;
-      }
+  
+  // --- Fallback GitHub PUBLIC: si pp-config.js n'a pas exposé PP_fetchTable ---
+  // (On garde la compatibilité avec les autres pages, mais on évite de bloquer ce fichier.)
+  function ensurePPFetchTable() {
+    if (typeof window.PP_fetchTable === "function") return;
 
-      const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
+    const SUPABASE_URL = "https://hpiqwvwpxzppxpxhjede.supabase.co";
+    const READ_APP_URL = `${SUPABASE_URL}/functions/v1/read-app`;
+
+    window.PP_fetchTable = async function(tableName) {
+      const url = `${READ_APP_URL}?app=equipements&table=${encodeURIComponent(tableName)}`;
+      const r = await fetch(url, { method: "GET" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j || j.ok !== true) {
+        const err = j?.error ? String(j.error) : `HTTP ${r.status}`;
+        throw new Error(`read-app failed for ${tableName}: ${err}`);
+      }
+      // read-app renvoie soit {records:[...]}, soit {items:[...]}
+      return Array.isArray(j.records) ? j.records : (Array.isArray(j.items) ? j.items : []);
+    };
+  }
+
+async function init() {
+    try {
+      ensurePPFetchTable();
+const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
       const [diplomeTable, equipTable, travauxTable] = await Promise.all([
         fetchT(DIPLOME_TABLE),
