@@ -10,14 +10,9 @@
   <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
   <!-- Portail Prévention PACA (GitHub) -->
-  <link rel="stylesheet" href="/pp-core.css" />
-  <link rel="stylesheet" href="/pp-portail.css" />
-  <script>
-  // Public page: no auth lightbox
-  window.PP_APP_NAME = "equipements";
-  window.PP_AUTH_DISABLED = true;
-</script>
-<script src="/pp-config.js"></script>
+  <link rel="stylesheet" href="/guide/css/pp-core.css" />
+  <link rel="stylesheet" href="/guide/css/pp-portail.css" />
+  <script src="/guide/js/pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -145,7 +140,7 @@
 <div id="pp-header"></div>
 <script>
   // Injection header commun
-  fetch("/guide/partials/pp-header.html", { cache: 'no-store' })
+  fetch('/guide/partials/pp-header.html', { cache: 'no-store' })
     .then(r => r.ok ? r.text() : '')
     .then(t => { if(t) document.getElementById('pp-header').innerHTML = t; })
     .catch(() => {});
@@ -351,40 +346,19 @@
   }
 
   function normalizeTable(raw) {
-    // Normalize PP_fetchTable / read-app payload into a "columns" object:
-    // { id: [...], ColA: [...], ColB: [...] }
     if (!raw) return null;
 
-    const records = Array.isArray(raw) ? raw
-      : Array.isArray(raw.records) ? raw.records
-      : Array.isArray(raw.data) ? raw.data
-      : null;
+    // Déjà au format colonnes (fetchTable Grist)
+    if (raw.id && Array.isArray(raw.id)) return raw;
 
-    // Empty-but-valid
-    if (!records) return null;
-    if (records.length === 0) return { id: [] };
+    // read-app: {records:[{id,fields}...]}
+    if (Array.isArray(raw.records)) return recordsToColumns(raw.records);
 
-    const cols = { id: [] };
+    // read-app Liste_des_equipements: {records, items}
+    if (Array.isArray(raw.items) && Array.isArray(raw.records)) return recordsToColumns(raw.records);
 
-    // Discover columns
-    for (const rec of records) {
-      const f = rec && rec.fields ? rec.fields : rec;
-      if (!f || typeof f !== "object") continue;
-      for (const k of Object.keys(f)) {
-        if (!(k in cols)) cols[k] = [];
-      }
-    }
-
-    // Fill columns
-    for (const rec of records) {
-      cols.id.push(rec?.id ?? null);
-      const f = rec && rec.fields ? rec.fields : rec;
-      for (const k of Object.keys(cols)) {
-        if (k === "id") continue;
-        cols[k].push(f?.[k]);
-      }
-    }
-    return cols;
+    // Fallback: rien de lisible
+    return null;
   }
 
   async function init() {
