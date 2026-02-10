@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <script>window.PP_APP_NAME = "equipements";</script>
-
   
-  <meta charset="UTF-8" />
+  <script>
+    window.PP_APP_NAME = "equipements";
+  </script>
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
   <!-- Portail Prévention PACA (GitHub) -->
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-core.css" />
-  <link rel="stylesheet" href="https://preventionpaca.github.io/guide/css/pp-portail.css" />
-  <script>window.PP_AUTH_DISABLED = true;</script>
-<script src="https://preventionpaca.github.io/guide/js/pp-config.js"></script>
+  <link rel="stylesheet" href="pp-core.css" />
+  <link rel="stylesheet" href="pp-portail.css" />
+  <script>
+  // Public page: no auth lightbox
+  window.PP_APP_NAME = "equipements";
+  window.PP_AUTH_DISABLED = true;
+</script>
+<script src="pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -31,34 +36,116 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  
+  <style>
+    :root{
+      --bg:#f3f4f6; --card:#ffffff; --border:#d1d5db; --text:#111827;
+      --muted:#6b7280; --accent:#1b396a;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0; padding:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .app{max-width:1100px; margin:0 auto; padding:16px;}
+    .card{
+      background:var(--card); border-radius:8px; border:1px solid var(--border);
+      padding:16px 20px; box-shadow:0 1px 2px rgba(15,23,42,.06);
+    }
+    .title{font-size:1.05rem; font-weight:600; margin-bottom:12px; color:var(--accent);}
+    .field-label{font-size:.85rem; color:var(--muted); margin-bottom:4px;}
+    .search-row{display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+    .search-row input[type="text"]{
+      flex:1 1 260px; padding:8px 10px; border-radius:6px;
+      border:1px solid var(--border); font-size:.95rem;
+    }
+    .hint{font-size:.8rem; color:var(--muted);}
+    #emptyMessage{margin-top:12px; font-size:.9rem; color:var(--muted);}
+    .chart-section{margin-top:20px; display:none;}
+    .chart-header{font-size:.95rem; font-weight:600; margin-bottom:8px;}
+    .chart-wrapper{max-width:100%;margin:0 auto; margin-top:40px; margin-bottom:40px;}
+    #pieCanvas{width:100%;height:420px;}
+    #legend{margin-top:16px;}
+    .error{color:#b91c1c; font-size:.9rem; margin-top:8px;}
 
-  
+    .legend-columns{
+      display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;
+    }
+    @media (max-width:900px){
+      .legend-columns{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+    }
+    .legend-column{
+      border:1px solid var(--border); border-radius:6px;
+      padding:8px 10px; background:#f9fafb; font-size:.9rem;
+    }
+    .legend-column-title{font-weight:600; font-size:.85rem; margin-bottom:6px;}
+    .legend-list{display:grid; gap:4px;}
+    .legend-item{display:flex; align-items:center; gap:8px;}
+    .legend-color{
+      width:14px; height:14px; border-radius:3px;
+      border:1px solid rgba(0,0,0,.1); flex-shrink:0;
+    }
+    .legend-link{text-decoration:none; color:var(--accent); word-break:break-word;}
+    .legend-link:hover{text-decoration:underline;}
+    .legend-link.no-link{color:var(--muted); cursor:default; text-decoration:none;}
 
-<style>
-  /* Page-specific layout only (theme handled by pp-core.css / pp-portail.css) */
-  .app{max-width:1100px;margin:0 auto;padding:24px 16px 60px;}
-  .card{background:#fff;border-radius:16px;padding:18px;border:1px solid rgba(0,0,0,.08);}
-  .title{margin:0 0 10px 0;font-size:20px;font-weight:700;}
-  .sub{margin:0 0 10px 0;opacity:.8;}
-  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
-  .field{flex:1;min-width:280px;}
-  input[type="text"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.2);font-size:14px;}
-  datalist option{font-size:14px;}
-  .help{font-size:13px;opacity:.75;margin-top:8px;}
-  .status{margin-top:10px;font-size:14px;}
-  .status.error{color:#b91c1c;}
-  .status.ok{color:#065f46;}
-  .viz{margin-top:16px;}
-  .viz.hidden{display:none;}
-</style>
+    /* Équipements / produits */
+    .equipment-section{margin-top:24px; font-size:.9rem;}
+    .equipment-title{font-weight:600; margin-bottom:6px;}
+    .equip-columns{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+    @media (max-width:1100px){
+      .equip-columns{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+    }
+    .equip-column{
+      border:1px solid var(--border); border-radius:6px;
+      padding:8px 10px; background:#f9fafb;
+    }
+    .equip-column-title{
+      font-weight:600; font-size:.85rem; margin-bottom:6px; color:var(--accent);
+    }
+    .equip-list{display:grid; grid-template-columns:1fr; gap:4px;}
+    .equip-item{display:flex; align-items:center; gap:8px; font-size:.88rem;}
+    .equip-color{
+      width:14px; height:14px; border-radius:3px;
+      border:1px solid rgba(0,0,0,.1); flex-shrink:0;
+    }
+    .equip-link{text-decoration:none; color:var(--text);}
+    .equip-link:hover{text-decoration:underline;}
+    .equip-empty{font-size:.8rem; color:var(--muted);}
+    datalist{display:none;}
+
+    /* Export buttons */
+    .export-bar{
+      display:flex; gap:10px; justify-content:flex-end; align-items:center;
+      margin: 8px 0 10px;
+    }
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff; color:var(--accent);
+      border-radius:8px; padding:8px 10px; font-weight:600; font-size:.9rem;
+      cursor:pointer;
+    }
+    .btn:hover{filter:brightness(0.98);}
+    .btn:active{transform:translateY(1px);}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; transform:none;}
+
+    /* Mode export : on garde uniquement chartHeader + camembert + blocs */
+    body.exporting .title,
+    body.exporting .field-label,
+    body.exporting .search-row,
+    body.exporting .hint,
+    body.exporting #emptyMessage,
+    body.exporting #errorMessage,
+    body.exporting .export-bar{
+      display:none !important;
+    }
+  </style>
 </head>
 
 <body>
 <div id="pp-header"></div>
 <script>
   // Injection header commun
-  fetch('/guide/partials/pp-header.html', { cache: 'no-store' })
+  fetch('../partials/pp-header.html', { cache: 'no-store' })
     .then(r => r.ok ? r.text() : '')
     .then(t => { if(t) document.getElementById('pp-header').innerHTML = t; })
     .catch(() => {});
@@ -264,30 +351,50 @@
   }
 
   function normalizeTable(raw) {
+    // Normalize PP_fetchTable / read-app payload into a "columns" object:
+    // { id: [...], ColA: [...], ColB: [...] }
     if (!raw) return null;
 
-    // Déjà au format colonnes (fetchTable Grist)
-    if (raw.id && Array.isArray(raw.id)) return raw;
+    const records = Array.isArray(raw) ? raw
+      : Array.isArray(raw.records) ? raw.records
+      : Array.isArray(raw.data) ? raw.data
+      : null;
 
-    // Si on reçoit directement un tableau [{id, fields}...] (cas où un wrapper renvoie records)
-    if (Array.isArray(raw)) return recordsToColumns(raw);
+    // Empty-but-valid
+    if (!records) return null;
+    if (records.length === 0) return { id: [] };
 
-    // read-app: {records:[{id,fields}...]}
-    if (Array.isArray(raw.records)) return recordsToColumns(raw.records);
+    const cols = { id: [] };
 
-    // read-app Liste_des_equipements: parfois {items:[...], records:[...]}
-    if (Array.isArray(raw.items) && Array.isArray(raw.records)) return recordsToColumns(raw.records);
+    // Discover columns
+    for (const rec of records) {
+      const f = rec && rec.fields ? rec.fields : rec;
+      if (!f || typeof f !== "object") continue;
+      for (const k of Object.keys(f)) {
+        if (!(k in cols)) cols[k] = [];
+      }
+    }
 
-    // Fallback: rien de lisible
-    return null;
+    // Fill columns
+    for (const rec of records) {
+      cols.id.push(rec?.id ?? null);
+      const f = rec && rec.fields ? rec.fields : rec;
+      for (const k of Object.keys(cols)) {
+        if (k === "id") continue;
+        cols[k].push(f?.[k]);
+      }
+    }
+    return cols;
   }
+
   async function init() {
     try {
-if (!window.PP_fetchTable) {
-  showError("PP_fetchTable indisponible (pp-config/PP_SB_API_READ non disponible).");
-  return;
-}
-const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
+      if (!window.PP_fetchTable) {
+        showError("PP_fetchTable indisponible (pp-config.js non chargé).");
+        return;
+      }
+
+      const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
       const [diplomeTable, equipTable, travauxTable] = await Promise.all([
         fetchT(DIPLOME_TABLE),
@@ -866,6 +973,5 @@ const fetchT = async (name) => normalizeTable(await window.PP_fetchTable(name));
 
   init();
 </script>
-  <script src="https://preventionpaca.github.io/guide/js/pp-header.js"></script>
 </body>
 </html>
