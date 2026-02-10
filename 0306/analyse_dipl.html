@@ -10,14 +10,14 @@
   <title>Répartition des travaux réglementés par diplôme en PACA</title>
   
   <!-- Portail Prévention PACA (GitHub) -->
-  <link rel="stylesheet" href="pp-core.css" />
-  <link rel="stylesheet" href="pp-portail.css" />
+  <link rel="stylesheet" href="/pp-core.css" />
+  <link rel="stylesheet" href="/pp-portail.css" />
   <script>
   // Public page: no auth lightbox
   window.PP_APP_NAME = "equipements";
   window.PP_AUTH_DISABLED = true;
 </script>
-<script src="pp-config.js"></script>
+<script src="/pp-config.js"></script>
   <script>
     // Page: Analyse diplômes (GitHub)
     window.PP_APP_NAME = window.PP_APP_NAME || "equipements";
@@ -145,7 +145,7 @@
 <div id="pp-header"></div>
 <script>
   // Injection header commun
-  fetch('../partials/pp-header.html', { cache: 'no-store' })
+  fetch("/guide/partials/pp-header.html", { cache: 'no-store' })
     .then(r => r.ok ? r.text() : '')
     .then(t => { if(t) document.getElementById('pp-header').innerHTML = t; })
     .catch(() => {});
