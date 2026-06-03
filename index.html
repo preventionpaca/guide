@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Portail Prévention PACA</title>
+
+<style>
+:root{
+  --bleu:#071f3c;
+  --bleu2:#0b2b52;
+  --orange:#ff7a00;
+  --blanc:#ffffff;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at center,
+      var(--bleu2) 0%,
+      var(--bleu) 100%);
+  color:var(--blanc);
+  font-family:Arial, Helvetica, sans-serif;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+
+.maintenance{
+  width:min(900px,95vw);
+
+  border:4px solid var(--orange);
+  border-radius:30px;
+
+  background:rgba(0,0,0,.15);
+
+  text-align:center;
+
+  padding:60px 40px;
+}
+
+.logo{
+  font-size:3rem;
+  font-weight:800;
+  letter-spacing:2px;
+  margin-bottom:15px;
+}
+
+.subtitle{
+  font-size:1.2rem;
+  opacity:.9;
+  margin-bottom:40px;
+}
+
+.circle{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+
+  margin:0 auto 40px auto;
+
+  border:10px solid rgba(255,122,0,.25);
+  border-top-color:var(--orange);
+
+  animation:rotation 1.5s linear infinite;
+}
+
+@keyframes rotation{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+.maj{
+  color:var(--orange);
+  font-size:3rem;
+  font-weight:900;
+  margin-bottom:25px;
+}
+
+.message{
+  font-size:1.3rem;
+  line-height:1.7;
+}
+
+.date{
+  margin-top:25px;
+  font-size:1.6rem;
+  font-weight:bold;
+  color:var(--orange);
+}
+
+.small{
+  margin-top:35px;
+  opacity:.75;
+  font-size:.95rem;
+}
+</style>
+</head>
+
+<body>
+
+<div class="maintenance">
+
+  <div class="logo">
+    PORTAIL PRÉVENTION PACA
+  </div>
+
+  <div class="subtitle">
+    DREETS PACA • DRAAF PACA • Région académique PACA
+  </div>
+
+  <div class="circle"></div>
+
+  <div class="maj">
+    MISE À JOUR EN COURS
+  </div>
+
+  <div class="message">
+    Le portail est actuellement indisponible afin de permettre
+    le déploiement d'une nouvelle version.
+  </div>
+
+  <div class="date">
+    Remise en service prévue le 13 juillet 2026
+  </div>
+
+  <div class="small">
+    Merci de votre compréhension.
+  </div>
+
+</div>
+
+</body>
+</html>
