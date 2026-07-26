@@ -1,1 +1,1 @@
-window.MAINTENANCE = false;
+window.MAINTENANCE = true;
