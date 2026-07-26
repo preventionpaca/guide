@@ -2,4 +2,4 @@
 // false = site en ligne
 // true  = page de maintenance
 
-window.MAINTENANCE = true;
+window.MAINTENANCE = false;
