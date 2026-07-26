@@ -1,0 +1,56 @@
+{
+  "buttons": [
+    {
+      "id": "ouvrir-site",
+      "label": "$(globe) SITE",
+      "command": "setsid -f /usr/bin/brave-browser 'https://preventionpaca.github.io/guide/?v='$(date +%s) >/dev/null 2>&1",
+      "tooltip": "Ouvrir le site public",
+      "showOutput": false,
+      "priority": 100
+    },
+    {
+      "id": "ouvrir-github",
+      "label": "$(github) GITHUB",
+      "command": "setsid -f /usr/bin/brave-browser 'https://github.com/preventionpaca/guide' >/dev/null 2>&1",
+      "tooltip": "Ouvrir le dépôt GitHub",
+      "showOutput": false,
+      "priority": 95
+    },
+    {
+      "id": "publier-site",
+      "label": "$(rocket) PUBLIER",
+      "command": "./.vscode/publier.sh",
+      "cwd": "/home/rudy/Documents/Prevention_PACA/DEV/github-pages",
+      "tooltip": "Publier les modifications sur GitHub",
+      "showOutput": true,
+      "priority": 90
+    },
+    {
+      "id": "maintenance",
+      "label": "$(tools) MAINTENANCE",
+      "command": "./.vscode/maintenance.sh",
+      "cwd": "/home/rudy/Documents/Prevention_PACA/DEV/github-pages",
+      "tooltip": "Remplacer le portail par la page de maintenance et publier",
+      "showOutput": true,
+      "priority": 85
+    },
+    {
+      "id": "en-ligne",
+      "label": "$(check) EN LIGNE",
+      "command": "./.vscode/en-ligne.sh",
+      "cwd": "/home/rudy/Documents/Prevention_PACA/DEV/github-pages",
+      "tooltip": "Restaurer le portail de production et publier",
+      "showOutput": true,
+      "priority": 80
+    },
+    {
+      "id": "historique",
+      "label": "$(history) HISTORIQUE",
+      "command": "./.vscode/historique.sh",
+      "cwd": "/home/rudy/Documents/Prevention_PACA/DEV/github-pages",
+      "tooltip": "Afficher les 15 dernières publications",
+      "showOutput": true,
+      "priority": 75
+    }
+  ]
+}
