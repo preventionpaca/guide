@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "OUVRIR LE SITE",
+      "type": "shell",
+      "command": "${workspaceFolder}/.vscode/ouvrir-site.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "OUVRIR GITHUB",
+      "type": "shell",
+      "command": "${workspaceFolder}/.vscode/ouvrir-github.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      }
+    }
+  ]
+}

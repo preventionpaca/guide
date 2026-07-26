@@ -1,0 +1,16 @@
+{
+  "buttons": [
+    {
+      "name": "SITE",
+      "task": "OUVRIR LE SITE",
+      "icon": "🌐",
+      "tooltip": "Ouvrir le site public"
+    },
+    {
+      "name": "GITHUB",
+      "task": "OUVRIR GITHUB",
+      "icon": "🐙",
+      "tooltip": "Ouvrir le dépôt GitHub"
+    }
+  ]
+}
