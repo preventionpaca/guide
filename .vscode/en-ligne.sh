@@ -2,37 +2,29 @@
 set -euo pipefail
 
 REPO="/home/rudy/Documents/Prevention_PACA/DEV/github-pages"
-SOURCE="$REPO/index-production.html"
-TARGET="$REPO/index.html"
-PUBLISH="$REPO/.vscode/publier.sh"
-SITE_URL="https://preventionpaca.github.io/guide"
+CONFIG="$REPO/site-config.js"
 
-[[ -f "$SOURCE" ]] || {
-  echo "❌ index-production.html est introuvable."
-  exit 1
-}
+cd "$REPO"
 
-cp -- "$SOURCE" "$TARGET"
+cat > "$CONFIG" <<'CONFIGEOF'
+// Configuration globale du portail Prévention PACA
+// false = site en ligne
+// true  = page de maintenance
 
-cmp -s "$SOURCE" "$TARGET" || {
-  echo "❌ La restauration de la production a échoué."
-  exit 1
-}
+window.MAINTENANCE = false;
+CONFIGEOF
 
-echo "✅ Page de production restaurée localement."
+echo "✅ Mode production activé localement."
 
-"$PUBLISH"
+git add site-config.js
 
-echo
-echo "⏳ GitHub Pages déploie le portail."
-echo "   Attente de 45 secondes avant ouverture…"
+if git diff --cached --quiet; then
+  echo "ℹ️ Le site était déjà en ligne."
+  exit 0
+fi
 
-sleep 45
+git commit -m "Remise en ligne - $(date '+%d/%m/%Y à %H:%M:%S')"
+git push origin main
 
-setsid -f /usr/bin/brave-browser \
-  "${SITE_URL}/?production=$(date +%s)" \
-  >/dev/null 2>&1 || true
-
-echo
-echo "✅ Site ouvert. Si la maintenance apparaît encore,"
-echo "   patienter une minute puis cliquer sur SITE."
+echo "✅ SITE REMIS EN LIGNE"
+echo "⏳ GitHub Pages peut prendre quelques instants pour se mettre à jour."

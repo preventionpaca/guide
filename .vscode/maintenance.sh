@@ -2,37 +2,29 @@
 set -euo pipefail
 
 REPO="/home/rudy/Documents/Prevention_PACA/DEV/github-pages"
-SOURCE="$REPO/index-maintenance.html"
-TARGET="$REPO/index.html"
-PUBLISH="$REPO/.vscode/publier.sh"
-SITE_URL="https://preventionpaca.github.io/guide"
+CONFIG="$REPO/site-config.js"
 
-[[ -f "$SOURCE" ]] || {
-  echo "❌ index-maintenance.html est introuvable."
-  exit 1
-}
+cd "$REPO"
 
-cp -- "$SOURCE" "$TARGET"
+cat > "$CONFIG" <<'CONFIGEOF'
+// Configuration globale du portail Prévention PACA
+// false = site en ligne
+// true  = page de maintenance
 
-cmp -s "$SOURCE" "$TARGET" || {
-  echo "❌ La copie de la page de maintenance a échoué."
-  exit 1
-}
+window.MAINTENANCE = true;
+CONFIGEOF
 
-echo "🛠 Page de maintenance installée localement."
+echo "🛠 Mode maintenance activé localement."
 
-"$PUBLISH"
+git add site-config.js
 
-echo
-echo "⏳ GitHub Pages déploie la nouvelle page."
-echo "   Attente de 45 secondes avant ouverture…"
+if git diff --cached --quiet; then
+  echo "ℹ️ Le site était déjà en maintenance."
+  exit 0
+fi
 
-sleep 45
+git commit -m "Activation maintenance - $(date '+%d/%m/%Y à %H:%M:%S')"
+git push origin main
 
-setsid -f /usr/bin/brave-browser \
-  "${SITE_URL}/?maintenance=$(date +%s)" \
-  >/dev/null 2>&1 || true
-
-echo
-echo "✅ Site ouvert. Si l’ancienne page apparaît encore,"
-echo "   patienter une minute puis cliquer sur SITE."
+echo "✅ MODE MAINTENANCE PUBLIÉ"
+echo "⏳ GitHub Pages peut prendre quelques instants pour se mettre à jour."
