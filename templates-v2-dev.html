@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Catalogue DEV des gabarits Prévention PACA.">
+  <title>Gabarits — Prévention PACA DEV</title>
+  <link rel="stylesheet" href="css/pp-design-system-v1.css">
+  <link rel="stylesheet" href="css/pp-components-v1.css">
+  <link rel="stylesheet" href="css/pp-layouts-v1.css">
+  <link rel="stylesheet" href="css/pp-print-v1.css" media="print">
+  <script src="js/pp-v2-config.js" defer></script>
+  <script src="js/pp-components-v1.js" defer></script>
+  <script src="js/pp-navigation-v1.js" defer></script>
+</head>
+<body class="pp-page">
+  <div data-pp-component="header" data-state="disconnected" data-role="invite"></div>
+  <main id="contenu">
+    <header class="pp-page-header"><div class="pp-container"><p class="pp-eyebrow">Catalogue DEV</p><h1>Gabarits de pages</h1><p class="pp-lead">Dix structures fictives réutilisant les composants communs.</p></div></header>
+    <div class="pp-container pp-content pp-stack pp-stack--large">
+      <section><h2>1. Page publique</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Information publique</div><div class="pp-template-preview__body"><p class="pp-eyebrow">Prévention</p><h3>Comprendre les travaux réglementés</h3><p>Introduction courte, contenus hiérarchisés et accès aux ressources.</p><a class="pp-button" href="#demo">Consulter le guide</a></div></div></section>
+      <section><h2>2. Espace personnel</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Espace établissement</div><div class="pp-template-preview__body pp-dashboard-grid"><article class="pp-metric">Dossiers actifs<strong>4</strong></article><article class="pp-metric">Équipements<strong>18</strong></article><article class="pp-metric">À vérifier<strong>2</strong></article><article class="pp-metric">Documents<strong>7</strong></article></div></div></section>
+      <section><h2>3. Page de liste</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Book des équipements</div><div class="pp-template-preview__body pp-stack"><div class="pp-search-bar"><input class="pp-control" aria-label="Rechercher" placeholder="Rechercher"><button class="pp-button">Rechercher</button></div><div class="pp-table-wrap"><table class="pp-table pp-table--responsive"><thead><tr><th>Nom</th><th>Type</th><th>Statut</th></tr></thead><tbody><tr><td data-label="Nom">Équipement fictif</td><td data-label="Type">Machine</td><td data-label="Statut"><span class="pp-status pp-status--success">Publié</span></td></tr></tbody></table></div></div></div></section>
+      <section><h2>4. Page de fiche</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Fiche équipement</div><div class="pp-template-preview__body pp-detail-grid"><div><h3>Scie circulaire fictive</h3><dl class="pp-definition-list"><dt>Type</dt><dd>Équipement</dd><dt>Régime</dt><dd>Dérogation</dd></dl></div><aside class="pp-info-box"><h3>Documents</h3><p>Notice et références associées.</p></aside></div></div></section>
+      <section><h2>5. Formulaire de création</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Nouvelle contribution</div><form class="pp-template-preview__body pp-form" data-pp-demo-form><div class="pp-form-grid"><label class="pp-field"><span class="pp-label">Intitulé</span><input class="pp-control" required></label><label class="pp-field"><span class="pp-label">Type</span><select class="pp-control"><option>Équipement</option></select></label></div><button class="pp-button" type="submit">Créer le brouillon fictif</button></form></div></section>
+      <section><h2>6. Page d’administration</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Administration</div><div class="pp-template-preview__body pp-layout-sidebar"><aside class="pp-sidebar"><nav><ul><li><a href="#users" aria-current="page">Utilisateurs</a></li><li><a href="#permissions">Permissions</a></li><li><a href="#logs">Journaux</a></li></ul></nav></aside><div class="pp-panel"><h3>Utilisateurs fictifs</h3><div class="pp-alert pp-alert--warning"><p>La visibilité de ce menu ne constitue pas une autorisation.</p></div></div></div></div></section>
+      <section><h2>7. Tableau de bord</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Tableau de bord</div><div class="pp-template-preview__body"><div class="pp-dashboard-grid"><article class="pp-metric">Contributions<strong>12</strong></article><article class="pp-metric">Validées<strong>8</strong></article><article class="pp-metric">En attente<strong>3</strong></article><article class="pp-metric">Erreur<strong>1</strong></article></div></div></div></section>
+      <section><h2>8. Assistant à étapes</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Préparer une dérogation</div><div class="pp-template-preview__body pp-stack"><ol class="pp-stepper"><li class="pp-step pp-step--complete">1 Établissement</li><li class="pp-step pp-step--active">2 Formation</li><li class="pp-step pp-step--upcoming">3 Équipements</li><li class="pp-step pp-step--upcoming">4 Travaux</li></ol><div class="pp-panel"><h3>Formation</h3><p>Contenu fictif de l’étape active.</p></div></div></div></section>
+      <section><h2>9. Page d’erreur</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Erreur</div><div class="pp-template-preview__body"><div class="pp-state"><div class="pp-state__icon">!</div><h3>La page n’est pas disponible</h3><p>Expliquez le problème sans exposer de détail technique.</p><a class="pp-button" href="#accueil">Revenir à l’accueil</a></div></div></div></section>
+      <section><h2>10. Page sans résultat</h2><div class="pp-template-preview"><div class="pp-template-preview__bar">Recherche</div><div class="pp-template-preview__body"><div class="pp-state"><div class="pp-state__icon">0</div><h3>Aucun résultat</h3><p>Essayez des mots plus généraux ou effacez les filtres.</p><button class="pp-button pp-button--secondary">Effacer les filtres</button></div></div></div></section>
+    </div>
+  </main>
+  <div data-pp-component="footer"></div>
+</body>
+</html>

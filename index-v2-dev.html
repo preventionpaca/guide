@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Maquette DEV de la future plateforme Prévention PACA.">
+  <title>Prévention PACA — Accueil DEV v2</title>
+  <link rel="stylesheet" href="css/pp-design-system-v1.css">
+  <script src="js/pp-v2-config.js" defer></script>
+</head>
+<body>
+  <a class="pp-skip-link" href="#contenu">Aller au contenu</a>
+  <header class="pp-institutional">
+    <div class="pp-container pp-institutional__inner">
+      <div class="pp-wordmark" aria-label="Prévention PACA">
+        <strong>Prévention PACA</strong>
+        <span>Prévention des risques professionnels</span>
+      </div>
+      <span class="pp-badge">DEV · 2.0.0-dev.1</span>
+    </div>
+  </header>
+
+  <main id="contenu">
+    <section class="pp-hero" aria-labelledby="titre-principal">
+      <div class="pp-container pp-hero__grid">
+        <div>
+          <p class="pp-eyebrow">Nouvelle plateforme — maquette fonctionnelle</p>
+          <h1 id="titre-principal">Prévenir, comprendre et agir.</h1>
+          <p class="pp-lead">Un accès clair aux équipements, travaux réglementés et démarches de dérogation pour les établissements, entreprises et acteurs institutionnels de Provence-Alpes-Côte d’Azur.</p>
+        </div>
+        <div class="pp-hero__mark" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="pp-section" aria-labelledby="parcours-publics">
+      <div class="pp-container">
+        <div class="pp-section-heading">
+          <p class="pp-eyebrow">Accès public</p>
+          <h2 id="parcours-publics">Consulter les ressources essentielles</h2>
+          <p>Ces contenus seront accessibles sans authentification. Les données affichées dans cette maquette sont fictives.</p>
+        </div>
+        <div class="pp-grid">
+          <a class="pp-card" href="#demo" aria-describedby="demo">
+            <span class="pp-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5h7v13H4zM13 5.5h7v13h-7zM7 9h1M16 9h1"/></svg></span>
+            <h3>Book des équipements et produits</h3>
+            <p>Rechercher une fiche et consulter les principales obligations.</p><small>Découvrir le futur service</small>
+          </a>
+          <a class="pp-card" href="#demo">
+            <span class="pp-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 19h18L12 3Z"/><path d="M12 9v4M12 16h.01"/></svg></span>
+            <h3>Travaux réglementés</h3>
+            <p>Comprendre les interdictions, dérogations et mesures de prévention.</p><small>Consulter les parcours</small>
+          </a>
+          <a class="pp-card" href="#demo">
+            <span class="pp-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M9 7h3"/></svg></span>
+            <h3>Ressources et documentation</h3>
+            <p>Retrouver les guides, formulaires et références réglementaires.</p><small>Parcourir les ressources</small>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="pp-section pp-section--muted" aria-labelledby="parcours-metiers">
+      <div class="pp-container">
+        <div class="pp-section-heading">
+          <p class="pp-eyebrow">Accès métier</p>
+          <h2 id="parcours-metiers">Réaliser une démarche</h2>
+          <p>Les droits seront vérifiés pour chaque action par le backend Apps Script.</p>
+        </div>
+        <div class="pp-grid">
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Préparer une demande de dérogation</h3><p>Construire le dossier à partir de l’établissement, des diplômes et des travaux concernés.</p><small>Authentification requise</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Avis médicaux</h3><p>Préparer et suivre les informations nécessaires au parcours médical.</p><small>Accès habilité</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Espace établissement</h3><p>Gérer les équipements, diplômes et démarches de l’établissement.</p><small>Code PACA requis</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Espace entreprise</h3><p>Préparer les démarches concernant les jeunes accueillis en entreprise.</p><small>Code PACA requis</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Espace DDFPT</h3><p>Coordonner les informations et accompagner les équipes de l’établissement.</p><small>Accès habilité</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Contributions au référentiel</h3><p>Proposer une nouvelle fiche ou compléter le Book existant.</p><small>Permission requise</small></a>
+          <a class="pp-card pp-card--restricted" href="#demo"><h3>Validation métier</h3><p>Contrôler, valider puis préparer la publication des contributions.</p><small>Validateurs habilités</small></a>
+          <a class="pp-card pp-card--admin" href="#demo"><h3>Administration</h3><p>Gérer les utilisateurs, autorisations, paramètres et journaux.</p><small>Administrateurs uniquement</small></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="pp-section" aria-labelledby="navigation-role">
+      <div class="pp-container">
+        <div class="pp-section-heading">
+          <p class="pp-eyebrow">Démonstration</p>
+          <h2 id="navigation-role">Prévisualiser la navigation par rôle</h2>
+        </div>
+        <div class="pp-role-panel">
+          <div class="pp-role-list" role="group" aria-label="Choisir un rôle de démonstration">
+            <button class="pp-role-button" type="button" data-role="invite" aria-pressed="true">Invité</button>
+            <button class="pp-role-button" type="button" data-role="etablissement" aria-pressed="false">Établissement</button>
+            <button class="pp-role-button" type="button" data-role="entreprise" aria-pressed="false">Entreprise</button>
+            <button class="pp-role-button" type="button" data-role="ddfpt" aria-pressed="false">DDFPT</button>
+            <button class="pp-role-button" type="button" data-role="validateur" aria-pressed="false">Validateur métier</button>
+            <button class="pp-role-button" type="button" data-role="medecin" aria-pressed="false">Médecin</button>
+            <button class="pp-role-button" type="button" data-role="administrateur" aria-pressed="false">Administrateur</button>
+          </div>
+          <div class="pp-role-output" aria-live="polite">
+            <h3 id="role-title">Navigation — Invité</h3>
+            <ul id="role-items"><li>Accueil public</li><li>Book des équipements</li><li>Travaux réglementés</li><li>Ressources et documentation</li></ul>
+          </div>
+        </div>
+        <p class="pp-notice" id="demo"><strong>Maquette DEV :</strong> aucune connexion, donnée réelle ou opération distante n’est utilisée sur cette page.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pp-footer">
+    <div class="pp-container pp-footer__inner">
+      <p><strong>Prévention PACA</strong> — Portail réglementaire régional</p>
+      <p>Maquette DEV · Données de démonstration</p>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      "use strict";
+      const common = ["Accueil public", "Book des équipements", "Travaux réglementés", "Ressources et documentation"];
+      const items = {
+        invite: common,
+        etablissement: [...common, "Préparer une dérogation", "Espace établissement", "Contributions"],
+        entreprise: [...common, "Préparer une dérogation", "Espace entreprise"],
+        ddfpt: [...common, "Préparer une dérogation", "Espace DDFPT", "Contributions"],
+        validateur: [...common, "Contributions", "Validation métier"],
+        medecin: [...common, "Avis médicaux"],
+        administrateur: [...common, "Tous les espaces métier", "Validation métier", "Administration"]
+      };
+      const labels = { invite: "Invité", etablissement: "Établissement", entreprise: "Entreprise", ddfpt: "DDFPT", validateur: "Validateur métier", medecin: "Médecin", administrateur: "Administrateur" };
+      const title = document.querySelector("#role-title");
+      const list = document.querySelector("#role-items");
+      document.querySelectorAll(".pp-role-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".pp-role-button").forEach((item) => item.setAttribute("aria-pressed", "false"));
+          button.setAttribute("aria-pressed", "true");
+          const role = button.dataset.role;
+          title.textContent = `Navigation — ${labels[role]}`;
+          list.replaceChildren(...items[role].map((text) => {
+            const li = document.createElement("li");
+            li.textContent = text;
+            return li;
+          }));
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

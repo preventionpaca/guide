@@ -3,8 +3,13 @@ set -euo pipefail
 
 REPO="/home/rudy/Documents/Prevention_PACA/DEV/github-pages"
 CONFIG="$REPO/site-config.js"
+INDEX="$REPO/index.html"
+INDEX_PRODUCTION="$REPO/index-production.html"
+ATTENDRE="$REPO/.vscode/attendre-github-pages.sh"
 
 cd "$REPO"
+
+TOKEN_CACHE="$(date +%Y%m%d%H%M%S)"
 
 cat > "$CONFIG" <<'CONFIGEOF'
 // Configuration globale du portail Prévention PACA
@@ -14,17 +19,47 @@ cat > "$CONFIG" <<'CONFIGEOF'
 window.MAINTENANCE = false;
 CONFIGEOF
 
-echo "✅ Mode production activé localement."
+# Renouvelle le numéro de version du script pour éviter un ancien cache navigateur
+python3 - "$INDEX" "$INDEX_PRODUCTION" "$TOKEN_CACHE" <<'PYEOF'
+import re
+import sys
+from pathlib import Path
 
-git add site-config.js
+token = sys.argv[3]
 
-if git diff --cached --quiet; then
-  echo "ℹ️ Le site était déjà en ligne."
-  exit 0
+for filename in sys.argv[1:3]:
+    path = Path(filename)
+
+    if not path.exists():
+        continue
+
+    content = path.read_text(encoding="utf-8")
+
+    content, count = re.subn(
+        r'site-config\.js(?:\?v=[^"\']*)?',
+        f'site-config.js?v={token}',
+        content
+    )
+
+    if count:
+        path.write_text(content, encoding="utf-8")
+PYEOF
+
+git add site-config.js index.html
+
+if [[ -f "$INDEX_PRODUCTION" ]]; then
+  git add index-production.html
 fi
 
-git commit -m "Remise en ligne - $(date '+%d/%m/%Y à %H:%M:%S')"
-git push origin main
+if git diff --cached --quiet; then
+  echo "ℹ️ Le site est déjà configuré en ligne."
+  SHA="$(git rev-parse HEAD)"
+else
+  git commit -m "Remise en ligne - $(date '+%d/%m/%Y à %H:%M:%S')"
+  git push origin main
+  SHA="$(git rev-parse HEAD)"
+fi
 
-echo "✅ SITE REMIS EN LIGNE"
-echo "⏳ GitHub Pages peut prendre quelques instants pour se mettre à jour."
+echo
+echo "✅ Mode en ligne envoyé sur GitHub."
+"$ATTENDRE" "$SHA" false

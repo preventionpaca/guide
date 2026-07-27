@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_GITHUB="preventionpaca/guide"
+SITE_URL="https://preventionpaca.github.io/guide"
+
+SHA_ATTENDU="${1:-}"
+MODE_ATTENDU="${2:-}"
+
+if [[ -z "$SHA_ATTENDU" ]]; then
+  echo "❌ Commit Git absent."
+  exit 1
+fi
+
+if [[ "$MODE_ATTENDU" != "true" && "$MODE_ATTENDU" != "false" ]]; then
+  echo "❌ Mode attendu incorrect : $MODE_ATTENDU"
+  exit 1
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "❌ GitHub CLI est introuvable."
+  exit 1
+fi
+
+DEBUT=$(date +%s)
+DERNIER_AFFICHAGE=""
+MAX_ATTENTE=600
+
+echo
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "⏳ SUIVI RÉEL DU DÉPLOIEMENT GITHUB PAGES"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Commit attendu : ${SHA_ATTENDU:0:7}"
+echo
+
+while true
+do
+  MAINTENANT=$(date +%s)
+  ECOULE=$((MAINTENANT - DEBUT))
+
+  if (( ECOULE >= MAX_ATTENTE )); then
+    echo
+    echo "❌ Délai maximal atteint après ${ECOULE} secondes."
+    echo "   Le push a réussi, mais GitHub Pages n'a pas confirmé le build."
+    exit 1
+  fi
+
+  REPONSE=$(
+    gh api "repos/$REPO_GITHUB/pages/builds/latest" 2>/dev/null || true
+  )
+
+  if [[ -z "$REPONSE" ]]; then
+    printf "\r⏳ %3d s — GitHub Pages ne répond pas encore…          " "$ECOULE"
+    sleep 2
+    continue
+  fi
+
+  BUILD_SHA=$(
+    python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit") or "")' \
+      <<< "$REPONSE" 2>/dev/null || true
+  )
+
+  BUILD_STATUS=$(
+    python3 -c 'import json,sys; print(json.load(sys.stdin).get("status") or "")' \
+      <<< "$REPONSE" 2>/dev/null || true
+  )
+
+  BUILD_ERREUR=$(
+    python3 -c '
+import json,sys
+data=json.load(sys.stdin)
+error=data.get("error") or {}
+print(error.get("message") or "")
+' <<< "$REPONSE" 2>/dev/null || true
+  )
+
+  if [[ "$BUILD_SHA" != "$SHA_ATTENDU" ]]; then
+    ETAT="attente du nouveau build"
+  else
+    case "$BUILD_STATUS" in
+      queued)
+        ETAT="en file d'attente"
+        ;;
+      building)
+        ETAT="construction en cours"
+        ;;
+      built)
+        ETAT="build terminé"
+        ;;
+      errored|error|failed|failure)
+        echo
+        echo "❌ Échec du déploiement GitHub Pages."
+        [[ -n "$BUILD_ERREUR" ]] && echo "   Erreur : $BUILD_ERREUR"
+        exit 1
+        ;;
+      *)
+        ETAT="${BUILD_STATUS:-état inconnu}"
+        ;;
+    esac
+  fi
+
+  AFFICHAGE="⏳ ${ECOULE} s — ${ETAT}"
+
+  if [[ "$AFFICHAGE" != "$DERNIER_AFFICHAGE" ]]; then
+    printf "\r%-78s" "$AFFICHAGE"
+    DERNIER_AFFICHAGE="$AFFICHAGE"
+  fi
+
+  if [[ "$BUILD_SHA" == "$SHA_ATTENDU" && "$BUILD_STATUS" == "built" ]]; then
+    echo
+    break
+  fi
+
+  sleep 2
+done
+
+DUREE_BUILD=$(
+  python3 -c '
+import json,sys
+data=json.load(sys.stdin)
+duration=data.get("duration")
+if isinstance(duration, int):
+    print(round(duration / 1000, 1))
+else:
+    print("")
+' <<< "$REPONSE" 2>/dev/null || true
+)
+
+echo
+echo "✅ GitHub Pages confirme le déploiement du commit ${SHA_ATTENDU:0:7}."
+echo "✅ Temps réellement observé : ${ECOULE} secondes."
+
+if [[ -n "$DUREE_BUILD" ]]; then
+  echo "ℹ️ Durée interne indiquée par GitHub : ${DUREE_BUILD} secondes."
+fi
+
+###############################################################################
+# VÉRIFICATION DU FICHIER RÉELLEMENT PUBLIÉ
+###############################################################################
+
+echo
+echo "🔎 Vérification du fichier site-config.js réellement publié…"
+
+VERIFICATION_DEBUT=$(date +%s)
+CONFIG_OK=false
+
+while true
+do
+  MAINTENANT=$(date +%s)
+  VERIFICATION_ECOULE=$((MAINTENANT - VERIFICATION_DEBUT))
+
+  CONFIG_DISTANTE=$(
+    curl -fsSL \
+      "${SITE_URL}/site-config.js?commit=${SHA_ATTENDU}&t=${MAINTENANT}" \
+      2>/dev/null || true
+  )
+
+  if grep -Eq \
+    "window[.]MAINTENANCE[[:space:]]*=[[:space:]]*${MODE_ATTENDU}[[:space:]]*;" \
+    <<< "$CONFIG_DISTANTE"
+  then
+    CONFIG_OK=true
+    break
+  fi
+
+  if (( VERIFICATION_ECOULE >= 120 )); then
+    break
+  fi
+
+  printf "\r⏳ Publication visible dans %3d s — vérification du fichier public…" \
+    "$VERIFICATION_ECOULE"
+
+  sleep 2
+done
+
+echo
+
+if [[ "$CONFIG_OK" == true ]]; then
+  if [[ "$MODE_ATTENDU" == true ]]; then
+    echo "✅ Le site public confirme : MODE MAINTENANCE."
+  else
+    echo "✅ Le site public confirme : MODE EN LIGNE."
+  fi
+else
+  echo "⚠️ Le build est terminé, mais le fichier public n'est pas encore confirmé."
+  echo "   GitHub ou son réseau de cache peut nécessiter quelques secondes de plus."
+fi
+
+URL_FINALE="${SITE_URL}/?commit=${SHA_ATTENDU}&t=$(date +%s)"
+
+echo
+echo "🌐 Ouverture du site…"
+nohup xdg-open "$URL_FINALE" >/dev/null 2>&1 </dev/null &
+
+echo
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ OPÉRATION TERMINÉE"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Portail authentifié DEV de Prévention PACA.">
+  <title>Portail personnalisé — Prévention PACA DEV</title>
+  <link rel="stylesheet" href="css/pp-design-system-v1.css">
+  <link rel="stylesheet" href="css/pp-components-v1.css">
+  <link rel="stylesheet" href="css/pp-layouts-v1.css">
+  <link rel="stylesheet" href="css/pp-print-v1.css" media="print">
+  <script src="js/pp-v2-config.js" defer></script>
+  <script src="js/pp-components-v1.js" defer></script>
+  <script src="js/pp-navigation-v1.js" defer></script>
+  <script src="js/pp-api-v2.js" defer></script>
+  <script src="js/pp-auth-v2.js" defer></script>
+  <script src="js/pp-portal-v2.js" defer></script>
+</head>
+<body class="pp-page">
+  <div data-pp-component="header" data-state="disconnected" data-role="invite"></div>
+  <main id="contenu">
+    <header class="pp-page-header">
+      <div class="pp-container pp-page-header__inner">
+        <div><p class="pp-eyebrow">Portail personnalisé</p><h1>Votre espace Prévention PACA</h1><p class="pp-lead">Connectez-vous avec votre Code PACA pour afficher les accès associés à votre profil.</p></div>
+        <span class="pp-badge">DEV · 2.0.0-dev.4</span>
+      </div>
+    </header>
+
+    <div class="pp-container pp-content">
+      <div class="pp-alert pp-alert--warning" id="simulation-notice" hidden>
+        <p class="pp-alert__title">Mode simulation DEV</p>
+        <p>Aucun backend n’est contacté. Ce mode n’est activé que par le paramètre local explicite prévu pour la recette.</p>
+      </div>
+
+      <section class="pp-content--narrow" data-portal-state="disconnected" id="connexion" aria-labelledby="login-title">
+        <div class="pp-panel pp-stack">
+          <div><p class="pp-eyebrow">Connexion</p><h2 id="login-title">S’identifier avec un Code PACA</h2><p>Le Code PACA est transmis au serveur uniquement pour vérifier le compte. Il n’est pas conservé dans le navigateur après la tentative.</p></div>
+          <form class="pp-form" id="login-form" novalidate>
+            <div class="pp-field">
+              <label class="pp-label" for="code-paca">Code PACA <span class="pp-required" aria-hidden="true">*</span></label>
+              <input class="pp-control" id="code-paca" name="codePaca" type="password" required maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="code-help auth-message">
+              <span class="pp-help" id="code-help">Respectez les lettres, chiffres et tirets de votre code. Aucun espace interne.</span>
+              <span class="pp-help" id="auth-message" aria-live="polite"></span>
+            </div>
+            <button class="pp-button" id="login-submit" type="submit">Se connecter</button>
+          </form>
+          <div class="pp-info-box"><h3>Protection de votre accès</h3><p>La session est temporaire et disparaît à la fermeture de cet onglet. Le Code PACA et le jeton ne sont jamais placés dans l’URL.</p></div>
+        </div>
+      </section>
+
+      <section class="pp-state" data-portal-state="loading" hidden aria-live="polite" aria-busy="true">
+        <div class="pp-spinner" aria-hidden="true"></div><h2>Vérification en cours</h2><p>Veuillez patienter sans fermer cette page.</p>
+      </section>
+
+      <section class="pp-state" data-portal-state="locked" hidden role="alert">
+        <div class="pp-state__icon" aria-hidden="true">!</div><h2>Connexion temporairement indisponible</h2><p>Plusieurs tentatives ont échoué. Attendez avant de recommencer.</p><button class="pp-button pp-button--secondary" data-return-login type="button">Retour à la connexion</button>
+      </section>
+
+      <section class="pp-state" data-portal-state="expired" hidden role="alert">
+        <div class="pp-state__icon" aria-hidden="true">⌛</div><h2>Votre session a expiré</h2><p>Reconnectez-vous pour accéder de nouveau à votre espace.</p><button class="pp-button" data-return-login type="button">Se reconnecter</button>
+      </section>
+
+      <section data-portal-state="connected" hidden aria-labelledby="portal-title">
+        <div class="pp-panel pp-stack">
+          <div class="pp-cluster">
+            <div><p class="pp-eyebrow">Profil connecté</p><h2 id="portal-title"><span id="profile-name"></span></h2><p><strong>Rôle :</strong> <span id="profile-role"></span><br><span id="profile-entity"></span></p></div>
+            <span class="pp-status pp-status--success">Session active</span>
+          </div>
+          <div class="pp-alert pp-alert--info"><p><strong>Sécurité :</strong> les cartes sont calculées par le serveur. Leur visibilité ne remplace jamais le contrôle d’autorisation de chaque route.</p></div>
+        </div>
+        <div class="pp-section-heading pp-margin-top-4"><p class="pp-eyebrow">Mes accès</p><h2>Services disponibles</h2><p>Les modules métier restent préparatoires dans ce lot.</p></div>
+        <div class="pp-grid" id="portal-cards"></div>
+      </section>
+    </div>
+  </main>
+  <div data-pp-component="footer"></div>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Catalogue DEV des composants Prévention PACA.">
+  <title>Composants — Prévention PACA DEV</title>
+  <link rel="stylesheet" href="css/pp-design-system-v1.css">
+  <link rel="stylesheet" href="css/pp-components-v1.css">
+  <link rel="stylesheet" href="css/pp-layouts-v1.css">
+  <link rel="stylesheet" href="css/pp-print-v1.css" media="print">
+  <script src="js/pp-v2-config.js" defer></script>
+  <script src="js/pp-components-v1.js" defer></script>
+  <script src="js/pp-navigation-v1.js" defer></script>
+</head>
+<body class="pp-page">
+  <div data-pp-component="header" data-state="connected" data-role="validateur_metier"></div>
+  <div class="pp-container" id="breadcrumb"></div>
+  <main id="contenu">
+    <header class="pp-page-header">
+      <div class="pp-container pp-page-header__inner">
+        <div><p class="pp-eyebrow">Bibliothèque v1.0</p><h1>Composants d’interface</h1><p class="pp-lead">États, variantes et règles communes — démonstrations locales sans fonction métier.</p></div>
+        <span class="pp-badge">2.0.0-dev.2</span>
+      </div>
+    </header>
+
+    <div class="pp-container pp-content pp-layout-sidebar">
+      <aside class="pp-sidebar">
+        <nav aria-label="Sommaire des composants"><ul>
+          <li><a href="#typographie" aria-current="page">Titres et actions</a></li>
+          <li><a href="#cartes">Cartes et statuts</a></li>
+          <li><a href="#messages">Messages et états</a></li>
+          <li><a href="#navigation">Navigation</a></li>
+          <li><a href="#formulaires">Formulaires</a></li>
+          <li><a href="#tableaux">Tableaux</a></li>
+          <li><a href="#superpositions">Modales et panneau</a></li>
+          <li><a href="#assistant">Assistant</a></li>
+        </ul></nav>
+      </aside>
+
+      <div class="pp-stack pp-stack--large">
+        <section class="pp-panel" id="typographie">
+          <p class="pp-eyebrow">Fondations</p><h2>Titres, boutons et liens d’action</h2>
+          <h3>Titre de sous-section</h3><p class="pp-lead">Les titres structurent le contenu ; ils ne servent pas seulement à agrandir du texte.</p>
+          <div class="pp-cluster">
+            <button class="pp-button" type="button">Action principale</button>
+            <button class="pp-button pp-button--secondary" type="button">Action secondaire</button>
+            <button class="pp-button pp-button--dark" type="button">Action forte</button>
+            <button class="pp-button pp-button--danger" type="button">Supprimer</button>
+            <button class="pp-button" type="button" disabled>Désactivé</button>
+            <a class="pp-action-link" href="#cartes">Voir les cartes →</a>
+          </div>
+          <p class="pp-help"><strong>À faire :</strong> un verbe précis par bouton. <strong>À éviter :</strong> plusieurs actions principales concurrentes.</p>
+        </section>
+
+        <section id="cartes">
+          <div class="pp-section-heading"><p class="pp-eyebrow">Contenus</p><h2>Cartes, badges et statuts</h2><p>Une carte mène à une destination unique. Les statuts associent texte, forme et couleur.</p></div>
+          <div class="pp-grid">
+            <article class="pp-card"><span class="pp-card__icon" aria-hidden="true">B</span><h3>Carte standard</h3><p>Résumé concis d’un module ou d’un contenu.</p><small>Information complémentaire</small></article>
+            <article class="pp-card pp-card--restricted"><h3>Accès habilité</h3><p>La bordure ne remplace jamais la mention explicite.</p><small>Permission requise</small></article>
+            <article class="pp-card pp-card--admin"><h3>Administration</h3><p>Réservé aux actions d’administration.</p><small>Administrateurs</small></article>
+          </div>
+          <div class="pp-cluster pp-margin-top-4">
+            <span class="pp-badge--neutral">Brouillon</span><span class="pp-status pp-status--success">Publié</span>
+            <span class="pp-status pp-status--warning">À vérifier</span><span class="pp-status pp-status--danger">Refusé</span>
+            <span class="pp-status pp-status--info">En cours</span>
+          </div>
+        </section>
+
+        <section class="pp-stack" id="messages">
+          <div><p class="pp-eyebrow">Retour utilisateur</p><h2>Alertes, notifications et états</h2></div>
+          <div class="pp-alert pp-alert--info"><p class="pp-alert__title">Information</p><p>Ce catalogue utilise uniquement des données fictives.</p></div>
+          <div class="pp-alert pp-alert--success"><p class="pp-alert__title">Confirmation</p><p>La démonstration a été enregistrée localement.</p></div>
+          <div class="pp-alert pp-alert--warning"><p class="pp-alert__title">Avertissement</p><p>Vérifiez les informations avant de poursuivre.</p></div>
+          <div class="pp-alert pp-alert--danger" role="alert"><p class="pp-alert__title">Erreur</p><p>Le champ obligatoire doit être renseigné.</p></div>
+          <div class="pp-info-box"><h3>Encadré d’information</h3><p>À utiliser pour une règle ou une aide durable, pas pour une notification temporaire.</p></div>
+          <button class="pp-button pp-button--secondary" type="button" data-pp-toast="Notification de démonstration." data-pp-toast-status="info">Afficher une notification</button>
+          <div class="pp-grid">
+            <div class="pp-state"><div class="pp-state__icon" aria-hidden="true">0</div><h3>Aucun résultat</h3><p>Modifiez les filtres ou créez un premier élément.</p><button class="pp-button" type="button">Créer</button></div>
+            <div class="pp-state" aria-busy="true"><div class="pp-spinner" aria-hidden="true"></div><h3>Chargement</h3><p>Veuillez patienter.</p></div>
+            <div class="pp-state"><div class="pp-state__icon" aria-hidden="true">!</div><h3>Impossible de charger</h3><p>Une explication et une action de reprise sont nécessaires.</p><button class="pp-button pp-button--secondary" type="button">Réessayer</button></div>
+          </div>
+          <div class="pp-panel" aria-label="Squelette de chargement"><div class="pp-stack"><span class="pp-skeleton pp-width-40"></span><span class="pp-skeleton"></span><span class="pp-skeleton pp-width-75"></span></div></div>
+        </section>
+
+        <section class="pp-panel pp-stack" id="navigation">
+          <div><p class="pp-eyebrow">Navigation</p><h2>Onglets, accordéons et pagination</h2></div>
+          <div class="pp-tabs" data-pp-tabs>
+            <div class="pp-tabs__list" role="tablist" aria-label="Exemple de sections">
+              <button class="pp-tab" id="tab-general" role="tab" aria-selected="true" aria-controls="panel-general">Général</button>
+              <button class="pp-tab" id="tab-documents" role="tab" aria-selected="false" aria-controls="panel-documents" tabindex="-1">Documents</button>
+              <button class="pp-tab" id="tab-history" role="tab" aria-selected="false" aria-controls="panel-history" tabindex="-1">Historique</button>
+            </div>
+            <div class="pp-tab-panel" id="panel-general" role="tabpanel" aria-labelledby="tab-general">Informations générales fictives.</div>
+            <div class="pp-tab-panel" id="panel-documents" role="tabpanel" aria-labelledby="tab-documents" hidden>Documents fictifs.</div>
+            <div class="pp-tab-panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>Historique fictif.</div>
+          </div>
+          <div class="pp-accordion">
+            <div class="pp-accordion__item"><h3><button class="pp-accordion__button" data-pp-accordion-button aria-expanded="true" aria-controls="answer-1">Quand utiliser un accordéon ?</button></h3><div id="answer-1" class="pp-accordion__panel">Pour du contenu secondaire que l’utilisateur choisit de développer.</div></div>
+            <div class="pp-accordion__item"><h3><button class="pp-accordion__button" data-pp-accordion-button aria-expanded="false" aria-controls="answer-2">Que faut-il éviter ?</button></h3><div id="answer-2" class="pp-accordion__panel" hidden>Ne pas masquer une information indispensable à la tâche.</div></div>
+          </div>
+          <nav class="pp-pagination" aria-label="Pagination"><button type="button" aria-label="Page précédente">←</button><a href="#page-1" aria-current="page">1</a><a href="#page-2">2</a><a href="#page-3">3</a><button type="button" aria-label="Page suivante">→</button></nav>
+        </section>
+
+        <section class="pp-panel pp-stack" id="formulaires">
+          <div><p class="pp-eyebrow">Saisie</p><h2>Formulaires</h2><p>Libellés persistants, aide reliée aux champs et erreurs textuelles.</p></div>
+          <form class="pp-form" data-pp-demo-form>
+            <div class="pp-form-grid">
+              <div class="pp-field"><label class="pp-label" for="name">Nom de l’établissement <span class="pp-required" aria-hidden="true">*</span></label><input class="pp-control" id="name" required aria-describedby="name-help"><span class="pp-help" id="name-help">Champ obligatoire.</span></div>
+              <div class="pp-field"><label class="pp-label" for="email">Adresse électronique</label><input class="pp-control" id="email" type="email" value="exemple@ac-nice.fr"></div>
+              <div class="pp-field"><label class="pp-label" for="number">Nombre de jeunes</label><input class="pp-control" id="number" type="number" min="0" value="12"></div>
+              <div class="pp-field"><label class="pp-label" for="date">Date</label><input class="pp-control" id="date" type="date"></div>
+              <div class="pp-field"><label class="pp-label" for="select">Académie</label><select class="pp-control" id="select"><option>Aix-Marseille</option><option>Nice</option></select></div>
+              <div class="pp-field"><label class="pp-label" for="search">Recherche</label><input class="pp-control" id="search" type="search" placeholder="Rechercher une fiche"></div>
+              <div class="pp-field pp-field--full"><label class="pp-label" for="message">Description facultative</label><textarea class="pp-control" id="message"></textarea></div>
+              <div class="pp-field"><label class="pp-label" for="error">Champ en erreur</label><input class="pp-control" id="error" aria-invalid="true" aria-describedby="error-message"><span class="pp-field-message pp-field-message--error" id="error-message">Indiquez une valeur valide.</span></div>
+              <div class="pp-field pp-field--success"><label class="pp-label" for="success">Champ validé</label><input class="pp-control" id="success" value="Valeur correcte"><span class="pp-field-message">Valeur vérifiée.</span></div>
+              <div class="pp-field"><label class="pp-label" for="disabled">Champ désactivé</label><input class="pp-control" id="disabled" value="Non modifiable" disabled></div>
+              <div class="pp-field"><label class="pp-label" for="file">Ajouter un fichier</label><div class="pp-file"><input id="file" type="file"><p class="pp-help">PDF, 5 Mo maximum — démonstration.</p></div></div>
+            </div>
+            <fieldset class="pp-choice-group"><legend class="pp-label">Type de structure</legend><label class="pp-choice"><input type="radio" name="structure" checked> Établissement</label><label class="pp-choice"><input type="radio" name="structure"> Entreprise</label></fieldset>
+            <fieldset class="pp-choice-group"><legend class="pp-label">Options</legend><label class="pp-choice"><input type="checkbox"> Recevoir un récapitulatif fictif</label><label class="pp-switch"><input type="checkbox"><span class="pp-switch__track" aria-hidden="true"></span><span>Activer le brouillon</span></label></fieldset>
+            <div class="pp-autocomplete pp-field"><label class="pp-label" for="auto">Autocomplétion fictive</label><input class="pp-control" id="auto" role="combobox" aria-expanded="true" aria-controls="auto-list"><ul class="pp-autocomplete__list" id="auto-list" role="listbox"><li><button type="button" role="option">Lycée professionnel Démo</button></li><li><button type="button" role="option">CFA Exemple</button></li></ul></div>
+            <div class="pp-cluster"><button class="pp-button" type="submit">Enregistrer la démonstration</button><button class="pp-button pp-button--secondary" type="reset">Réinitialiser</button></div>
+          </form>
+        </section>
+
+        <section class="pp-stack" id="tableaux">
+          <div><p class="pp-eyebrow">Données</p><h2>Recherche, filtres et tableau responsive</h2></div>
+          <form class="pp-search-bar" role="search"><label class="pp-visually-hidden" for="table-search">Rechercher</label><input class="pp-control" id="table-search" type="search" placeholder="Rechercher un équipement"><button class="pp-button" type="submit">Rechercher</button></form>
+          <div class="pp-filter-bar"><label class="pp-field"><span class="pp-label">Statut</span><select class="pp-control"><option>Tous</option><option>Publié</option><option>À vérifier</option></select></label><label class="pp-choice"><input type="checkbox"> Mes contributions</label><button class="pp-button pp-button--secondary" type="button">Effacer les filtres</button></div>
+          <div class="pp-table-wrap">
+            <table class="pp-table pp-table--responsive">
+              <caption class="pp-visually-hidden">Équipements fictifs</caption>
+              <thead><tr><th scope="col"><input type="checkbox" aria-label="Sélectionner toutes les lignes"></th><th scope="col"><button class="pp-sort" aria-sort="ascending">Équipement</button></th><th scope="col">Type</th><th scope="col">Statut</th><th scope="col">Actions</th></tr></thead>
+              <tbody>
+                <tr><td data-label="Sélection"><input type="checkbox" aria-label="Sélectionner Scie circulaire"></td><td data-label="Équipement">Scie circulaire</td><td data-label="Type">Équipement</td><td data-label="Statut"><span class="pp-status pp-status--success">Publié</span></td><td data-label="Actions"><div class="pp-table-actions"><button class="pp-button pp-button--secondary" type="button">Consulter</button></div></td></tr>
+                <tr><td data-label="Sélection"><input type="checkbox" aria-label="Sélectionner Produit fictif"></td><td data-label="Équipement">Produit fictif</td><td data-label="Type">Produit</td><td data-label="Statut"><span class="pp-status pp-status--warning">À vérifier</span></td><td data-label="Actions"><div class="pp-table-actions"><button class="pp-button pp-button--secondary" type="button">Consulter</button></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="pp-panel pp-stack" id="superpositions">
+          <div><p class="pp-eyebrow">Superpositions</p><h2>Modales et panneau latéral</h2><p>Le focus reste dans la superposition et revient au déclencheur après fermeture.</p></div>
+          <div class="pp-cluster">
+            <button class="pp-button" type="button" data-pp-open="modal-confirm">Confirmation</button>
+            <button class="pp-button pp-button--secondary" type="button" data-pp-open="modal-warning">Avertissement</button>
+            <button class="pp-button pp-button--secondary" type="button" data-pp-open="modal-form">Formulaire court</button>
+            <button class="pp-button pp-button--dark" type="button" data-pp-open="drawer-detail">Détail latéral</button>
+          </div>
+        </section>
+
+        <section class="pp-panel pp-stack" id="assistant">
+          <div><p class="pp-eyebrow">Parcours fictif</p><h2>Assistant de dérogation</h2></div>
+          <ol class="pp-stepper" aria-label="Progression">
+            <li class="pp-step pp-step--complete"><span class="pp-step__number">1</span>Établissement</li>
+            <li class="pp-step pp-step--complete"><span class="pp-step__number">2</span>Formation</li>
+            <li class="pp-step pp-step--active" aria-current="step"><span class="pp-step__number">3</span>Équipements</li>
+            <li class="pp-step pp-step--error"><span class="pp-step__number">4</span>Travaux réglementés</li>
+            <li class="pp-step pp-step--upcoming"><span class="pp-step__number">5</span>Jeunes</li>
+            <li class="pp-step pp-step--upcoming"><span class="pp-step__number">6</span>Avis médical</li>
+            <li class="pp-step pp-step--upcoming"><span class="pp-step__number">7</span>Vérification</li>
+            <li class="pp-step pp-step--upcoming"><span class="pp-step__number">8</span>Génération</li>
+          </ol>
+          <div class="pp-info-box"><h3>Étape 3 — Équipements</h3><p>Exemple visuel uniquement. Aucune sauvegarde ni règle métier.</p></div>
+          <div class="pp-cluster"><button class="pp-button pp-button--secondary" type="button">← Précédent</button><button class="pp-button pp-button--quiet" type="button" data-pp-toast="Brouillon fictif sauvegardé." data-pp-toast-status="success">Sauvegarder le brouillon</button><button class="pp-button" type="button">Suivant →</button></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <div data-pp-component="footer"></div>
+
+  <div class="pp-modal" id="modal-confirm" hidden role="presentation"><section class="pp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" tabindex="-1"><div class="pp-modal__header"><h2 id="confirm-title">Confirmer l’action</h2><button class="pp-icon-button" data-pp-close type="button" aria-label="Fermer">×</button></div><p>Cette action est purement fictive.</p><div class="pp-cluster"><button class="pp-button" data-pp-close type="button">Confirmer</button><button class="pp-button pp-button--secondary" data-pp-close type="button">Annuler</button></div></section></div>
+  <div class="pp-modal" id="modal-warning" hidden role="presentation"><section class="pp-modal__dialog" role="alertdialog" aria-modal="true" aria-labelledby="warning-title" tabindex="-1"><div class="pp-modal__header"><h2 id="warning-title">Attention</h2><button class="pp-icon-button" data-pp-close type="button" aria-label="Fermer">×</button></div><div class="pp-alert pp-alert--warning"><p>Vérifiez les conséquences avant de poursuivre.</p></div><button class="pp-button pp-button--secondary" data-pp-close type="button">J’ai compris</button></section></div>
+  <div class="pp-modal" id="modal-form" hidden role="presentation"><section class="pp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="form-title" tabindex="-1"><div class="pp-modal__header"><h2 id="form-title">Ajouter une note</h2><button class="pp-icon-button" data-pp-close type="button" aria-label="Fermer">×</button></div><form class="pp-form" data-pp-demo-form><label class="pp-field"><span class="pp-label">Note</span><textarea class="pp-control" required></textarea></label><button class="pp-button" type="submit">Ajouter fictivement</button></form></section></div>
+  <div class="pp-drawer" id="drawer-detail" hidden><aside class="pp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1"><div class="pp-modal__header"><h2 id="drawer-title">Détail de la fiche</h2><button class="pp-icon-button" data-pp-close type="button" aria-label="Fermer">×</button></div><dl class="pp-definition-list"><dt>Type</dt><dd>Équipement</dd><dt>Statut</dt><dd>Publié</dd><dt>Référence</dt><dd>Démonstration</dd></dl></aside></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      PPNavigation.breadcrumb(document.getElementById("breadcrumb"), [
+        { label: "Accueil", href: "#accueil" },
+        { label: "Documentation", href: "#documentation" },
+        { label: "Bibliothèque de composants" }
+      ]);
+    });
+  </script>
+</body>
+</html>

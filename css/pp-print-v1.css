@@ -1,0 +1,25 @@
+/* Prévention PACA — impression v1 — plateforme 2.0.0-dev.2. */
+@page { margin: 16mm; }
+@media print {
+  * { box-shadow: none !important; text-shadow: none !important; }
+  body { color: #000; background: #fff; font-size: 10.5pt; }
+  .pp-site-header, .pp-main-nav, .pp-breadcrumb, .pp-site-footer,
+  .pp-menu-toggle, .pp-button, .pp-pagination, .pp-filter-bar,
+  .pp-toast-region, .pp-modal, .pp-drawer, .pp-no-print { display: none !important; }
+  .pp-container, .pp-content--narrow { width: 100%; max-width: none; }
+  .pp-page-header, .pp-section, .pp-content { padding: 0 0 1rem; background: #fff !important; }
+  .pp-panel, .pp-card, .pp-alert, .pp-info-box, .pp-table-wrap {
+    break-inside: avoid; border-color: #777; background: #fff !important;
+  }
+  .pp-grid, .pp-dashboard-grid, .pp-form-grid, .pp-detail-grid { display: block; }
+  .pp-card, .pp-panel, .pp-field, .pp-metric { margin-bottom: .8rem; }
+  .pp-table { display: table !important; }
+  .pp-table thead { position: static !important; width: auto !important; height: auto !important; clip: auto !important; }
+  .pp-table tbody { display: table-row-group !important; }
+  .pp-table tr { display: table-row !important; padding: 0 !important; }
+  .pp-table th, .pp-table td { display: table-cell !important; padding: .4rem !important; border: 1px solid #777 !important; }
+  .pp-table td::before { content: none !important; }
+  a[href]::after { content: " (" attr(href) ")"; font-size: .8em; }
+  a[href^="#"]::after, a[href^="javascript:"]::after { content: ""; }
+  .pp-print-only { display: block !important; }
+}

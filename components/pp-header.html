@@ -1,0 +1,26 @@
+<!-- Référence statique du header Prévention PACA — 2.0.0-dev.2.
+     L'intégration locale recommandée utilise :
+     <div data-pp-component="header" data-state="disconnected" data-role="invite"></div>
+     avec js/pp-navigation-v1.js. -->
+<header class="pp-site-header">
+  <div class="pp-container pp-site-header__top">
+    <a class="pp-site-brand" href="#accueil" aria-label="Prévention PACA — accueil">
+      <span class="pp-site-brand__logo" aria-hidden="true">PACA</span>
+      <span class="pp-site-brand__text">
+        <strong>Prévention PACA</strong>
+        <small>Prévention des risques professionnels</small>
+      </span>
+    </a>
+    <div class="pp-site-header__identity">
+      <span class="pp-badge">DEV · 2.0.0-dev.2</span>
+      <span class="pp-identity-text">Non connecté</span>
+      <button class="pp-button pp-button--secondary" type="button">Se connecter</button>
+      <button class="pp-button pp-button--secondary pp-menu-toggle" type="button" aria-expanded="false" aria-controls="pp-main-menu">
+        <span aria-hidden="true">☰</span><span class="pp-visually-hidden">Ouvrir le menu</span>
+      </button>
+    </div>
+  </div>
+  <nav class="pp-main-nav" id="pp-main-menu" aria-label="Navigation principale">
+    <div class="pp-container"><ul class="pp-main-nav__list"></ul></div>
+  </nav>
+</header>

@@ -1,0 +1,145 @@
+/*
+ * Prévention PACA — Design system web v1.0
+ * Adaptation du BAT graphique officiel — compatible plateforme 2.0.0-dev.2.
+ */
+:root {
+  --pp-color-primary: #d99a2b;
+  --pp-color-primary-dark: #7a4d00;
+  --pp-color-secondary: #d98a7b;
+  --pp-color-accent: #e4a432;
+  --pp-color-surface: #ffffff;
+  --pp-color-surface-muted: #edf1f2;
+  --pp-color-surface-blue: #d5dee1;
+  --pp-color-text: #29272a;
+  --pp-color-text-muted: #5d6268;
+  --pp-color-border: #cbd3d6;
+  --pp-color-success: #287a53;
+  --pp-color-warning: #8a5a00;
+  --pp-color-danger: #a93636;
+  --pp-color-info: #365f78;
+  --pp-radius-sm: .375rem;
+  --pp-radius-md: .75rem;
+  --pp-radius-lg: 1rem;
+  --pp-shadow-card: 0 1px 3px rgb(41 39 42 / 8%);
+  --pp-shadow-overlay: 0 1rem 3rem rgb(41 39 42 / 18%);
+  --pp-space-1: .25rem;
+  --pp-space-2: .5rem;
+  --pp-space-3: .75rem;
+  --pp-space-4: 1rem;
+  --pp-space-5: 1.5rem;
+  --pp-space-6: 2rem;
+  --pp-space-7: 3rem;
+  --pp-content-width: 74rem;
+  --pp-content-narrow: 48rem;
+  --pp-control-height: 2.75rem;
+  --pp-transition-fast: 160ms ease;
+  --pp-z-header: 30;
+  --pp-z-overlay: 100;
+  --pp-font-sans: "Arial", "Helvetica Neue", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--pp-color-text);
+  background: var(--pp-color-surface);
+  font: 400 1rem/1.55 var(--pp-font-sans);
+}
+a { color: var(--pp-color-primary-dark); text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .14em; }
+button, input, select, textarea { font: inherit; }
+:focus-visible { outline: 3px solid var(--pp-color-info); outline-offset: 3px; }
+.pp-container { width: min(100% - 2rem, var(--pp-content-width)); margin-inline: auto; }
+.pp-skip-link {
+  position: fixed; z-index: 100; top: .5rem; left: .5rem; padding: .75rem 1rem;
+  color: #fff; background: var(--pp-color-text); transform: translateY(-150%);
+}
+.pp-skip-link:focus { transform: none; }
+.pp-institutional {
+  border-bottom: 1px solid var(--pp-color-border);
+  background: var(--pp-color-surface);
+}
+.pp-institutional__inner {
+  min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.pp-wordmark { display: grid; line-height: 1.1; }
+.pp-wordmark strong { font-size: 1.15rem; letter-spacing: .015em; }
+.pp-wordmark span { color: var(--pp-color-text-muted); font-size: .8rem; }
+.pp-badge {
+  display: inline-flex; align-items: center; min-height: 1.75rem; padding: .25rem .65rem;
+  border: 1px solid var(--pp-color-warning); border-radius: 999px;
+  color: var(--pp-color-primary-dark); background: #fff8e8; font-size: .78rem; font-weight: 700;
+}
+.pp-hero { padding: clamp(2.5rem, 6vw, 5.5rem) 0; background: var(--pp-color-surface-muted); }
+.pp-hero__grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(16rem, .7fr); gap: 3rem; align-items: center; }
+.pp-eyebrow { margin: 0 0 .75rem; color: var(--pp-color-primary-dark); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: .78rem; }
+h1, h2, h3 { margin-top: 0; line-height: 1.16; color: var(--pp-color-text); }
+h1 { max-width: 15ch; margin-bottom: 1rem; font-size: clamp(2.25rem, 5vw, 4.4rem); letter-spacing: -.035em; }
+h2 { margin-bottom: .75rem; font-size: clamp(1.7rem, 3vw, 2.4rem); }
+h3 { margin-bottom: .5rem; font-size: 1.16rem; }
+.pp-lead { max-width: 65ch; margin: 0; color: var(--pp-color-text-muted); font-size: 1.12rem; }
+.pp-hero__mark {
+  min-height: 13rem; display: grid; place-items: center; position: relative;
+  border-radius: var(--pp-radius-md); background: var(--pp-color-surface-blue); overflow: hidden;
+}
+.pp-hero__mark::before { content: ""; width: 7rem; height: 7rem; border: 2rem solid var(--pp-color-accent); border-radius: 50%; }
+.pp-hero__mark::after { content: ""; position: absolute; width: 45%; height: 1rem; bottom: 1.5rem; right: 0; background: var(--pp-color-secondary); }
+.pp-section { padding: clamp(2.75rem, 6vw, 5rem) 0; }
+.pp-section--muted { background: var(--pp-color-surface-muted); }
+.pp-section-heading { max-width: 46rem; margin-bottom: 2rem; }
+.pp-section-heading p { color: var(--pp-color-text-muted); margin: 0; }
+.pp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.pp-card {
+  min-height: 12rem; display: flex; flex-direction: column; padding: 1.35rem;
+  border: 1px solid var(--pp-color-border); border-radius: var(--pp-radius-md);
+  color: inherit; background: var(--pp-color-surface); box-shadow: var(--pp-shadow-card);
+  text-decoration: none;
+}
+.pp-card:hover { border-color: var(--pp-color-primary); }
+.pp-card__icon {
+  width: 2.5rem; height: 2.5rem; display: grid; place-items: center; margin-bottom: 1.25rem;
+  border-radius: var(--pp-radius-sm); color: var(--pp-color-text); background: #f7e6c4;
+}
+.pp-card__icon svg { width: 1.45rem; height: 1.45rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pp-card p { margin: 0; color: var(--pp-color-text-muted); }
+.pp-card small { margin-top: auto; padding-top: 1rem; color: var(--pp-color-primary-dark); font-weight: 700; }
+.pp-card--restricted { border-left: .35rem solid var(--pp-color-secondary); }
+.pp-card--admin { border-left: .35rem solid var(--pp-color-text); }
+.pp-role-panel { display: grid; grid-template-columns: 18rem 1fr; gap: 2rem; align-items: start; }
+.pp-role-list { display: grid; gap: .5rem; }
+.pp-role-button {
+  width: 100%; padding: .7rem .85rem; border: 1px solid var(--pp-color-border);
+  border-radius: var(--pp-radius-sm); color: var(--pp-color-text); background: #fff; text-align: left; cursor: pointer;
+}
+.pp-role-button[aria-pressed="true"] { color: #fff; border-color: var(--pp-color-text); background: var(--pp-color-text); }
+.pp-role-output { padding: 1.5rem; border-radius: var(--pp-radius-md); background: var(--pp-color-surface-blue); }
+.pp-role-output ul { columns: 2; margin-bottom: 0; padding-left: 1.2rem; }
+.pp-notice { padding: 1rem 1.2rem; border-left: .35rem solid var(--pp-color-info); background: #eef6fa; }
+.pp-footer { padding: 2rem 0; border-top: 1px solid var(--pp-color-border); color: var(--pp-color-text-muted); background: #fff; }
+.pp-footer__inner { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.pp-footer p { margin: 0; }
+
+@media (max-width: 52rem) {
+  .pp-hero__grid, .pp-role-panel { grid-template-columns: 1fr; }
+  .pp-hero__mark { min-height: 8rem; }
+  .pp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 36rem) {
+  .pp-container { width: min(100% - 1.25rem, var(--pp-content-width)); }
+  .pp-grid { grid-template-columns: 1fr; }
+  .pp-role-output ul { columns: 1; }
+  .pp-institutional__inner { min-height: 3.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+@media print {
+  :root { --pp-color-text: #000; }
+  .pp-skip-link, .pp-role-list { display: none; }
+  .pp-hero, .pp-section, .pp-footer { padding-block: 1.25rem; background: #fff !important; }
+  .pp-grid { display: block; }
+  .pp-card { min-height: 0; margin-bottom: .75rem; break-inside: avoid; box-shadow: none; }
+  a { color: #000; text-decoration: none; }
+}
