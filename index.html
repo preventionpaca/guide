@@ -6,10 +6,12 @@
 
   <script src="site-config.js?v=20260726030835"></script>
   <script>
-    if (window.MAINTENANCE === true) {
-      window.location.replace("index-production.html");
-    }
-  </script>
+  if (window.MAINTENANCE === true) {
+    window.location.replace("index-maintenance.html");
+  } else {
+    window.location.replace("index-production.html");
+  }
+</script>
 
   <title>Portail prévention PACA</title>
 
