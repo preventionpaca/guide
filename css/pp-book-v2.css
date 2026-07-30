@@ -1,5 +1,5 @@
 /* Book des équipements — compléments ciblés au design system v1. */
-.pp-book-filters { grid-template-columns: repeat(5, minmax(9rem, 1fr)); }
+.pp-book-filters { grid-template-columns: repeat(3, minmax(9rem, 1fr)); }
 .pp-book-results-heading, .pp-book-detail-heading { justify-content: space-between; }
 .pp-book-results-heading h2 { margin-bottom: 0; }
 .pp-book-thumbnail {
@@ -8,6 +8,19 @@
   color: var(--pp-color-text-muted); background: var(--pp-color-surface-muted); font-size: .75rem;
 }
 .pp-book-thumbnail img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.pp-book-photo-button {
+  display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent;
+  cursor: zoom-in;
+}
+.pp-book-photo-button:focus-visible { outline: 3px solid var(--pp-color-primary-dark); outline-offset: -3px; }
+.pp-book-regime { display: inline-flex; align-items: center; gap: .35rem; }
+.pp-book-regime::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: currentColor; }
+.pp-book-regime--success { color: #176b3a; background: #e9f7ef; }
+.pp-book-regime--warning { color: #7a4a00; background: #fff2cc; }
+.pp-book-regime--danger { color: #a61b1b; background: #fdecec; }
+.pp-book-regime--info { color: #185b85; background: #e8f4fb; }
+.pp-book-regime--neutral { color: #4b5563; background: #f1f3f5; }
+.pp-book-provisional { border-left: .3rem solid #2878a0; }
 .pp-book-pagination { justify-content: center; }
 .pp-book-pagination button:disabled { opacity: .5; cursor: not-allowed; }
 .pp-book-detail-hero { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
@@ -17,6 +30,14 @@
   color: var(--pp-color-text-muted); background: var(--pp-color-surface-muted);
 }
 .pp-book-detail-image img { width: 100%; max-height: 22rem; object-fit: contain; background: #fff; }
+.pp-book-viewer { padding: 1rem; }
+.pp-book-viewer__dialog { width: min(96vw, 76rem); max-height: 96vh; }
+.pp-book-viewer__stage {
+  min-height: 12rem; max-height: calc(96vh - 7rem); display: grid; place-items: center;
+  overflow: auto; background: #111;
+}
+.pp-book-viewer__stage img { display: block; max-width: 100%; max-height: calc(96vh - 8rem); object-fit: contain; }
+.pp-book-viewer__stage .pp-alert { margin: 1rem; background: #fff; }
 .pp-book-sections { display: grid; gap: 1rem; }
 .pp-book-section { padding-top: 1rem; border-top: 1px solid var(--pp-color-border); }
 .pp-book-section p { white-space: pre-line; }

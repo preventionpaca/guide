@@ -1,7 +1,7 @@
-/* Prévention PACA — configuration publique non sensible — 2.0.0-dev.5. */
+/* Prévention PACA — configuration publique non sensible — 2.0.0-dev.6. */
 window.PP_V2_CONFIG = Object.freeze({
   environment: "DEV",
-  version: "2.0.0-dev.5",
+  version: "2.0.0-dev.6",
   demoOnly: false,
   defaultRole: "invite",
   componentLibrary: "1.0.0",

@@ -28,7 +28,7 @@
           <h1>Book des équipements et produits</h1>
           <p class="pp-lead">Consulter les équipements, produits, formations et travaux associés.</p>
         </div>
-        <span class="pp-badge">DEV · 2.0.0-dev.5</span>
+        <span class="pp-badge">DEV · 2.0.0-dev.6</span>
       </div>
     </header>
 
@@ -90,6 +90,12 @@
                 <label class="pp-label" for="book-regime">Régime</label>
                 <select class="pp-control" id="book-regime" name="regime"><option value="">Tous les régimes</option></select>
               </div>
+              <div class="pp-field" id="book-validation-field" hidden>
+                <label class="pp-label" for="book-validation-status">Statut de validation</label>
+                <select class="pp-control" id="book-validation-status" name="validationStatus">
+                  <option value="">Fiches validées</option>
+                </select>
+              </div>
               <div class="pp-field">
                 <label class="pp-label" for="book-sort">Tri</label>
                 <select class="pp-control" id="book-sort" name="sort"></select>
@@ -139,6 +145,18 @@
       </section>
     </div>
   </main>
+  <div class="pp-modal pp-book-viewer" id="book-photo-viewer" hidden role="presentation">
+    <section class="pp-modal__dialog pp-book-viewer__dialog" role="dialog" aria-modal="true" aria-labelledby="book-viewer-title" tabindex="-1">
+      <div class="pp-modal__header">
+        <h2 id="book-viewer-title">Photographie de l’équipement</h2>
+        <button class="pp-icon-button" id="book-viewer-close" type="button" aria-label="Fermer la photographie agrandie">×</button>
+      </div>
+      <div class="pp-book-viewer__stage">
+        <img id="book-viewer-image" alt="">
+        <p id="book-viewer-error" class="pp-alert pp-alert--danger" role="alert" hidden>La photographie agrandie ne peut pas être chargée.</p>
+      </div>
+    </section>
+  </div>
   <div data-pp-component="footer"></div>
 </body>
 </html>

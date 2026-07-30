@@ -1,8 +1,9 @@
-/* Contrôleur du Book DEV — lecture seule — 2.0.0-dev.5. */
+/* Contrôleur du Book DEV — lecture seule — 2.0.0-dev.6. */
 (function (window, document) {
   "use strict";
   var configuration = null;
   var currentPage = 1;
+  var viewerReturnFocus = null;
 
   function element(id) { return document.getElementById(id); }
   function show(state) {
@@ -22,6 +23,7 @@
       type: element("book-type").value,
       family: element("book-family").value,
       regime: element("book-regime").value,
+      validationStatus: element("book-validation-status").value,
       sort: element("book-sort").value || "name_asc",
       pageSize: Number(element("book-page-size").value || 20),
       page: currentPage
@@ -42,8 +44,8 @@
   }
   function applyUrlToForm() {
     var params = new URLSearchParams(window.location.search);
-    ["query","type","family","regime","sort"].forEach(function (name) {
-      var control = element("book-" + (name === "query" ? "query" : name));
+    ["query","type","family","regime","validationStatus","sort"].forEach(function (name) {
+      var control = element(name === "validationStatus" ? "book-validation-status" : "book-" + name);
       if (control && params.has(name)) control.value = params.get(name);
     });
     if (params.has("pageSize")) element("book-page-size").value = params.get("pageSize");
@@ -59,30 +61,78 @@
     if (equipmentId) params.set("id", equipmentId);
     window.history.pushState({}, "", window.location.pathname + (params.toString() ? "?" + params.toString() : ""));
   }
-  function imageNode(media, className) {
+  function closePhotoViewer() {
+    var viewer = element("book-photo-viewer");
+    viewer.hidden = true;
+    element("book-viewer-image").removeAttribute("src");
+    document.body.classList.remove("pp-overlay-open");
+    if (viewerReturnFocus && document.contains(viewerReturnFocus)) viewerReturnFocus.focus();
+    viewerReturnFocus = null;
+  }
+  function openPhotoViewer(media, alternativeText, trigger) {
+    if (!media || !media.available || !/^https:\/\//i.test(media.url || "")) return;
+    viewerReturnFocus = trigger || document.activeElement;
+    var viewer = element("book-photo-viewer");
+    var image = element("book-viewer-image");
+    var error = element("book-viewer-error");
+    element("book-viewer-title").textContent = "Photographie — " + alternativeText;
+    error.hidden = true;
+    image.hidden = false;
+    image.alt = alternativeText;
+    image.onload = function () { error.hidden = true; image.hidden = false; };
+    image.onerror = function () { image.hidden = true; error.hidden = false; };
+    image.src = media.url;
+    viewer.hidden = false;
+    document.body.classList.add("pp-overlay-open");
+    element("book-viewer-close").focus();
+  }
+  function imageNode(media, className, alternativeText, viewerMedia) {
     var wrapper = document.createElement("div");
     wrapper.className = className;
     wrapper.textContent = "Photo indisponible";
     if (!media || !media.available || !/^https:\/\//i.test(media.url || "")) return wrapper;
     var image = document.createElement("img");
     image.src = media.url;
-    image.alt = "";
+    image.alt = alternativeText || "";
     image.loading = "lazy";
     image.referrerPolicy = "no-referrer";
     image.addEventListener("error", function () {
       image.remove(); wrapper.textContent = "Photo indisponible";
     });
-    wrapper.replaceChildren(image);
+    var availableViewerMedia = viewerMedia || media;
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "pp-book-photo-button";
+    button.setAttribute("aria-label", "Agrandir la photographie de " + (alternativeText || "l’équipement"));
+    button.addEventListener("click", function () {
+      openPhotoViewer(availableViewerMedia, alternativeText || "Équipement", button);
+    });
+    button.appendChild(image);
+    wrapper.replaceChildren(button);
     return wrapper;
+  }
+  function regimeBadge(presentation, rawValue) {
+    var value = presentation || { label:rawValue || "Régime non renseigné", tone:"neutral", raw:rawValue || "" };
+    var badge = document.createElement("span");
+    badge.className = "pp-status pp-book-regime pp-book-regime--" + (value.tone || "neutral");
+    badge.textContent = value.raw || value.label;
+    if (value.raw && value.raw !== value.label) {
+      badge.title = value.label;
+      badge.setAttribute("aria-label", value.raw + " — " + value.label);
+    }
+    return badge;
   }
   function resultRow(item) {
     var row = document.createElement("tr");
-    var mediaCell = document.createElement("td"); mediaCell.dataset.label = "Photo"; mediaCell.appendChild(imageNode(item.thumbnail, "pp-book-thumbnail"));
+    if (item.validationStatus === "PENDING_VALIDATION") row.classList.add("pp-book-provisional");
+    var mediaCell = document.createElement("td"); mediaCell.dataset.label = "Photo";
+    mediaCell.appendChild(imageNode(item.thumbnail, "pp-book-thumbnail", item.name, item.media));
     var nameCell = document.createElement("td"); nameCell.dataset.label = "Désignation";
     var strong = document.createElement("strong"); strong.textContent = item.name; nameCell.appendChild(strong);
     var typeCell = document.createElement("td"); typeCell.dataset.label = "Type"; typeCell.textContent = item.type || "—";
     var familyCell = document.createElement("td"); familyCell.dataset.label = "Famille"; familyCell.textContent = item.family || "—";
-    var regimeCell = document.createElement("td"); regimeCell.dataset.label = "Régime"; regimeCell.textContent = item.regime || "—";
+    var regimeCell = document.createElement("td"); regimeCell.dataset.label = "Régime";
+    regimeCell.appendChild(regimeBadge(item.regimePresentation, item.regime));
     var actionCell = document.createElement("td"); actionCell.dataset.label = "Action";
     var button = document.createElement("button"); button.className = "pp-button pp-button--secondary"; button.type = "button"; button.textContent = "Consulter";
     button.addEventListener("click", function () { openDetail(item.id); });
@@ -139,17 +189,28 @@
   function renderDetail(detail) {
     var content = element("book-detail-content"); content.replaceChildren();
     var hero = document.createElement("div"); hero.className = "pp-book-detail-hero";
-    hero.appendChild(imageNode(detail.media, "pp-book-detail-image"));
+    hero.appendChild(imageNode(detail.media, "pp-book-detail-image", detail.name, detail.media));
     var intro = document.createElement("div");
     var eyebrow = document.createElement("p"); eyebrow.className = "pp-eyebrow"; eyebrow.textContent = detail.type || "Équipement ou produit";
     var title = document.createElement("h2"); title.id = "book-detail-title"; title.textContent = detail.name;
     var definition = document.createElement("dl"); definition.className = "pp-definition-list";
-    [["Identifiant",detail.id],["Famille",detail.family],["Régime",detail.regime],["Domaines",detail.domains]].forEach(function (entry) {
+    [["Identifiant",detail.id],["Famille",detail.family],["Domaines",detail.domains]].forEach(function (entry) {
       if (!entry[1]) return;
       var term = document.createElement("dt"); term.textContent = entry[0];
       var value = document.createElement("dd"); value.textContent = entry[1];
       definition.append(term, value);
     });
+    var regimeTerm = document.createElement("dt"); regimeTerm.textContent = "Régime";
+    var regimeValue = document.createElement("dd"); regimeValue.appendChild(regimeBadge(detail.regimePresentation, detail.regime));
+    definition.append(regimeTerm, regimeValue);
+    if (detail.validationStatus === "PENDING_VALIDATION") {
+      var statusTerm = document.createElement("dt"); statusTerm.textContent = "Statut";
+      var statusValue = document.createElement("dd");
+      var statusBadge = document.createElement("span");
+      statusBadge.className = "pp-status pp-status--info";
+      statusBadge.textContent = "En cours de validation — fiche provisoire";
+      statusValue.appendChild(statusBadge); definition.append(statusTerm, statusValue);
+    }
     intro.append(eyebrow, title, definition); hero.appendChild(intro); content.appendChild(hero);
     var sections = document.createElement("div"); sections.className = "pp-book-sections";
     [
@@ -242,6 +303,10 @@
       addOptions(element("book-type"), configuration.facets.types, "Tous les types");
       addOptions(element("book-family"), configuration.facets.families, "Toutes les familles");
       addOptions(element("book-regime"), configuration.facets.regimes, "Tous les régimes");
+      if (configuration.validation && configuration.validation.canViewPending) {
+        addOptions(element("book-validation-status"), configuration.validation.statuses, null);
+        element("book-validation-field").hidden = false;
+      }
       addOptions(element("book-sort"), configuration.sorts, null);
       addOptions(element("book-page-size"), configuration.pageSizes.map(function (size) { return { id:String(size),label:String(size) }; }), null);
       element("book-media-notice").hidden = !configuration.mediaPolicy.legacyProviderPresent;
@@ -266,6 +331,21 @@
       element("book-detail").hidden = true; element("book-results-section").hidden = false; writeUrl("");
     });
     element("book-retry").addEventListener("click", function () { show("loading"); initialize(); });
+    element("book-viewer-close").addEventListener("click", closePhotoViewer);
+    element("book-photo-viewer").addEventListener("click", function (event) {
+      if (event.target === element("book-photo-viewer")) closePhotoViewer();
+    });
+    document.addEventListener("keydown", function (event) {
+      var viewer = element("book-photo-viewer");
+      if (viewer.hidden) return;
+      if (event.key === "Escape") {
+        event.preventDefault(); closePhotoViewer(); return;
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        element("book-viewer-close").focus();
+      }
+    });
     window.addEventListener("popstate", function () { window.location.reload(); });
     initialize();
   });
