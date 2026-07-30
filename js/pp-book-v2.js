@@ -23,6 +23,8 @@
       type: element("book-type").value,
       family: element("book-family").value,
       regime: element("book-regime").value,
+      domain: element("book-domain").value,
+      diploma: element("book-diploma").value,
       validationStatus: element("book-validation-status").value,
       sort: element("book-sort").value || "name_asc",
       pageSize: Number(element("book-page-size").value || 20),
@@ -44,12 +46,30 @@
   }
   function applyUrlToForm() {
     var params = new URLSearchParams(window.location.search);
-    ["query","type","family","regime","validationStatus","sort"].forEach(function (name) {
+    ["query","type","family","regime","domain","diploma","validationStatus","sort"].forEach(function (name) {
       var control = element(name === "validationStatus" ? "book-validation-status" : "book-" + name);
       if (control && params.has(name)) control.value = params.get(name);
     });
     if (params.has("pageSize")) element("book-page-size").value = params.get("pageSize");
     currentPage = Math.max(1, Number(params.get("page") || 1) || 1);
+  }
+  function availableDiplomas(domainId) {
+    var settings = configuration && configuration.diplomaDomainFilters;
+    if (!settings || !settings.enabled) return [];
+    return settings.diplomas.filter(function (diploma) {
+      return !domainId || (diploma.domains || []).some(function (domain) {
+        return domain.id === domainId;
+      });
+    });
+  }
+  function refreshDiplomaOptions() {
+    var select = element("book-diploma");
+    var selected = select.value;
+    var values = availableDiplomas(element("book-domain").value);
+    addOptions(select, values, "Tous les diplômes");
+    if (values.some(function (diploma) { return diploma.id === selected; })) {
+      select.value = selected;
+    }
   }
   function writeUrl(equipmentId) {
     var params = new URLSearchParams();
@@ -131,13 +151,21 @@
     var strong = document.createElement("strong"); strong.textContent = item.name; nameCell.appendChild(strong);
     var typeCell = document.createElement("td"); typeCell.dataset.label = "Type"; typeCell.textContent = item.type || "—";
     var familyCell = document.createElement("td"); familyCell.dataset.label = "Famille"; familyCell.textContent = item.family || "—";
+    var domainCell = document.createElement("td"); domainCell.dataset.label = "Domaine";
+    domainCell.textContent = item.domainReferences && item.domainReferences.length
+      ? item.domainReferences[0].label + (item.domainReferences.length > 1 ? " +" + (item.domainReferences.length - 1) : "")
+      : "—";
+    var diplomaCell = document.createElement("td"); diplomaCell.dataset.label = "Diplôme";
+    diplomaCell.textContent = item.diplomas && item.diplomas.length
+      ? item.diplomas[0].label + (item.diplomas.length > 1 ? " +" + (item.diplomas.length - 1) : "")
+      : "—";
     var regimeCell = document.createElement("td"); regimeCell.dataset.label = "Régime";
     regimeCell.appendChild(regimeBadge(item.regimePresentation, item.regime));
     var actionCell = document.createElement("td"); actionCell.dataset.label = "Action";
     var button = document.createElement("button"); button.className = "pp-button pp-button--secondary"; button.type = "button"; button.textContent = "Consulter";
     button.addEventListener("click", function () { openDetail(item.id); });
     actionCell.appendChild(button);
-    row.append(mediaCell, nameCell, typeCell, familyCell, regimeCell, actionCell);
+    row.append(mediaCell, nameCell, typeCell, familyCell, domainCell, diplomaCell, regimeCell, actionCell);
     return row;
   }
   function renderResults(data) {
@@ -186,6 +214,22 @@
     var content = document.createElement("p"); content.textContent = value;
     section.append(heading, content); return section;
   }
+  function referenceSection(title, values, fallback) {
+    if ((!values || !values.length) && !fallback) return null;
+    var section = document.createElement("section"); section.className = "pp-book-section";
+    var heading = document.createElement("h3"); heading.textContent = title;
+    if (values && values.length) {
+      var list = document.createElement("ul"); list.className = "pp-book-reference-list";
+      values.forEach(function (value) {
+        var item = document.createElement("li"); item.textContent = value.label; list.appendChild(item);
+      });
+      section.append(heading, list);
+    } else {
+      var content = document.createElement("p"); content.textContent = fallback;
+      section.append(heading, content);
+    }
+    return section;
+  }
   function renderDetail(detail) {
     var content = element("book-detail-content"); content.replaceChildren();
     var hero = document.createElement("div"); hero.className = "pp-book-detail-hero";
@@ -194,7 +238,7 @@
     var eyebrow = document.createElement("p"); eyebrow.className = "pp-eyebrow"; eyebrow.textContent = detail.type || "Équipement ou produit";
     var title = document.createElement("h2"); title.id = "book-detail-title"; title.textContent = detail.name;
     var definition = document.createElement("dl"); definition.className = "pp-definition-list";
-    [["Identifiant",detail.id],["Famille",detail.family],["Domaines",detail.domains]].forEach(function (entry) {
+    [["Identifiant",detail.id],["Famille",detail.family]].forEach(function (entry) {
       if (!entry[1]) return;
       var term = document.createElement("dt"); term.textContent = entry[0];
       var value = document.createElement("dd"); value.textContent = entry[1];
@@ -219,7 +263,8 @@
       detailSection("Nature des travaux", detail.workNature),
       detailSection("Articles du Code du travail", detail.legalArticles),
       detailSection("Vérification générale périodique", detail.periodicInspection),
-      detailSection("Diplômes concernés", detail.diplomas),
+      referenceSection("Domaines professionnels", detail.domains, detail.legacyDomains),
+      referenceSection("Diplômes concernés", detail.diplomas, detail.legacyDiplomas),
       detailSection("Observations particulières", detail.observations)
     ].filter(Boolean).forEach(function (section) { sections.appendChild(section); });
     var chemicalValues = detail.chemical && Object.keys(detail.chemical).some(function (key) { return !!detail.chemical[key]; });
@@ -303,6 +348,10 @@
       addOptions(element("book-type"), configuration.facets.types, "Tous les types");
       addOptions(element("book-family"), configuration.facets.families, "Toutes les familles");
       addOptions(element("book-regime"), configuration.facets.regimes, "Tous les régimes");
+      if (configuration.diplomaDomainFilters && configuration.diplomaDomainFilters.enabled) {
+        addOptions(element("book-domain"), configuration.diplomaDomainFilters.domains, "Tous les domaines");
+        addOptions(element("book-diploma"), configuration.diplomaDomainFilters.diplomas, "Tous les diplômes");
+      }
       if (configuration.validation && configuration.validation.canViewPending) {
         addOptions(element("book-validation-status"), configuration.validation.statuses, null);
         element("book-validation-field").hidden = false;
@@ -311,6 +360,7 @@
       addOptions(element("book-page-size"), configuration.pageSizes.map(function (size) { return { id:String(size),label:String(size) }; }), null);
       element("book-media-notice").hidden = !configuration.mediaPolicy.legacyProviderPresent;
       applyUrlToForm();
+      refreshDiplomaOptions();
       show("ready");
       await search({ preserveUrl:true });
       var requestedId = new URLSearchParams(window.location.search).get("id");
@@ -323,8 +373,9 @@
   document.addEventListener("DOMContentLoaded", function () {
     element("book-search-form").addEventListener("submit", function (event) { event.preventDefault(); search({ resetPage:true }); });
     element("book-reset").addEventListener("click", function () {
-      element("book-search-form").reset(); currentPage = 1; search();
+      element("book-search-form").reset(); refreshDiplomaOptions(); currentPage = 1; search();
     });
+    element("book-domain").addEventListener("change", refreshDiplomaOptions);
     element("book-previous").addEventListener("click", function () { if (currentPage > 1) { currentPage -= 1; search(); } });
     element("book-next").addEventListener("click", function () { currentPage += 1; search(); });
     element("book-back").addEventListener("click", function () {

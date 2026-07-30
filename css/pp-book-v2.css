@@ -42,6 +42,8 @@
 .pp-book-section { padding-top: 1rem; border-top: 1px solid var(--pp-color-border); }
 .pp-book-section p { white-space: pre-line; }
 .pp-book-documents { margin: 0; padding-left: 1.2rem; }
+.pp-book-reference-list { margin: 0; padding-left: 1.2rem; }
+.pp-book-reference-list li + li { margin-top: .35rem; }
 @media (max-width: 64rem) {
   .pp-book-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
