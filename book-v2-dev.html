@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Book des équipements et produits — Prévention PACA DEV.">
+  <title>Book des équipements et produits — Prévention PACA DEV</title>
+  <link rel="stylesheet" href="css/pp-design-system-v1.css">
+  <link rel="stylesheet" href="css/pp-components-v1.css">
+  <link rel="stylesheet" href="css/pp-layouts-v1.css">
+  <link rel="stylesheet" href="css/pp-book-v2.css">
+  <link rel="stylesheet" href="css/pp-print-v1.css" media="print">
+  <script src="js/pp-v2-config.js" defer></script>
+  <script src="js/pp-components-v1.js" defer></script>
+  <script src="js/pp-navigation-v1.js" defer></script>
+  <script src="js/pp-api-v2.js" defer></script>
+  <script src="js/pp-auth-v2.js" defer></script>
+  <script src="js/pp-book-v2.js" defer></script>
+</head>
+<body class="pp-page">
+  <div data-pp-component="header" data-state="disconnected" data-role="invite"></div>
+  <main id="contenu">
+    <div class="pp-container" id="book-breadcrumb"></div>
+    <header class="pp-page-header">
+      <div class="pp-container pp-page-header__inner">
+        <div>
+          <p class="pp-eyebrow">Référentiel régional</p>
+          <h1>Book des équipements et produits</h1>
+          <p class="pp-lead">Consulter les équipements, produits, formations et travaux associés.</p>
+        </div>
+        <span class="pp-badge">DEV · 2.0.0-dev.5</span>
+      </div>
+    </header>
+
+    <div class="pp-container pp-content pp-stack--large">
+      <section class="pp-state" data-book-state="loading" aria-live="polite" aria-busy="true">
+        <div class="pp-spinner" aria-hidden="true"></div>
+        <h2>Chargement du Book</h2>
+        <p>Vérification de votre session et préparation du référentiel.</p>
+      </section>
+
+      <section class="pp-state" data-book-state="session-required" hidden>
+        <div class="pp-state__icon" aria-hidden="true">⌛</div>
+        <h2>Connexion nécessaire</h2>
+        <p>Connectez-vous depuis votre portail personnalisé pour consulter le Book.</p>
+        <a class="pp-button" href="portail-v2-dev.html">Accéder au portail</a>
+      </section>
+
+      <section class="pp-state" data-book-state="denied" hidden>
+        <div class="pp-state__icon" aria-hidden="true">!</div>
+        <h2>Accès non autorisé</h2>
+        <p>Votre profil ne dispose pas de l’autorisation nécessaire.</p>
+        <a class="pp-button pp-button--secondary" href="portail-v2-dev.html">Retour au portail</a>
+      </section>
+
+      <section class="pp-state" data-book-state="error" hidden role="alert">
+        <div class="pp-state__icon" aria-hidden="true">!</div>
+        <h2>Book temporairement indisponible</h2>
+        <p id="book-error-message">La consultation n’a pas pu être chargée.</p>
+        <button class="pp-button" id="book-retry" type="button">Réessayer</button>
+      </section>
+
+      <section data-book-state="ready" hidden>
+        <div class="pp-alert pp-alert--warning" id="book-media-notice" hidden>
+          <p class="pp-alert__title">Migration des photographies en préparation</p>
+          <p>Certaines photographies utilisent encore l’hébergement historique. Leur migration vers Google Drive est prévue séparément, sans modifier le référentiel.</p>
+        </div>
+
+        <section class="pp-panel pp-stack" id="book-search-panel" aria-labelledby="book-search-title">
+          <div>
+            <p class="pp-eyebrow">Recherche</p>
+            <h2 id="book-search-title">Trouver un équipement ou un produit</h2>
+          </div>
+          <form class="pp-form" id="book-search-form">
+            <div class="pp-search-bar">
+              <label class="pp-visually-hidden" for="book-query">Désignation, type, domaine ou mot-clé</label>
+              <input class="pp-control" id="book-query" name="query" type="search" maxlength="100" placeholder="Désignation, type, domaine ou mot-clé">
+              <button class="pp-button" type="submit">Rechercher</button>
+            </div>
+            <div class="pp-form-grid pp-book-filters">
+              <div class="pp-field">
+                <label class="pp-label" for="book-type">Type</label>
+                <select class="pp-control" id="book-type" name="type"><option value="">Tous les types</option></select>
+              </div>
+              <div class="pp-field">
+                <label class="pp-label" for="book-family">Famille de produit</label>
+                <select class="pp-control" id="book-family" name="family"><option value="">Toutes les familles</option></select>
+              </div>
+              <div class="pp-field">
+                <label class="pp-label" for="book-regime">Régime</label>
+                <select class="pp-control" id="book-regime" name="regime"><option value="">Tous les régimes</option></select>
+              </div>
+              <div class="pp-field">
+                <label class="pp-label" for="book-sort">Tri</label>
+                <select class="pp-control" id="book-sort" name="sort"></select>
+              </div>
+              <div class="pp-field">
+                <label class="pp-label" for="book-page-size">Résultats par page</label>
+                <select class="pp-control" id="book-page-size" name="pageSize"></select>
+              </div>
+            </div>
+            <div class="pp-cluster">
+              <button class="pp-button pp-button--secondary" id="book-reset" type="button">Réinitialiser</button>
+              <span class="pp-help" id="book-search-status" aria-live="polite"></span>
+            </div>
+          </form>
+        </section>
+
+        <section id="book-results-section" class="pp-stack pp-margin-top-4" aria-labelledby="book-results-title">
+          <div class="pp-cluster pp-book-results-heading">
+            <div><p class="pp-eyebrow">Résultats</p><h2 id="book-results-title">Équipements et produits</h2></div>
+            <p id="book-result-count" aria-live="polite"></p>
+          </div>
+          <div class="pp-state" id="book-empty" hidden>
+            <div class="pp-state__icon" aria-hidden="true">0</div>
+            <h3>Aucun résultat</h3>
+            <p>Modifiez votre recherche ou réinitialisez les filtres.</p>
+          </div>
+          <div class="pp-table-wrap" id="book-table-wrap">
+            <table class="pp-table pp-table--responsive">
+              <thead><tr><th>Photo</th><th>Désignation</th><th>Type</th><th>Famille</th><th>Régime</th><th><span class="pp-visually-hidden">Action</span></th></tr></thead>
+              <tbody id="book-results"></tbody>
+            </table>
+          </div>
+          <nav class="pp-pagination pp-book-pagination" aria-label="Pagination">
+            <button type="button" id="book-previous">Page précédente</button>
+            <span id="book-page-label"></span>
+            <button type="button" id="book-next">Page suivante</button>
+          </nav>
+        </section>
+
+        <section id="book-detail" class="pp-panel pp-stack--large pp-margin-top-4" hidden aria-labelledby="book-detail-title">
+          <div class="pp-cluster pp-book-detail-heading">
+            <button class="pp-button pp-button--secondary" id="book-back" type="button">Retour aux résultats</button>
+            <span class="pp-status pp-status--info">Lecture seule</span>
+          </div>
+          <div id="book-detail-content"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+  <div data-pp-component="footer"></div>
+</body>
+</html>

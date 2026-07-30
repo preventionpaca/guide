@@ -1,0 +1,34 @@
+/* Book des équipements — compléments ciblés au design system v1. */
+.pp-book-filters { grid-template-columns: repeat(5, minmax(9rem, 1fr)); }
+.pp-book-results-heading, .pp-book-detail-heading { justify-content: space-between; }
+.pp-book-results-heading h2 { margin-bottom: 0; }
+.pp-book-thumbnail {
+  width: 5rem; height: 4rem; display: grid; place-items: center; overflow: hidden;
+  border: 1px solid var(--pp-color-border); border-radius: var(--pp-radius-sm);
+  color: var(--pp-color-text-muted); background: var(--pp-color-surface-muted); font-size: .75rem;
+}
+.pp-book-thumbnail img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.pp-book-pagination { justify-content: center; }
+.pp-book-pagination button:disabled { opacity: .5; cursor: not-allowed; }
+.pp-book-detail-hero { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.pp-book-detail-image {
+  width: 100%; min-height: 12rem; display: grid; place-items: center; overflow: hidden;
+  border: 1px solid var(--pp-color-border); border-radius: var(--pp-radius-md);
+  color: var(--pp-color-text-muted); background: var(--pp-color-surface-muted);
+}
+.pp-book-detail-image img { width: 100%; max-height: 22rem; object-fit: contain; background: #fff; }
+.pp-book-sections { display: grid; gap: 1rem; }
+.pp-book-section { padding-top: 1rem; border-top: 1px solid var(--pp-color-border); }
+.pp-book-section p { white-space: pre-line; }
+.pp-book-documents { margin: 0; padding-left: 1.2rem; }
+@media (max-width: 64rem) {
+  .pp-book-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 52rem) {
+  .pp-book-detail-hero { grid-template-columns: 1fr; }
+  .pp-book-detail-image { width: min(100%, 24rem); }
+}
+@media (max-width: 36rem) {
+  .pp-book-filters { grid-template-columns: 1fr; }
+  .pp-book-results-heading, .pp-book-detail-heading { align-items: flex-start; }
+}
