@@ -1,7 +1,8 @@
-/* Session navigateur temporaire — sessionStorage uniquement — 2.0.0-dev.3. */
+/* Session navigateur temporaire isolée par environnement — 2.1.0-dev.149. */
 (function (window) {
   "use strict";
-  var STORAGE_KEY = "pp_v2_session";
+  var environment = String(window.PP_V2_CONFIG && window.PP_V2_CONFIG.environment || "UNKNOWN").toLowerCase();
+  var STORAGE_KEY = "pp_v2_session_" + environment;
 
   function read() {
     var raw = window.sessionStorage.getItem(STORAGE_KEY);

@@ -6,10 +6,14 @@
 
   <script src="site-config.js?v=20260726030835"></script>
   <script>
-  if (window.MAINTENANCE === true) {
+  const ppSiteConfig = window.PP_SITE_CONFIG || {};
+  if (ppSiteConfig.maintenance === true) {
     window.location.replace("index-maintenance.html");
   } else {
-    window.location.replace("index-production.html");
+    const target = String(ppSiteConfig.appUrl || "");
+    if (/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(target)) {
+      window.location.replace(target + window.location.search + window.location.hash);
+    }
   }
 </script>
 
@@ -80,11 +84,11 @@
 <script type="module">
 import { isInGristWidget } from "js/pp-runtime.js";
 </script>
-  <!-- Script Grist -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <!-- Configuration Grist DEV centralisée pour le widget et le routage. -->
+  <script src="https://camin.getgrist.com/grist-plugin-api.js"></script>
 
 <script>
-  // ✅ Forcer l'app Supabase (même docId Grist : 4eHMq8g5jsqb)
+  // Forcer l'application Supabase hors widget Grist.
   window.PP_APP_NAME = "equipements";
 </script>
 
@@ -262,6 +266,12 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
   // wrapper QR / deep-link (on conserve)
   const WRAPPER_BASE   = 'https://preventionpaca.github.io/guide/guide_iframe.html?src=';
   const WRAPPER_MARKER = 'guide_iframe.html';
+  const GRIST_PRIMARY_HOST = String(window.PP_GRIST_HOST || '').replace(/\/+$/, '');
+  // PP_GRIST_LEGACY_EXTERNAL_APPROVED: gvPEJV3qAHS9 est distinct du document principal.
+  const GRIST_LEGACY_EXTERNAL_HOST = 'https://docs.getgrist.com'; // PP_GRIST_LEGACY_EXTERNAL_APPROVED
+  const GRIST_LINK_HOSTS = [GRIST_PRIMARY_HOST, GRIST_LEGACY_EXTERNAL_HOST].filter(Boolean).map(function(value){
+    try { return new URL(value).hostname; } catch (error) { return ''; }
+  }).filter(Boolean);
 
   // mapping Grist -> route interne (pages cles)
   const GRIST_KEY_ROUTES = [
@@ -382,7 +392,8 @@ window.PP_IS_GRIST = !!(window.grist && window.grist.docApi && typeof window.gri
     }
 
     // 3) Externe (non Grist) : on laisse tel quel
-    if (!u.includes('docs.getgrist.com')) return u;
+    try { if (GRIST_LINK_HOSTS.indexOf(new URL(u).hostname) === -1) return u; }
+    catch (error) { return u; }
 
     // 4) Pages "cles" : routes internes
     for (const r of GRIST_KEY_ROUTES) {

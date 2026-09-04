@@ -1,11 +1,11 @@
-/* Prévention PACA — configuration publique non sensible — 2.0.0-dev.6. */
-window.PP_V2_CONFIG = Object.freeze({
-  environment: "DEV",
-  version: "2.0.0-dev.6",
-  demoOnly: false,
-  defaultRole: "invite",
-  componentLibrary: "1.0.0",
-  appsScriptDevUrl: "https://script.google.com/macros/s/AKfycbxp1WsKD41zQUphVPNJ5MfcjO6eN6NjGEkBpxB9D-2QW-mZplS1j0j4i4p7YGn7oTLE/exec",
-  requestTimeoutMs: 15000,
-  simulationEnabled: true
-});
+/* Adaptateur de configuration publique commun DEV/PROD — 2.1.0-dev.149. */
+(function (window) {
+  var site = window.PP_SITE_CONFIG || {};
+  window.PP_V2_CONFIG = Object.freeze({
+    environment: String(site.environment || ""),
+    version: "2.1.0-dev.149",
+    appUrl: String(site.appUrl || ""),
+    requestTimeoutMs: 15000,
+    simulationEnabled: String(site.environment || "") === "DEV"
+  });
+}(window));

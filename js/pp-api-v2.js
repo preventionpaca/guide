@@ -1,10 +1,10 @@
-/* Client API Apps Script DEV — 2.0.0-dev.6. */
+/* Client API Apps Script commun DEV/PROD — 2.1.0-dev.149. */
 (function (window) {
   "use strict";
   var inflight = false;
 
   function config() {
-    if (!window.PP_V2_CONFIG || window.PP_V2_CONFIG.environment !== "DEV") throw new Error("CONFIG_UNAVAILABLE");
+    if (!window.PP_V2_CONFIG || ["DEV", "PROD"].indexOf(window.PP_V2_CONFIG.environment) === -1) throw new Error("CONFIG_UNAVAILABLE");
     return window.PP_V2_CONFIG;
   }
 
@@ -46,12 +46,12 @@
     if (inflight) throw new Error("REQUEST_IN_PROGRESS");
     if (simulationRequested()) return simulatedResponse(action);
     var settings = config();
-    if (!settings.appsScriptDevUrl) throw new Error("CONFIG_UNAVAILABLE");
+    if (!settings.appUrl) throw new Error("CONFIG_UNAVAILABLE");
     inflight = true;
     var controller = new AbortController();
     var timer = window.setTimeout(function () { controller.abort(); }, settings.requestTimeoutMs || 12000);
     try {
-      var response = await window.fetch(settings.appsScriptDevUrl, {
+      var response = await window.fetch(settings.appUrl, {
         method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: JSON.stringify(Object.assign({ action: action }, payload || {})),
         signal: controller.signal, cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer"

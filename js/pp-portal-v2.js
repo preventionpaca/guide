@@ -1,4 +1,4 @@
-/* Contrôleur de portail authentifié DEV — 2.0.0-dev.3. */
+/* Contrôleur de portail authentifié commun DEV/PROD — 2.1.0-dev.149. */
 (function (window, document) {
   "use strict";
   var submitting = false;
@@ -15,6 +15,9 @@
     var code = error && error.message;
     if (code === "CONFIG_UNAVAILABLE") return "Le backend DEV n’est pas configuré. Utilisez le mode simulation explicitement prévu pour la recette locale.";
     if (code === "NETWORK_TIMEOUT") return "Le service met trop de temps à répondre.";
+    if (code === "NETWORK_ERROR") return "La connexion réseau avec le service a échoué.";
+    if (code === "INVALID_RESPONSE") return "Le service a retourné une réponse impossible à interpréter.";
+    if (code === "REQUEST_IN_PROGRESS") return "Une vérification est déjà en cours.";
     return "Le service est temporairement indisponible.";
   }
   function renderPortal(data) {
