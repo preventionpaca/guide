@@ -31,6 +31,9 @@
     (async function () {
       'use strict';
       var config = window.PP_SITE_CONFIG || {};
+      var appFrame = document.getElementById('pp-app-frame');
+      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','derogation-example','medical-example','workstation-example']);
+      var allowedParams = new Set(['page','loggedOut','requestedRoute','id2','legacyId2','equipmentId','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
       var previewValid = false;
@@ -58,7 +61,29 @@
       }
       params.delete('preview');
       var forwardedSearch = params.toString();
-      document.getElementById('pp-app-frame').src = target + (forwardedSearch ? '?' + forwardedSearch : '') + window.location.hash;
+      function routeUrl(search, hash) {
+        var input = new URLSearchParams(String(search || '').replace(/^\?/, ''));
+        var output = new URLSearchParams();
+        input.forEach(function (value, name) { if (allowedParams.has(name)) output.append(name, value); });
+        var page = output.get('page') || 'portal-dev';
+        if (!allowedPages.has(page)) page = 'portal-dev';
+        output.set('page', page);
+        return target + '?' + output.toString() + (/^#[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(String(hash || '')) ? String(hash || '') : '');
+      }
+      appFrame.src = routeUrl(forwardedSearch, window.location.hash);
+      window.addEventListener('message', function (event) {
+        var data = event && event.data || {};
+        var trustedOrigin = /^https:\/\/(?:script\.google\.com|[A-Za-z0-9-]+\.googleusercontent\.com)$/.test(String(event.origin || ''));
+        if (!trustedOrigin || !data || data.channel !== 'PP_GITHUB_IFRAME_NAV_V1') return;
+        if (data.type === 'PP_NAVIGATION_BRIDGE_READY') {
+          try { event.source.postMessage({channel:'PP_GITHUB_IFRAME_NAV_V1',type:'PP_NAVIGATION_PARENT_READY'}, event.origin); } catch (ignoreReplyError) {}
+          return;
+        }
+        if (data.type !== 'PP_NAVIGATE') return;
+        var next = routeUrl(data.search, data.hash);
+        console.info('PP_IFRAME_NAVIGATION source=' + String(data.source || '').replace(/[^a-z0-9_-]/gi,'').slice(0,32) + ' target=' + new URL(next).searchParams.get('page'));
+        appFrame.src = next;
+      });
     }());
   </script>
 </body>
