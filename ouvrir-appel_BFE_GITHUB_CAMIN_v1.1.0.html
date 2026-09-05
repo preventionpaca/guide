@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ouverture BFE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <style>
+    body{
+      font-family:Arial,Helvetica,sans-serif;
+      background:#f6f8fc;
+      color:#202124;
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .card{
+      background:#fff;
+      border-radius:18px;
+      box-shadow:0 1px 5px rgba(60,64,67,.25);
+      padding:24px;
+      max-width:540px;
+      width:calc(100% - 48px);
+    }
+    h1{font-size:20px;margin:0 0 10px}
+    p{line-height:1.45}
+    a{color:#1a73e8;font-weight:bold}
+    .small{font-size:12px;color:#667085;margin-top:16px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ouverture du suivi BFE…</h1>
+    <p id="status">Préparation de l’interface.</p>
+    <p id="fallback" style="display:none">
+      Si rien ne se passe, <a id="manualLink" href="#">ouvrir l’interface BFE</a>.
+    </p>
+    <p class="small">Relais BFE — GitHub Pages → Apps Script → CAMIN</p>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  // VERSION : 1.1.0 — 05/09/2026
+  // Rôle : contourner l'ajout /u/x/ par Google dans les liens Apps Script
+  // ouverts depuis Gmail avec plusieurs comptes connectés.
+
+  const APPS_SCRIPT_EXEC =
+    "https://script.google.com/macros/s/AKfycbxNEPixdnwdcbEcNc082Z2MdpHuaeVB0wXGjAI6R0d3hS-bb0jskazupRKSfVvu8RPJ/exec";
+
+  const GRIST_URL =
+    "https://camin.getgrist.com/uKYH5wVXdMb7/Ionos-EK/p/10?style=singlePage";
+
+  const params = new URLSearchParams(window.location.search);
+  const appel = params.get("appel") || params.get("fiche") || params.get("id") || "";
+  const action = (params.get("action") || "").toLowerCase().trim();
+
+  const status = document.getElementById("status");
+  const fallback = document.getElementById("fallback");
+  const manualLink = document.getElementById("manualLink");
+
+  manualLink.href = GRIST_URL;
+
+  let appsScriptUrl = APPS_SCRIPT_EXEC;
+
+  if (appel) {
+    appsScriptUrl += "?appel=" + encodeURIComponent(appel) + "&t=" + Date.now();
+    status.textContent = "Ouverture de la fiche BFE n°" + appel + "…";
+  } else if (action === "accueil" || action === "home") {
+    appsScriptUrl += "?action=accueil&t=" + Date.now();
+    status.textContent = "Ouverture de l’interface BFE…";
+  } else {
+    // Aucun paramètre : ouverture simple de l'accueil BFE.
+    appsScriptUrl += "?action=accueil&t=" + Date.now();
+    status.textContent = "Ouverture de l’interface BFE…";
+  }
+
+  // Appel discret : Apps Script mémorise la fiche demandée ou efface
+  // la fiche mémorisée pour l'accueil. no-cors est volontaire.
+  fetch(appsScriptUrl, {
+    method: "GET",
+    mode: "no-cors",
+    cache: "no-store",
+    credentials: "omit"
+  }).finally(function () {
+    // Petit délai pour laisser Apps Script écrire OUVRIR_FICHE_AUTO.
+    setTimeout(function () {
+      window.location.replace(GRIST_URL);
+    }, 1200);
+  });
+
+  // Filet de sécurité : l'utilisateur garde toujours un lien manuel vers CAMIN.
+  setTimeout(function () {
+    fallback.style.display = "block";
+  }, 3500);
+})();
+</script>
+</body>
+</html>
