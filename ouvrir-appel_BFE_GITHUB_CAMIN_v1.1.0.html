@@ -6,96 +6,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <style>
-    body{
-      font-family:Arial,Helvetica,sans-serif;
-      background:#f6f8fc;
-      color:#202124;
-      margin:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-    }
-    .card{
-      background:#fff;
-      border-radius:18px;
-      box-shadow:0 1px 5px rgba(60,64,67,.25);
-      padding:24px;
-      max-width:540px;
-      width:calc(100% - 48px);
-    }
-    h1{font-size:20px;margin:0 0 10px}
-    p{line-height:1.45}
-    a{color:#1a73e8;font-weight:bold}
-    .small{font-size:12px;color:#667085;margin-top:16px}
+    :root{--bg:#f4f7fb;--card:#fff;--text:#1f2937;--muted:#667085;--blue:#2457d6}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+    .card{width:min(460px,calc(100vw - 36px));background:var(--card);border:1px solid #e5eaf0;border-radius:18px;box-shadow:0 12px 34px rgba(15,23,42,.12);padding:24px}
+    .row{display:flex;align-items:center;gap:14px}.spinner{width:26px;height:26px;border:3px solid #dfe7f7;border-top-color:var(--blue);border-radius:50%;animation:spin .75s linear infinite;flex:0 0 auto}
+    @keyframes spin{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 5px}.sub{font-size:13px;color:var(--muted);line-height:1.45}
+    #fallback{display:none;margin-top:14px;font-size:12px}a{color:var(--blue);font-weight:700}
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Ouverture du suivi BFE…</h1>
-    <p id="status">Préparation de l’interface.</p>
-    <p id="fallback" style="display:none">
-      Si rien ne se passe, <a id="manualLink" href="#">ouvrir l’interface BFE</a>.
-    </p>
-    <p class="small">Relais BFE — GitHub Pages → Apps Script → CAMIN</p>
+    <div class="row">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <h1 id="title">Ouverture du suivi BFE</h1>
+        <div class="sub" id="status">Préparation de l’interface…</div>
+      </div>
+    </div>
+    <div id="fallback">Si l’ouverture ne démarre pas, <a id="manualLink" href="#">ouvrir l’interface BFE</a>.</div>
   </div>
 
 <script>
-(function () {
+(function(){
   'use strict';
-
-  // VERSION : 1.1.0 — 05/09/2026
-  // Rôle : contourner l'ajout /u/x/ par Google dans les liens Apps Script
-  // ouverts depuis Gmail avec plusieurs comptes connectés.
-
+  // VERSION 1.2.0 — 05/09/2026
   const APPS_SCRIPT_EXEC =
     "https://script.google.com/macros/s/AKfycbxNEPixdnwdcbEcNc082Z2MdpHuaeVB0wXGjAI6R0d3hS-bb0jskazupRKSfVvu8RPJ/exec";
-
   const GRIST_URL =
     "https://camin.getgrist.com/uKYH5wVXdMb7/Ionos-EK/p/10?style=singlePage";
 
-  const params = new URLSearchParams(window.location.search);
-  const appel = params.get("appel") || params.get("fiche") || params.get("id") || "";
-  const action = (params.get("action") || "").toLowerCase().trim();
+  const p=new URLSearchParams(location.search);
+  const appel=p.get("appel")||p.get("fiche")||p.get("id")||"";
+  const action=(p.get("action")||"").toLowerCase().trim();
+  const title=document.getElementById("title");
+  const status=document.getElementById("status");
+  const fallback=document.getElementById("fallback");
+  document.getElementById("manualLink").href=GRIST_URL;
 
-  const status = document.getElementById("status");
-  const fallback = document.getElementById("fallback");
-  const manualLink = document.getElementById("manualLink");
-
-  manualLink.href = GRIST_URL;
-
-  let appsScriptUrl = APPS_SCRIPT_EXEC;
-
-  if (appel) {
-    appsScriptUrl += "?appel=" + encodeURIComponent(appel) + "&t=" + Date.now();
-    status.textContent = "Ouverture de la fiche BFE n°" + appel + "…";
-  } else if (action === "accueil" || action === "home") {
-    appsScriptUrl += "?action=accueil&t=" + Date.now();
-    status.textContent = "Ouverture de l’interface BFE…";
-  } else {
-    // Aucun paramètre : ouverture simple de l'accueil BFE.
-    appsScriptUrl += "?action=accueil&t=" + Date.now();
-    status.textContent = "Ouverture de l’interface BFE…";
+  let url=APPS_SCRIPT_EXEC;
+  if(appel){
+    title.textContent="Ouverture de la fiche BFE n°"+appel;
+    status.textContent="Chargement de la fiche…";
+    url+="?appel="+encodeURIComponent(appel)+"&t="+Date.now();
+  }else{
+    title.textContent="Ouverture de l’interface BFE";
+    status.textContent="Chargement de l’espace de traitement…";
+    url+="?action=accueil&t="+Date.now();
   }
 
-  // Appel discret : Apps Script mémorise la fiche demandée ou efface
-  // la fiche mémorisée pour l'accueil. no-cors est volontaire.
-  fetch(appsScriptUrl, {
-    method: "GET",
-    mode: "no-cors",
-    cache: "no-store",
-    credentials: "omit"
-  }).finally(function () {
-    // Petit délai pour laisser Apps Script écrire OUVRIR_FICHE_AUTO.
-    setTimeout(function () {
-      window.location.replace(GRIST_URL);
-    }, 1200);
-  });
+  // L'appel Apps Script est lancé sans attendre sa réponse.
+  // Le widget CAMIN interroge ensuite OUVRIR_FICHE_AUTO pendant son chargement.
+  try{
+    fetch(url,{method:"GET",mode:"no-cors",cache:"no-store",credentials:"omit"}).catch(function(){});
+  }catch(e){}
 
-  // Filet de sécurité : l'utilisateur garde toujours un lien manuel vers CAMIN.
-  setTimeout(function () {
-    fallback.style.display = "block";
-  }, 3500);
+  // Redirection très rapide : le widget poursuit lui-même la recherche de la fiche.
+  setTimeout(function(){location.replace(GRIST_URL)},250);
+  setTimeout(function(){fallback.style.display="block"},2500);
 })();
 </script>
 </body>
