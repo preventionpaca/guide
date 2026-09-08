@@ -34,7 +34,7 @@
       var config = window.PP_SITE_CONFIG || {};
       var previewConfig = window.PP_PREVIEW_CONFIG || {};
       var appFrame = document.getElementById('pp-app-frame');
-      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','derogation-example','medical-example','workstation-example']);
+      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','derogation-example','medical-example','workstation-example']);
       var allowedParams = new Set(['page','loggedOut','requestedRoute','id2','legacyId2','equipmentId','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
