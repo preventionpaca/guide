@@ -1,0 +1,10 @@
+{
+  "schema": "PublicWorkstationSnapshotManifest/v1",
+  "snapshotVersion": "v1-1ce34ce0cc9cea20",
+  "contentHash": "sha256:1ce34ce0cc9cea200b3da52c75cd170c5a866fbdea8e21b6e72ac976c7c66604",
+  "physicalSha256": "sha256:79738a32f519ecee68f5825740305362452a6c1fb1c3a5c131585dac21115335",
+  "byteLength": 3754,
+  "snapshotUrl": "https://preventionpaca.github.io/guide/data/public-workstation-snapshot/v1-1ce34ce0cc9cea20.json",
+  "generatedAt": "2026-09-18T08:07:16.087Z",
+  "itemCount": 1
+}
