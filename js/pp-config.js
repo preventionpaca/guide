@@ -10,7 +10,7 @@
   // -----------------------------
   // 1) CONFIG SITE / ROUTES
   // -----------------------------
-  const SITE_BASE = "https://preventionpaca.github.io/guide/";
+  const SITE_BASE = "https://preventionpaca.loucodi.fr/";
   const APP_DIR   = "0306/";
   const APP_BASE  = SITE_BASE + APP_DIR;
 

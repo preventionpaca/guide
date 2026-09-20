@@ -34,8 +34,8 @@
       var config = window.PP_SITE_CONFIG || {};
       var previewConfig = window.PP_PREVIEW_CONFIG || {};
       var appFrame = document.getElementById('pp-app-frame');
-      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','derogation-example','medical-example','workstation-example']);
-      var allowedParams = new Set(['page','loggedOut','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
+      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','access-recovery-confirm','derogation-example','medical-example','workstation-example']);
+      var allowedParams = new Set(['page','action','token','loggedOut','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
       var previewValid = false;
@@ -66,7 +66,12 @@
       function routeUrl(search, hash) {
         var input = new URLSearchParams(String(search || '').replace(/^\?/, ''));
         var output = new URLSearchParams();
-        input.forEach(function (value, name) { if (allowedParams.has(name)) output.append(name, value); });
+        input.forEach(function (value, name) {
+          if (!allowedParams.has(name)) return;
+          if (name === 'action' && value !== 'pp_v2_company_email_confirm') return;
+          if (name === 'token' && !/^[A-Za-z0-9_-]{32,180}$/.test(value)) return;
+          output.append(name, value);
+        });
         var page = output.get('page') || 'portal-dev';
         if (!allowedPages.has(page)) page = 'portal-dev';
         output.set('page', page);
