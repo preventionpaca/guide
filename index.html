@@ -34,8 +34,8 @@
       var config = window.PP_SITE_CONFIG || {};
       var previewConfig = window.PP_PREVIEW_CONFIG || {};
       var appFrame = document.getElementById('pp-app-frame');
-      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','work-previews','auth-diagnostic','contact','rgpd','establishment-access-confirm','access-recovery-confirm','derogation-example','medical-example','workstation-example']);
-      var allowedParams = new Set(['page','action','token','loggedOut','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
+      var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-proposal','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','snapshot-admin','organization-training','domain-diploma-admin','diploma-reference-admin','work-previews','auth-diagnostic','contact','rgpd','guide','establishment-access-confirm','access-recovery-confirm','derogation-example','medical-example','workstation-example']);
+      var allowedParams = new Set(['page','action','token','loggedOut','sessionExpired','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
       var previewValid = false;
@@ -72,6 +72,7 @@
           if (name === 'token' && !/^[A-Za-z0-9_-]{32,180}$/.test(value)) return;
           output.append(name, value);
         });
+        if (output.get('action') !== 'pp_v2_company_email_confirm') output.delete('token');
         var page = output.get('page') || 'portal-dev';
         if (!allowedPages.has(page)) page = 'portal-dev';
         output.set('page', page);
@@ -81,7 +82,7 @@
       window.addEventListener('message', function (event) {
         var data = event && event.data || {};
         var trustedOrigin = /^https:\/\/(?:script\.google\.com|[A-Za-z0-9-]+\.googleusercontent\.com)$/.test(String(event.origin || ''));
-        if (!trustedOrigin || !data || data.channel !== 'PP_GITHUB_IFRAME_NAV_V1') return;
+        if (!trustedOrigin || event.source !== appFrame.contentWindow || !data || data.channel !== 'PP_GITHUB_IFRAME_NAV_V1') return;
         if (data.type === 'PP_NAVIGATION_BRIDGE_READY') {
           try { event.source.postMessage({channel:'PP_GITHUB_IFRAME_NAV_V1',type:'PP_NAVIGATION_PARENT_READY'}, event.origin); } catch (ignoreReplyError) {}
           return;
