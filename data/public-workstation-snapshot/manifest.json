@@ -1,10 +1,10 @@
 {
   "schema": "PublicWorkstationSnapshotManifest/v1",
-  "snapshotVersion": "v1-1ce34ce0cc9cea20",
-  "contentHash": "sha256:1ce34ce0cc9cea200b3da52c75cd170c5a866fbdea8e21b6e72ac976c7c66604",
-  "physicalSha256": "sha256:79738a32f519ecee68f5825740305362452a6c1fb1c3a5c131585dac21115335",
-  "byteLength": 3754,
-  "snapshotUrl": "https://preventionpaca.loucodi.fr/data/public-workstation-snapshot/v1-1ce34ce0cc9cea20.json",
-  "generatedAt": "2026-09-18T08:07:16.087Z",
+  "snapshotVersion": "v1-9a88f41be7f07501",
+  "contentHash": "sha256:9a88f41be7f07501edb4e9833a007e45e3a6a800a32dc4ea94b9941d222a219a",
+  "physicalSha256": "sha256:925de0f6e74d02c97412e1e48969e41ee205d933ca685a75aad8be53d20c2006",
+  "byteLength": 3715,
+  "snapshotUrl": "data/public-workstation-snapshot/v1-9a88f41be7f07501.json",
+  "generatedAt": "2026-09-20T23:27:21.736Z",
   "itemCount": 1
 }

@@ -4,6 +4,6 @@
   "contentHash": "sha256:13c223345f5395166a416023cb10704812ebb3fe5686f4a4f84c9a6df6c57d9c",
   "physicalSha256": "sha256:65f6e631c0b0649329009e068807ec63913a51e02121b09eb3fc30849fb90936",
   "byteLength": 401909,
-  "snapshotUrl": "https://preventionpaca.loucodi.fr/data/public-snapshot/v1-13c223345f539516.json",
+  "snapshotUrl": "data/public-snapshot/v1-13c223345f539516.json",
   "generatedAt": "2026-09-17T21:39:38.658Z"
 }
