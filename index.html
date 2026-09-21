@@ -119,7 +119,9 @@
           && /^[A-Za-z0-9_-]{32,180}$/.test(forwardedToken);
         var accessRecoveryConfirmation = page === 'access-recovery-confirm'
           && /^[a-f0-9]{64}$/i.test(forwardedToken);
-        if (!companyEmailConfirmation && !accessRecoveryConfirmation) output.delete('token');
+        var establishmentAccessConfirmation = page === 'establishment-access-confirm'
+          && /^[0-9a-f]{64}$/.test(forwardedToken);
+        if (!companyEmailConfirmation && !accessRecoveryConfirmation && !establishmentAccessConfirmation) output.delete('token');
         return target + '?' + output.toString() + (/^#[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(String(hash || '')) ? String(hash || '') : '');
       }
       function navigationUrl(data) {
@@ -144,7 +146,9 @@
             && /^[A-Za-z0-9_-]{32,180}$/.test(messageToken);
           var messageAccessRecovery = input.get('page') === 'access-recovery-confirm'
             && /^[a-f0-9]{64}$/i.test(messageToken);
-          if (!messageCompanyConfirmation && !messageAccessRecovery) return '';
+          var messageEstablishmentAccess = input.get('page') === 'establishment-access-confirm'
+            && /^[0-9a-f]{64}$/.test(messageToken);
+          if (!messageCompanyConfirmation && !messageAccessRecovery && !messageEstablishmentAccess) return '';
         }
         if (input.has('routeTicket') && !/^[A-Za-z0-9_-]{40,160}$/.test(input.get('routeTicket'))) return '';
         return routeUrl(data.search, data.hash);
