@@ -35,7 +35,7 @@
       var previewConfig = window.PP_PREVIEW_CONFIG || {};
       var appFrame = document.getElementById('pp-app-frame');
       var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-proposal','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','snapshot-admin','organization-training','domain-diploma-admin','diploma-reference-admin','work-previews','auth-diagnostic','contact','rgpd','guide','establishment-access-confirm','access-recovery-confirm','derogation-example','medical-example','workstation-example']);
-      var allowedParams = new Set(['page','action','token','loggedOut','sessionExpired','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
+      var allowedParams = new Set(['page','action','token','routeTicket','loggedOut','sessionExpired','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
       var previewValid = false;
@@ -63,6 +63,11 @@
       }
       params.delete('preview');
       var forwardedSearch = params.toString();
+      if (params.has('routeTicket') && window.history && typeof window.history.replaceState === 'function') {
+        var visibleUrl = new URL(window.location.href);
+        visibleUrl.searchParams.delete('routeTicket');
+        window.history.replaceState(null, '', visibleUrl.pathname + visibleUrl.search + visibleUrl.hash);
+      }
       function routeUrl(search, hash) {
         var input = new URLSearchParams(String(search || '').replace(/^\?/, ''));
         var output = new URLSearchParams();
@@ -70,6 +75,7 @@
           if (!allowedParams.has(name)) return;
           if (name === 'action' && value !== 'pp_v2_company_email_confirm') return;
           if (name === 'token' && !/^[A-Za-z0-9_-]{32,180}$/.test(value)) return;
+          if (name === 'routeTicket' && !/^[A-Za-z0-9_-]{40,160}$/.test(value)) return;
           output.append(name, value);
         });
         if (output.get('action') !== 'pp_v2_company_email_confirm') output.delete('token');
