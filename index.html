@@ -111,10 +111,15 @@
           if (name === 'routeTicket' && !/^[A-Za-z0-9_-]{40,160}$/.test(value)) return;
           output.append(name, value);
         });
-        if (output.get('action') !== 'pp_v2_company_email_confirm') output.delete('token');
         var page = output.get('page') || 'portal-dev';
         if (!allowedPages.has(page)) page = 'portal-dev';
         output.set('page', page);
+        var forwardedToken = output.get('token') || '';
+        var companyEmailConfirmation = output.get('action') === 'pp_v2_company_email_confirm'
+          && /^[A-Za-z0-9_-]{32,180}$/.test(forwardedToken);
+        var accessRecoveryConfirmation = page === 'access-recovery-confirm'
+          && /^[a-f0-9]{64}$/i.test(forwardedToken);
+        if (!companyEmailConfirmation && !accessRecoveryConfirmation) output.delete('token');
         return target + '?' + output.toString() + (/^#[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(String(hash || '')) ? String(hash || '') : '');
       }
       function navigationUrl(data) {
@@ -133,7 +138,14 @@
         if (!valid || !allowedPages.has(input.get('page') || '')) return '';
         if (input.has('requestedRoute') && !allowedRequestedRoutes.has(input.get('requestedRoute'))) return '';
         if (input.has('action') && input.get('action') !== 'pp_v2_company_email_confirm') return '';
-        if (input.has('token') && (input.get('action') !== 'pp_v2_company_email_confirm' || !/^[A-Za-z0-9_-]{32,180}$/.test(input.get('token')))) return '';
+        if (input.has('token')) {
+          var messageToken = input.get('token') || '';
+          var messageCompanyConfirmation = input.get('action') === 'pp_v2_company_email_confirm'
+            && /^[A-Za-z0-9_-]{32,180}$/.test(messageToken);
+          var messageAccessRecovery = input.get('page') === 'access-recovery-confirm'
+            && /^[a-f0-9]{64}$/i.test(messageToken);
+          if (!messageCompanyConfirmation && !messageAccessRecovery) return '';
+        }
         if (input.has('routeTicket') && !/^[A-Za-z0-9_-]{40,160}$/.test(input.get('routeTicket'))) return '';
         return routeUrl(data.search, data.hash);
       }
