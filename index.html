@@ -36,6 +36,39 @@
       var appFrame = document.getElementById('pp-app-frame');
       var allowedPages = new Set(['portal-dev','auth','site-help','book-public','regulatory-analysis','quality','equipment-form','equipment-proposal','equipment-admin','equipment-irist','equipment-manager','company-registration','derogation','medical-choice','medical-batch','medical-opinion','workstation-choice','workstation-sheet','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','snapshot-admin','organization-training','domain-diploma-admin','diploma-reference-admin','work-previews','auth-diagnostic','contact','rgpd','guide','establishment-access-confirm','access-recovery-confirm','derogation-example','medical-example','workstation-example']);
       var allowedParams = new Set(['page','action','token','routeTicket','loggedOut','sessionExpired','requestedRoute','id2','legacyId2','equipmentId','equipmentUid','mode','lastName','firstName','birthDate','batchIndex','establishmentId','diplomaId']);
+      var allowedRequestedRoutes = new Set(['book','regulatory-analysis','equipment-form','equipment-proposal','equipment-admin','equipment-manager','equipment-irist','derogation','medical','medical-opinion','medical-batch','workstation','workstation-view','workstation-submit','prevention-reference','regulatory-center','regulatory-admin','snapshot-admin','organization-training','domain-diploma-admin','diploma-reference-admin','auth-diagnostic']);
+      var navigationChannelNonce = '';
+      var navigationClientSource = null;
+      var navigationClientOrigin = '';
+      function createNavigationChannelNonce() {
+        var bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, function (value) { return value.toString(16).padStart(2, '0'); }).join('');
+      }
+      function resetNavigationChannel() {
+        navigationChannelNonce = createNavigationChannelNonce();
+        navigationClientSource = null;
+        navigationClientOrigin = '';
+      }
+      function exactMessageShape(data, keys) {
+        return !!data && typeof data === 'object' && Object.keys(data).sort().join('|') === keys.slice().sort().join('|');
+      }
+      function trustedAppsScriptClientOrigin(origin) {
+        return /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(String(origin || ''));
+      }
+      function sourceBelongsToAppFrame(source) {
+        var current = source;
+        try {
+          for (var depth = 0; current && depth < 8; depth += 1) {
+            if (current === appFrame.contentWindow) return true;
+            if (current === current.parent) return false;
+            current = current.parent;
+          }
+        } catch (ignoreCrossOriginTraversal) {
+          return false;
+        }
+        return false;
+      }
       var params = new URLSearchParams(window.location.search);
       var previewToken = params.get('preview') || '';
       var previewValid = false;
@@ -84,18 +117,44 @@
         output.set('page', page);
         return target + '?' + output.toString() + (/^#[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(String(hash || '')) ? String(hash || '') : '');
       }
+      function navigationUrl(data) {
+        var input, seen = new Set(), valid = true;
+        if (!exactMessageShape(data, ['channel','type','nonce','source','search','hash'])) return '';
+        if (data.channel !== 'PP_GITHUB_IFRAME_NAV_V1' || data.type !== 'PP_NAVIGATE') return '';
+        if (data.nonce !== navigationChannelNonce || !/^[a-f0-9]{64}$/.test(String(data.nonce || ''))) return '';
+        if (!/^[a-z][a-z0-9_-]{0,31}$/.test(String(data.source || ''))) return '';
+        if (typeof data.search !== 'string' || data.search.length > 2048 || data.search.charAt(0) !== '?') return '';
+        if (typeof data.hash !== 'string' || data.hash.length > 1024 || (data.hash && !/^#[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(data.hash))) return '';
+        input = new URLSearchParams(data.search.slice(1));
+        input.forEach(function (value, name) {
+          if (!allowedParams.has(name) || seen.has(name) || value.length > 300) valid = false;
+          seen.add(name);
+        });
+        if (!valid || !allowedPages.has(input.get('page') || '')) return '';
+        if (input.has('requestedRoute') && !allowedRequestedRoutes.has(input.get('requestedRoute'))) return '';
+        if (input.has('action') && input.get('action') !== 'pp_v2_company_email_confirm') return '';
+        if (input.has('token') && (input.get('action') !== 'pp_v2_company_email_confirm' || !/^[A-Za-z0-9_-]{32,180}$/.test(input.get('token')))) return '';
+        if (input.has('routeTicket') && !/^[A-Za-z0-9_-]{40,160}$/.test(input.get('routeTicket'))) return '';
+        return routeUrl(data.search, data.hash);
+      }
+      resetNavigationChannel();
       appFrame.src = routeUrl(forwardedSearch, window.location.hash);
       window.addEventListener('message', function (event) {
         var data = event && event.data || {};
-        var trustedOrigin = /^https:\/\/(?:script\.google\.com|[A-Za-z0-9-]+\.googleusercontent\.com)$/.test(String(event.origin || ''));
-        if (!trustedOrigin || event.source !== appFrame.contentWindow || !data || data.channel !== 'PP_GITHUB_IFRAME_NAV_V1') return;
         if (data.type === 'PP_NAVIGATION_BRIDGE_READY') {
-          try { event.source.postMessage({channel:'PP_GITHUB_IFRAME_NAV_V1',type:'PP_NAVIGATION_PARENT_READY'}, event.origin); } catch (ignoreReplyError) {}
+          if (!exactMessageShape(data, ['channel','type']) || data.channel !== 'PP_GITHUB_IFRAME_NAV_V1') return;
+          if (!trustedAppsScriptClientOrigin(event.origin) || !sourceBelongsToAppFrame(event.source)) return;
+          if (navigationClientSource && (event.source !== navigationClientSource || event.origin !== navigationClientOrigin)) return;
+          navigationClientSource = event.source;
+          navigationClientOrigin = event.origin;
+          try { event.source.postMessage({channel:'PP_GITHUB_IFRAME_NAV_V1',type:'PP_NAVIGATION_PARENT_READY',nonce:navigationChannelNonce}, event.origin); } catch (ignoreReplyError) {}
           return;
         }
-        if (data.type !== 'PP_NAVIGATE') return;
-        var next = routeUrl(data.search, data.hash);
+        if (event.source !== navigationClientSource || event.origin !== navigationClientOrigin || !sourceBelongsToAppFrame(event.source)) return;
+        var next = navigationUrl(data);
+        if (!next) return;
         console.info('PP_IFRAME_NAVIGATION source=' + String(data.source || '').replace(/[^a-z0-9_-]/gi,'').slice(0,32) + ' target=' + new URL(next).searchParams.get('page'));
+        resetNavigationChannel();
         appFrame.src = next;
       });
     }());
