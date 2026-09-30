@@ -1,9 +1,9 @@
 {
   "schema": "PublicConsultationSnapshotManifest/v1",
-  "snapshotVersion": "v1-4463adc2e35f5bef",
-  "contentHash": "sha256:4463adc2e35f5bef1378226376b9c74f46f0395b0e7335c0401e5a88e8cbc054",
-  "physicalSha256": "sha256:905dfc6dfa625c97f60be13e7a0692a9393092232c7402f04b8dffe02331ae16",
-  "byteLength": 450929,
-  "snapshotUrl": "data/public-snapshot/v1-4463adc2e35f5bef.json",
-  "generatedAt": "2026-09-29T22:06:35.190Z"
+  "snapshotVersion": "v1-a75aec39ead946f9",
+  "contentHash": "sha256:a75aec39ead946f90d37c74116314ddf4e55b6ce0a8844756f6bede71209e8f1",
+  "physicalSha256": "sha256:0c644f712f43fb8d31e386ab03e6559d4269954f52ec57ef6098963dcd204e17",
+  "byteLength": 454581,
+  "snapshotUrl": "data/public-snapshot/v1-a75aec39ead946f9.json",
+  "generatedAt": "2026-09-30T06:54:09.739Z"
 }
