@@ -1,10 +1,10 @@
 {
   "schema": "PublicWorkstationSnapshotManifest/v1",
-  "snapshotVersion": "v1-9a88f41be7f07501",
-  "contentHash": "sha256:9a88f41be7f07501edb4e9833a007e45e3a6a800a32dc4ea94b9941d222a219a",
-  "physicalSha256": "sha256:925de0f6e74d02c97412e1e48969e41ee205d933ca685a75aad8be53d20c2006",
-  "byteLength": 3715,
-  "snapshotUrl": "data/public-workstation-snapshot/v1-9a88f41be7f07501.json",
-  "generatedAt": "2026-09-20T23:27:21.736Z",
-  "itemCount": 1
+  "snapshotVersion": "v1-e2a1b24ea79a1bd0",
+  "contentHash": "sha256:e2a1b24ea79a1bd0079eecfb7c546c811419cd4df82b20ee3090253178949ca4",
+  "physicalSha256": "sha256:ffdf918017c02de9c995433a6b295a6f00dac5afa05441d4b07bfe9b6ca549d3",
+  "byteLength": 13380,
+  "snapshotUrl": "data/public-workstation-snapshot/v1-e2a1b24ea79a1bd0.json",
+  "generatedAt": "2026-10-01T03:15:06.687Z",
+  "itemCount": 2
 }
